@@ -18,7 +18,10 @@ public class FleetInfoSidePanel {
     }
 
     private void drawShipStats(int num, Ship ship) {
-        
+        double powerUsage = ship.getActiveReactor().getCurrentUsage();
+        double shieldCap = ship.getShields().get(0).getCapacity();
+        double shieldMaxCap = ship.getShields().get(0).getMaxCapacity();
+        double speed = ship.getSpeed();
     }
 
     private ArrayList<Ship> getShips() {
