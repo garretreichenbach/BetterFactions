@@ -13,6 +13,7 @@ public class BetterStation extends Station {
     private Sector sector;
     private System system;
     private StationType stationType;
+    private int level;
 
     public BetterStation(Station baseEntity, StationType stationType, Faction ownerFaction, Sector sector) {
         this.baseEntity = baseEntity;
@@ -21,6 +22,7 @@ public class BetterStation extends Station {
         this.system = sector.getSystem();
         this.sector = sector;
         this.stationType = stationType;
+        this.level = 1;
     }
 
     public Station getBaseEntity() {
@@ -53,5 +55,13 @@ public class BetterStation extends Station {
 
     public StationType getStationType() {
         return stationType;
+    }
+
+    public int getLevel() {
+        return level;
+    }
+
+    public void setLevel(int level) {
+        this.level = level;
     }
 }
