@@ -1,5 +1,6 @@
 package net.dovtech.betterfactions.universe;
 
+import api.element.Element;
 import api.faction.Faction;
 import java.util.List;
 import java.util.Map;
@@ -7,10 +8,10 @@ import java.util.Map;
 public class ResourceZone {
 
     private List<System> systems;
-    private Map<Resource, Integer> resources;
+    private Map<Element, Integer> resources;
     private Map<Faction, Double> influences;
 
-    public ResourceZone(List<System> systems, Map<Resource, Integer> resources) {
+    public ResourceZone(List<System> systems, Map<Element, Integer> resources) {
         this.systems = systems;
         this.resources = resources;
     }
@@ -19,7 +20,7 @@ public class ResourceZone {
         return systems;
     }
 
-    public Map<Resource, Integer> getResources() {
+    public Map<Element, Integer> getResources() {
         return resources;
     }
 
