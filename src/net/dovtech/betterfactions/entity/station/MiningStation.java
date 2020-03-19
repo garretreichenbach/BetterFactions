@@ -1,13 +1,12 @@
 package net.dovtech.betterfactions.entity.station;
 
+import api.element.Element;
 import api.entity.Station;
 import api.faction.Faction;
 import api.inventory.Inventory;
 import api.universe.Sector;
-import net.dovtech.betterfactions.universe.Resource;
 import net.dovtech.betterfactions.universe.ResourceZone;
 import net.dovtech.betterfactions.utilities.ConfigReader;
-import java.util.Map;
 
 public class MiningStation extends BetterStation {
 
@@ -40,16 +39,17 @@ public class MiningStation extends BetterStation {
     }
 
     public void awardResources() {
-        Map<Resource, Integer> resourcesToAdd = null;
-        for(Resource resource : resourceZone.getResources().keySet()) {
-            resourcesToAdd.put(resource, calculateResource(resource));
+        for(Element element : resourceZone.getResources().keySet()) {
+            int existingAmount = 0;
+            if(inventory.getContents().get(element) != 0) {
+                existingAmount = inventory.getContents().get(element);
+            }
+            inventory.addElement(element, existingAmount + calculateResource(element));
         }
-
-        //Todo:Add resources to station inventory
     }
 
-    private int calculateResource(Resource resource) {
-        int amount = resourceZone.getResources().get(resource);
+    private int calculateResource(Element element) {
+        int amount = resourceZone.getResources().get(element);
         double levelMultiplier = 1;
         switch(getLevel()) {
             case 1: levelMultiplier = ConfigReader.getConfig().getMiningLevel1Multiplier();
