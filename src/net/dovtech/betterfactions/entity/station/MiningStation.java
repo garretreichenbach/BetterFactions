@@ -5,6 +5,7 @@ import api.entity.Station;
 import api.faction.Faction;
 import api.inventory.Inventory;
 import api.universe.Sector;
+import net.dovtech.betterfactions.entity.station.module.StationModule;
 import net.dovtech.betterfactions.universe.ResourceZone;
 import net.dovtech.betterfactions.utilities.ConfigReader;
 import java.util.Map;
