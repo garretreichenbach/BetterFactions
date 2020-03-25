@@ -21,11 +21,12 @@ public class BetterFaction {
     private List<NewsPost> newsPosts;
     private Station homebase;
     private List<Station> claimStations;
-    private System ownedSystems;
+    private List<System> ownedSystems;
     private Faction baseFaction;
     private Federation federation = null;
     private List<BetterFaction> alliedFactions;
     private List<BetterFaction> vassals;
+    private VassalType vassalType = VassalType.NONE;
     private BetterFaction overLord = null;
     private List<BetterFaction> nonAggressionPacts;
     private List<BetterFaction> enemyFactions;
@@ -85,7 +86,7 @@ public class BetterFaction {
         return claimStations;
     }
 
-    public System getOwnedSystems() {
+    public List<System> getOwnedSystems() {
         return ownedSystems;
     }
 
@@ -107,6 +108,10 @@ public class BetterFaction {
 
     public BetterFaction getOverLord() {
         return overLord;
+    }
+
+    public VassalType getVassalType() {
+        return vassalType;
     }
 
     public List<BetterFaction> getNonAggressionPacts() {
@@ -153,5 +158,14 @@ public class BetterFaction {
 
     public void removeTradeDeal(TradeDeal tradeDeal) {
         tradeDeals.remove(tradeDeal);
+    }
+
+    public void setOverLord(BetterFaction overlord, VassalType vassalType) {
+        this.overLord = overlord;
+        this.vassalType = vassalType;
+    }
+
+    public void setVassalType(VassalType vassalType) {
+        this.vassalType = vassalType;
     }
 }
