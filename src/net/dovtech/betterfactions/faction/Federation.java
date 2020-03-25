@@ -13,7 +13,6 @@ public class Federation {
     private List<Federation> enemyFederations;
     private List<BetterFaction> enemyFactions;
 
-
     public Federation(String displayName, List<BetterFaction> factions) {
         this.displayName = displayName;
         this.factions = factions;
