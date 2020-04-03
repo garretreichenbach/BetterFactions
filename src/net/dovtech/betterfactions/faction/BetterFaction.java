@@ -1,133 +1,25 @@
 package net.dovtech.betterfactions.faction;
 
-import api.entity.Player;
-import api.entity.Station;
 import api.faction.Faction;
-import api.faction.FactionRank;
-import api.faction.NewsPost;
-import net.dovtech.betterfactions.entity.fleet.BetterFleet;
+import net.dovtech.betterfactions.inventory.TabInventory;
+import net.dovtech.betterfactions.Global;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 public class BetterFaction {
 
-    private String name;
-    private List<Player> members;
-    private List<Player> activePlayers;
-    private List<Player> inactivePlayers;
-    private ArrayList<FactionRank> ranks;
-    private int memberCount;
-    private List<NewsPost> newsPosts;
-    private Station homebase;
-    private List<Station> claimStations;
-    private List<System> ownedSystems;
     private Faction baseFaction;
-    private Federation federation = null;
-    private List<BetterFaction> alliedFactions;
-    private List<BetterFaction> vassals;
-    private VassalType vassalType = VassalType.NONE;
-    private BetterFaction overLord = null;
-    private List<BetterFaction> nonAggressionPacts;
-    private List<BetterFaction> enemyFactions;
-    private List<Player> enemyPlayers;
-    private List<BetterFleet> fleets = null;
-    private List<TradeDeal> tradeDeals = null;
-    private Map<BetterFaction, String> opinions;
+    private Federation federation;
+    private ArrayList<BetterFaction> nonAggressionPacts;
+    private ArrayList<BetterFaction> guarantees;
+    private Map<BetterFaction, Integer> opinions;
 
     public BetterFaction(Faction baseFaction) {
         this.baseFaction = baseFaction;
-        this.name = baseFaction.getName();
-        this.members = baseFaction.getMembers();
-        this.activePlayers = baseFaction.getActivePlayers();
-        this.inactivePlayers = baseFaction.getInactivePlayers();
-        this.ranks = baseFaction.getRanks();
-        this.memberCount = baseFaction.getMemberCount();
-        this.newsPosts = baseFaction.getNewsPosts();
-        this.homebase = baseFaction.getHomebase();
-        this.claimStations = baseFaction.getClaimStations();
-        this.ownedSystems = baseFaction.getOwnedSystems();
-        //Todo:Get stuff like allied factions and turn them into BetterFactions objects
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public List<Player> getMembers() {
-        return members;
-    }
-
-    public List<Player> getActivePlayers() {
-        return activePlayers;
-    }
-
-    public List<Player> getInactivePlayers() {
-        return inactivePlayers;
-    }
-
-    public ArrayList<FactionRank> getRanks() {
-        return ranks;
-    }
-
-    public int getMemberCount() {
-        return memberCount;
-    }
-
-    public List<NewsPost> getNewsPosts() {
-        return newsPosts;
-    }
-
-    public Station getHomebase() {
-        return homebase;
-    }
-
-    public List<Station> getClaimStations() {
-        return claimStations;
-    }
-
-    public List<System> getOwnedSystems() {
-        return ownedSystems;
-    }
-
-    public Faction getBaseFaction() {
-        return baseFaction;
-    }
-
-    public Federation getFederation() {
-        return federation;
-    }
-
-    public List<BetterFaction> getAlliedFactions() {
-        return alliedFactions;
-    }
-
-    public List<BetterFaction> getVassals() {
-        return vassals;
-    }
-
-    public BetterFaction getOverLord() {
-        return overLord;
-    }
-
-    public VassalType getVassalType() {
-        return vassalType;
-    }
-
-    public List<BetterFaction> getNonAggressionPacts() {
-        return nonAggressionPacts;
-    }
-
-    public List<BetterFaction> getEnemyFactions() {
-        return enemyFactions;
-    }
-
-    public List<Player> getEnemyPlayers() {
-        return enemyPlayers;
-    }
-
-    public List<BetterFleet> getFleets() {
-        return fleets;
+    public TabInventory getFactionInventory() {
+        return Global.factionInventories.get(this);
     }
 
     public void joinFederation(Federation federation) {
@@ -136,36 +28,72 @@ public class BetterFaction {
     }
 
     public void leaveFederation() {
-        this.federation.removeFaction(this);
+        federation.removeFaction(this);
         this.federation = null;
     }
 
-    public Map<BetterFaction, String> getOpinions() {
-        return opinions;
+    public Federation getFederation() {
+        return federation;
     }
 
-    public void addOpinion(BetterFaction faction, String opinion) {
-        opinions.put(faction, opinion);
+    public void addNonAggressionPact(BetterFaction targetFaction) {
+        targetFaction.nonAggressionPacts.add(this);
+        nonAggressionPacts.add(targetFaction);
+        addOpinion(targetFaction, 30);
+        targetFaction.addOpinion(this, 30);
     }
 
-    public List<TradeDeal> getTradeDeals() {
-        return tradeDeals;
+    public void breakNonAggressionPact(BetterFaction targetFaction) {
+        targetFaction.nonAggressionPacts.remove(this);
+        nonAggressionPacts.remove(targetFaction);
+        addOpinion(targetFaction, -50);
+        targetFaction.addOpinion(this, -50);
     }
 
-    public void addTradeDeal(TradeDeal tradeDeal) {
-        tradeDeals.add(tradeDeal);
+    public ArrayList<BetterFaction> getNonAggressionPacts() {
+        return nonAggressionPacts;
     }
 
-    public void removeTradeDeal(TradeDeal tradeDeal) {
-        tradeDeals.remove(tradeDeal);
+    public void addGuarantee(BetterFaction targetFaction) {
+        guarantees.add(targetFaction);
+        addOpinion(targetFaction, 50);
+        targetFaction.addOpinion(this, 50);
     }
 
-    public void setOverLord(BetterFaction overlord, VassalType vassalType) {
-        this.overLord = overlord;
-        this.vassalType = vassalType;
+    public void removeGuarantee(BetterFaction targetFaction) {
+        guarantees.remove(targetFaction);
+        addOpinion(targetFaction, -15);
+        targetFaction.addOpinion(this, -30);
     }
 
-    public void setVassalType(VassalType vassalType) {
-        this.vassalType = vassalType;
+    public ArrayList<BetterFaction> getGuarantees() {
+        return guarantees;
+    }
+
+    public int getOpinion(BetterFaction targetFaction) {
+        return opinions.get(targetFaction);
+    }
+
+    public void addOpinion(BetterFaction targetFaction, int amount) {
+        opinions.replace(targetFaction, opinions.get(targetFaction), opinions.get(targetFaction) + amount);
+    }
+
+    public OpinionType getTotalOpinion(BetterFaction targetFaction) {
+        if(opinions.get(targetFaction) <= -200) {
+            return OpinionType.HOSTILE;
+        } else if(opinions.get(targetFaction) > -200 && opinions.get(targetFaction) <= -100) {
+            return OpinionType.ANGRY;
+        }  else if(opinions.get(targetFaction) > -100 && opinions.get(targetFaction) <= -30) {
+            return OpinionType.WARY;
+        }  else if(opinions.get(targetFaction) > -30 && opinions.get(targetFaction) <= 30) {
+            return OpinionType.NEUTRAL;
+        } else if(opinions.get(targetFaction) > 30 && opinions.get(targetFaction) <= 100) {
+            return OpinionType.WARM;
+        }  else if(opinions.get(targetFaction) > 100 && opinions.get(targetFaction) < 200) {
+            return OpinionType.FRIENDLY;
+        }  else if(opinions.get(targetFaction) >= 200) {
+            return OpinionType.VERY_FRIENDLY;
+        }
+        return null;
     }
 }
