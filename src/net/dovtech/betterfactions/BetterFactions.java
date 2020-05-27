@@ -83,7 +83,7 @@ public class BetterFactions extends StarMod {
                         options = factionPanel.getTabs().get(4);
                     }
 
-                    //Relations
+                    //Changes NPC relations to be all faction relations.
                     factionRelations.setName("FACTION RELATIONS");
                     GUINPCFactionsScrollableList npcFactionsList = (GUINPCFactionsScrollableList) factionRelations.getContent(0, 0).getChilds().get(0);
                     Set<Faction> factionsSet = (Set<Faction>) GameClient.getClientState().getFactionManager().getFactionCollection();
