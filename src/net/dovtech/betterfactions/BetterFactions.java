@@ -13,6 +13,7 @@ import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;
 import org.schema.game.client.view.gui.npc.GUINPCFactionsScrollableList;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.server.data.simulation.npc.NPCFaction;
+import org.schema.schine.graphicsengine.forms.AbstractSceneNode;
 import org.schema.schine.graphicsengine.forms.gui.GUIElementList;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 
@@ -59,7 +60,6 @@ public class BetterFactions extends StarMod {
                 GUIContentPane members = null;
                 GUIContentPane factionList = null;
                 GUIContentPane options = null;
-                GUIContentPane organization;
 
                 for(GUIContentPane contentPane : factionPanel.getTabs()) {
                     if(contentPane.getTabNameText().getText().contains("NEWS")) {
@@ -82,6 +82,9 @@ public class BetterFactions extends StarMod {
 
                 factionRelations.setName("FACTION RELATIONS");
                 factionList.setTabName("FACTION LIST");
+                //Todo:StarMade doesn't like casting from a player faction to an NPC one. Maybe look into creating new NPC factions and adding them as placeholders for player ones?
+
+                /*
                 GUINPCFactionsScrollableList npcFactionsList = (GUINPCFactionsScrollableList) factionRelations.getContent(0, 0).getChilds().get(0);
                 Collection<Faction> factions = GameClient.getClientState().getFactionManager().getFactionCollection();
                 GUIElementList elementList = new GUIElementList(npcFactionsList.getState());
@@ -93,11 +96,16 @@ public class BetterFactions extends StarMod {
                     }
                 }
                 npcFactionsList.updateListEntries(elementList, npcFactionsSet);
+                 */
+
 
                 //ToDo:Check to see if the player's faction is part of an organization. If it isn't, the organization tab should be different.
 
                 //Organization
-                organization = new GUIContentPane(factionPanel.getState(), factionPanel, "ORGANIZATION");
+                GUIContentPane organization = new GUIContentPane(factionPanel.getState(), factionPanel, "ORGANIZATION");
+                organization.setName("ORGANIZATION");
+                organization.setTabName("ORGANIZATION");
+
 
                 //GUIAncor organizationLogo = ;
                 //organization.setContent(0, 0, organizationLogo);
@@ -107,32 +115,40 @@ public class BetterFactions extends StarMod {
                 organization.addDivider(300);
 
                 /*
-                    GUITabbedContent organizationPanel = new GUITabbedContent(factionPanel.getState(), organization.getContent(1));
-                    organizationPanel.clearTabs();
 
-                    //Organization News
-                    GUIContentPane organizationNews = new GUIContentPane(organizationPanel.getState(), organizationPanel, "NEWS");
+                GUITabbedContent organizationPanel = (GUITabbedContent) factionPanel.clone();
+                organizationPanel.clearTabs();
 
-                    //Organization Members
-                    GUIContentPane memberFactions = new GUIContentPane(organizationPanel.getState(), organizationPanel, "MEMBER FACTIONS");
+                GUIContentPane paneBase = (GUIContentPane) news.clone();
 
-                    //Messages
-                    GUIContentPane messages = new GUIContentPane(organizationPanel.getState(), organizationPanel, "MESSAGES");
+                //Organization News
+                GUIContentPane organizationNews = (GUIContentPane) paneBase.clone();
+                organizationNews.setTabName("ORGANIZATION NEWS");
 
-                    //Resources
-                    GUIContentPane resources = new GUIContentPane(organizationPanel.getState(), organizationPanel, "RESOURCES");
+                //Organization Members
+                GUIContentPane memberFactions = (GUIContentPane) paneBase.clone();
+                memberFactions.setTabName("MEMBER FACTIONS");
 
-                    //Settings
-                    GUIContentPane settings = new GUIContentPane(organizationPanel.getState(), organizationPanel, "SETTINGS");
+                //Messages
+                GUIContentPane messages = (GUIContentPane) paneBase.clone();
+                messages.setTabName("MESSAGES");
 
-                    organizationPanel.getTabs().add(organizationNews);
-                    organizationPanel.getTabs().add(memberFactions);
-                    organizationPanel.getTabs().add(messages);
-                    organizationPanel.getTabs().add(resources);
-                    organizationPanel.getTabs().add(settings);
+                //Resources
+                GUIContentPane resources = (GUIContentPane) paneBase.clone();
+                resources.setTabName("RESOURCES");
 
-                    organization.setContent(0, 1, organizationPanel);
-                    */
+                //Settings
+                GUIContentPane settings = (GUIContentPane) paneBase.clone();
+                settings.setTabName("ORGANIZATION SETTINGS");
+
+                organizationPanel.getTabs().add(organizationNews);
+                organizationPanel.getTabs().add(memberFactions);
+                organizationPanel.getTabs().add(messages);
+                organizationPanel.getTabs().add(resources);
+                organizationPanel.getTabs().add(settings);
+                organization.setContent(1, organizationPanel);
+                 */
+
                 factionPanel.clearTabs();
                 if(factionPanelNew.getOwnFaction() != null) {
                     if(debug) {
@@ -159,7 +175,7 @@ public class BetterFactions extends StarMod {
 
                 if(debug) {
                     for(int i = 0; i < factionPanel.getTabs().size(); i ++) {
-                        DebugFile.log("[DEBUG]: Added tab " + factionPanel.getTabs().get(i).getTabNameText().getText().toString() + " to the faction menu at position " + i);
+                        DebugFile.log("[DEBUG]: Added tab " + factionPanel.getTabs().get(i).getTabName().toString() + " to the faction menu at position " + i);
                     }
                 }
                 factionPanel.draw();
