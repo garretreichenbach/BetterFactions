@@ -4,6 +4,7 @@ import api.DebugFile;
 import api.config.BlockConfig;
 import api.listener.Listener;
 import api.listener.events.Event;
+import api.listener.events.gui.FactionPanelGUICreateEvent;
 import api.listener.events.gui.GUIElementCreateEvent;
 import api.main.GameClient;
 import api.mod.StarLoader;
@@ -14,6 +15,8 @@ import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.server.data.simulation.npc.NPCFaction;
 import org.schema.schine.graphicsengine.forms.gui.GUIElementList;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
+
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -23,6 +26,7 @@ public class BetterFactions extends StarMod {
     public BetterFactions() {
         inst = this;
     }
+    private boolean debug;
 
     @Override
     public void onGameStart() {
@@ -30,88 +34,79 @@ public class BetterFactions extends StarMod {
         setModVersion("0.1.10");
         setModDescription("A versatile mod aimed at improving player faction interaction.");
         setModAuthor("TheDerpGamer");
+        debug = true;
     }
 
     @Override
     public void onEnable() {
         DebugFile.log("Enabled", this);
-        registerListeners();
-    }
 
-    public void onBlockConfigLoad(BlockConfig config) {
-
-        /*
-        ShipMarket shipMarket = new ShipMarket();
-        ElementInformation shipMarketInfo = shipMarket.getBlockInfo();
-        FactoryResource[] shipMarketRecipe = {
-                new FactoryResource(1, Blocks.SHOP_MODULE.getId()),
-                new FactoryResource(1, Blocks.FACTION_MODULE.getId())
-        };
-        BlockConfig.addRecipe(shipMarketInfo, FactoryType.ADVANCED, 5, shipMarketRecipe);
-        config.add(shipMarketInfo);
-
-         */
-    }
-
-    public void registerListeners() {
         //Faction GUI
-        StarLoader.registerListener(GUIElementCreateEvent.class, new Listener() {
+        StarLoader.registerListener(FactionPanelGUICreateEvent.class, new Listener() {
             @Override
             public void onEvent(Event e) {
-                GUIElementCreateEvent event = (GUIElementCreateEvent) e;
-                if(event.getGUIElement() instanceof FactionPanelNew) {
-                    FactionPanelNew factionPanelNew = (FactionPanelNew) event.getGUIElement();
-                    factionPanelNew.onInit();
-                    GUIMainWindow factionPanel = factionPanelNew.factionPanel;
+                FactionPanelGUICreateEvent event = (FactionPanelGUICreateEvent) e;
+                FactionPanelNew factionPanelNew = event.getFactionPanel();
+                GUIMainWindow factionPanel = event.getPanelMenu();
 
-                    GUIContentPane news = null;
-                    GUIContentPane factionRelations = null;
-                    GUIContentPane factionNews = null;
-                    GUIContentPane members = null;
-                    GUIContentPane factionList = null;
-                    GUIContentPane options = null;
-                    GUIContentPane organization;
+                if(debug) {
+                    DebugFile.log("[DEBUG]: FactionPanelGUICreateEvent fired!");
+                }
 
-                    for(GUIContentPane contentPane : factionPanel.getTabs()) {
-                        if(contentPane.getTabName().equals("NEWS")) {
-                            news = contentPane;
-                        } else if(contentPane.getTabName().equals("NPC DIPLOMACY")) {
-                            factionRelations = contentPane;
-                        } else if(contentPane.getTabName().equals("FACTION NEWS")) {
-                            factionNews = contentPane;
-                        } else if(contentPane.getTabName().equals("MEMBERS")) {
-                            members = contentPane;
-                        } else if(contentPane.getTabName().equals("LIST")) {
-                            factionList = contentPane;
-                        } else if(contentPane.getTabName().equals("OPTIONS")) {
-                            options = contentPane;
-                        }
+                GUIContentPane news = null;
+                GUIContentPane factionRelations = null;
+                GUIContentPane factionNews = null;
+                GUIContentPane members = null;
+                GUIContentPane factionList = null;
+                GUIContentPane options = null;
+                GUIContentPane organization;
+
+                for(GUIContentPane contentPane : factionPanel.getTabs()) {
+                    if(contentPane.getTabNameText().getText().contains("NEWS")) {
+                        news = contentPane;
+                    } else if(contentPane.getTabNameText().getText().contains("NPC DIPLOMACY")) {
+                        factionRelations = contentPane;
+                    } else if(contentPane.getTabNameText().getText().contains("FACTION NEWS")) {
+                        factionNews = contentPane;
+                    } else if(contentPane.getTabNameText().getText().contains("MEMBERS")) {
+                        members = contentPane;
+                    } else if(contentPane.getTabNameText().getText().contains("LIST")) {
+                        factionList = contentPane;
+                    } else if(contentPane.getTabNameText().getText().contains("OPTIONS")) {
+                        options = contentPane;
                     }
-
-                    factionRelations.setName("FACTION RELATIONS");
-                    factionList.setTabName("FACTION LIST");
-                    GUINPCFactionsScrollableList npcFactionsList = (GUINPCFactionsScrollableList) factionRelations.getContent(0, 0).getChilds().get(0);
-                    Collection<Faction> factions = GameClient.getClientState().getFactionManager().getFactionCollection();
-                    GUIElementList elementList = new GUIElementList(npcFactionsList.getState());
-                    Set<NPCFaction> npcFactionsSet = new HashSet<NPCFaction>();
-                    for(Faction faction : factions) {
-                        npcFactionsSet.add((NPCFaction) faction);
+                    if(debug) {
+                        DebugFile.log("[DEBUG]: " + contentPane.getTabNameText().getText().toString() + " tab created");
                     }
-                    npcFactionsList.updateListEntries(elementList, npcFactionsSet);
+                }
 
-                    //ToDo:Check to see if the player's faction is part of an organization. If it isn't, the organization tab should be different.
+                factionRelations.setName("FACTION RELATIONS");
+                factionList.setTabName("FACTION LIST");
+                GUINPCFactionsScrollableList npcFactionsList = (GUINPCFactionsScrollableList) factionRelations.getContent(0, 0).getChilds().get(0);
+                Collection<Faction> factions = GameClient.getClientState().getFactionManager().getFactionCollection();
+                GUIElementList elementList = new GUIElementList(npcFactionsList.getState());
+                Set<NPCFaction> npcFactionsSet = new HashSet<NPCFaction>();
+                for(Faction faction : factions) {
+                    npcFactionsSet.add((NPCFaction) faction);
+                    if(debug) {
+                        DebugFile.log("[DEBUG]: Added faction " + faction.getName() + " to the relations list" );
+                    }
+                }
+                npcFactionsList.updateListEntries(elementList, npcFactionsSet);
 
-                    //Organization
-                    organization = new GUIContentPane(factionPanel.getState(), factionPanel, "ORGANIZATION");
+                //ToDo:Check to see if the player's faction is part of an organization. If it isn't, the organization tab should be different.
 
-                    //GUIAncor organizationLogo = ;
-                    //organization.setContent(0, 0, organizationLogo);
+                //Organization
+                organization = new GUIContentPane(factionPanel.getState(), factionPanel, "ORGANIZATION");
 
-                    organization.addNewTextBox(30); //Organization Info
+                //GUIAncor organizationLogo = ;
+                //organization.setContent(0, 0, organizationLogo);
 
-                    organization.addDivider(300);
+                organization.addNewTextBox(30); //Organization Info
 
-                    /*
+                organization.addDivider(300);
+
+                /*
                     GUITabbedContent organizationPanel = new GUITabbedContent(factionPanel.getState(), organization.getContent(1));
                     organizationPanel.clearTabs();
 
@@ -138,20 +133,55 @@ public class BetterFactions extends StarMod {
 
                     organization.setContent(0, 1, organizationPanel);
                     */
-
-                    factionPanel.clearTabs();
-                    factionPanel.getTabs().add(news);
-                    factionPanel.getTabs().add(factionRelations);
-                    if(factionPanelNew.getOwnFaction() != null) {
-                        factionPanel.getTabs().add(factionNews);
-                        factionPanel.getTabs().add(members);
-                        factionPanel.getTabs().add(organization);
+                factionPanel.clearTabs();
+                if(factionPanelNew.getOwnFaction() != null) {
+                    if(debug) {
+                        DebugFile.log("[DEBUG]: Player is in a faction" );
                     }
-                    factionPanel.getTabs().add(factionList);
-                    factionPanel.getTabs().add(options);
-                    factionPanel.draw();
+                    factionPanel.getTabs().add(0, news);
+                    factionPanel.getTabs().add(1, factionRelations);
+                    factionPanel.getTabs().add(2, factionNews);
+                    factionPanel.getTabs().add(3, members);
+                    factionPanel.getTabs().add(4, factionList);
+                    factionPanel.getTabs().add(5, organization);
+                    factionPanel.getTabs().add(6, options);
+
+                } else {
+                    if(debug) {
+                        DebugFile.log("[DEBUG]: Player is not in a faction" );
+                    }
+                    factionPanel.getTabs().add(0, news);
+                    factionPanel.getTabs().add(1, factionRelations);
+                    factionPanel.getTabs().add(2, factionList);
+                    factionPanel.getTabs().add(3, organization);
+                    factionPanel.getTabs().add(4, options);
+                }
+
+                if(debug) {
+                    for(int i = 0; i < factionPanel.getTabs().size(); i ++) {
+                        DebugFile.log("[DEBUG]: Added tab " + factionPanel.getTabs().get(i).getTabNameText().getText().toString() + " to the faction menu at position " + i);
+                    }
+                }
+                factionPanel.draw();
+                if(debug) {
+                    DebugFile.log("[DEBUG]: Redrew the faction menu");
                 }
             }
         });
+    }
+
+    public void onBlockConfigLoad(BlockConfig config) {
+
+        /*
+        ShipMarket shipMarket = new ShipMarket();
+        ElementInformation shipMarketInfo = shipMarket.getBlockInfo();
+        FactoryResource[] shipMarketRecipe = {
+                new FactoryResource(1, Blocks.SHOP_MODULE.getId()),
+                new FactoryResource(1, Blocks.FACTION_MODULE.getId())
+        };
+        BlockConfig.addRecipe(shipMarketInfo, FactoryType.ADVANCED, 5, shipMarketRecipe);
+        config.add(shipMarketInfo);
+
+         */
     }
 }
