@@ -21,6 +21,7 @@ public class BetterFactions extends StarMod {
         inst = this;
     }
     private boolean debug;
+    private boolean orgPanelDrawn;
     private GUIContentPane organization;
 
     @Override
@@ -29,6 +30,7 @@ public class BetterFactions extends StarMod {
         setModVersion("0.1.11");
         setModDescription("A versatile mod aimed at improving player faction interaction.");
         setModAuthor("TheDerpGamer");
+        orgPanelDrawn = false;
         debug = true;
     }
 
@@ -50,11 +52,14 @@ public class BetterFactions extends StarMod {
 
                 factionPanelNew.factionPanel = factionPanel;
 
-                if(inFaction && selectedTab == 6) {
+                /*
+                if(inFaction && selectedTab == 6 && !orgPanelDrawn) {
                     organization.draw();
                     organization.drawAttached();
+                    orgPanelDrawn = true;
                     if(debug) DebugFile.log("[DEBUG]: Drew Organization panel");
                 }
+                 */
             }
         });
     }
