@@ -10,3 +10,4 @@ out/artifacts/BetterFactions_jar/BetterFactions.jar
 src/net/dovtech/betterfactions/BetterFactions.java
 src/META-INF/MANIFEST.MF
 out
+.idea
