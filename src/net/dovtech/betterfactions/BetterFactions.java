@@ -46,12 +46,12 @@ public class BetterFactions extends StarMod {
                 GUIMainWindow factionPanel = event.getPanelMenu();
                 boolean inFaction = factionPanelNew.getOwnFaction() != null;
                 int selectedTab = factionPanel.getSelectedTab();
-                if(debug) DebugFile.log("[DEBUG]: FactionPanelGUICreateEvent fired!");
 
                 if(inFaction && factionPanel.getTabs().size() == 6) createOrganizationPane(factionPanel);
 
                 factionPanelNew.factionPanel = factionPanel;
 
+                //Todo:This shit spits a nullpointer
                 /*
                 if(inFaction && selectedTab == 6 && !orgPanelDrawn) {
                     organization.draw();
