@@ -11,3 +11,4 @@ src/net/dovtech/betterfactions/BetterFactions.java
 src/META-INF/MANIFEST.MF
 out
 .idea
+.idea/BetterFactions.iml
