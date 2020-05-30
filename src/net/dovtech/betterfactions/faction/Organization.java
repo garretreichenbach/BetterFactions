@@ -1,6 +1,7 @@
 package net.dovtech.betterfactions.faction;
 
-import api.faction.Faction;
+import net.dovtech.betterfactions.BetterFactions;
+import org.schema.game.common.data.player.faction.Faction;
 import java.util.ArrayList;
 
 public class Organization {
@@ -43,10 +44,18 @@ public class Organization {
 
     public void addMember(Faction faction) {
         memberFactions.add(faction);
+        for(Faction f : memberFactions) {
+            f.getFriends().add(faction);
+        }
+        BetterFactions.addFactionToOrg(faction, this);
     }
 
     public void removeMember(Faction faction) {
         memberFactions.remove(faction);
+        for(Faction f : memberFactions) {
+            f.getFriends().remove(faction);
+        }
+        BetterFactions.removeFactionFromOrg(faction);
     }
 
     public ArrayList<Faction> getMemberFactions() {
