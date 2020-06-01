@@ -1,6 +1,7 @@
 package net.dovtech.betterfactions.gui;
 
 import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;
+import org.schema.game.client.view.gui.faction.newfaction.FactionScrollableListNew;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContextPane;
