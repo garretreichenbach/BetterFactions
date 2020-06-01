@@ -2,12 +2,21 @@ package net.dovtech.betterfactions;
 
 import api.listener.Listener;
 import api.listener.events.Event;
-import api.listener.events.gui.FactionPanelGUICreateEvent;
+import api.listener.events.gui.ControlManagerActivateEvent;
 import api.mod.StarLoader;
 import api.mod.StarMod;
 import net.dovtech.betterfactions.faction.Organization;
 import net.dovtech.betterfactions.gui.NewFactionPanel;
+import net.dovtech.betterfactions.gui.NewFactionScrollableList;
+import org.schema.game.client.data.GameClientState;
+import org.schema.game.client.view.gui.PlayerPanel;
+import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;
+import org.schema.game.client.view.gui.faction.newfaction.FactionScrollableListNew;
 import org.schema.game.common.data.player.faction.Faction;
+import org.schema.schine.graphicsengine.forms.gui.newgui.ScrollableTableList;
+
+import javax.swing.*;
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,7 +30,7 @@ public class BetterFactions extends StarMod {
     @Override
     public void onGameStart() {
         setModName("BetterFactions");
-        setModVersion("0.1.12");
+        setModVersion("0.1.14");
         setModDescription("A versatile mod aimed at improving player faction interaction.");
         setModAuthor("TheDerpGamer");
     }
@@ -29,12 +38,30 @@ public class BetterFactions extends StarMod {
     @Override
     public void onEnable() {
         //Faction GUI
-        StarLoader.registerListener(FactionPanelGUICreateEvent.class, new Listener() {
+        StarLoader.registerListener(ControlManagerActivateEvent.class, new Listener() {
             @Override
             public void onEvent(Event e) {
-                FactionPanelGUICreateEvent event = (FactionPanelGUICreateEvent) e;
-                NewFactionPanel factionPanel = new NewFactionPanel(event.getInputState());
-                factionPanel.recreateTabs();
+                ControlManagerActivateEvent event = ((ControlManagerActivateEvent) e);
+                PlayerPanel playerPanel = GameClientState.instance.getWorldDrawer().getGuiDrawer().getPlayerPanel();
+                playerPanel.onInit();
+                try {
+                    Field panel = PlayerPanel.class.getDeclaredField("factionPanelNew");
+                    panel.setAccessible(true);
+                    FactionPanelNew p = (FactionPanelNew) panel.get(playerPanel);
+                    if(!(p instanceof NewFactionPanel)) {
+                        GameClientState state = playerPanel.getState();
+                        panel.set(playerPanel, new NewFactionPanel(state));
+
+                        FactionScrollableListNew fList = new FactionScrollableListNew(p.getState(), p);
+                        Field fListField = FactionPanelNew.class.getDeclaredField("fList");
+                        fListField.setAccessible(true);
+                        fListField.set(fList, new NewFactionScrollableList(fList.getState(), p));
+                    }
+                } catch (NoSuchFieldException ex) {
+                    ex.printStackTrace();
+                } catch (IllegalAccessException ex) {
+                    ex.printStackTrace();
+                }
             }
         });
     }
