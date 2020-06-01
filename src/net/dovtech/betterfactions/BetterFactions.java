@@ -11,11 +11,7 @@ import net.dovtech.betterfactions.gui.NewFactionScrollableList;
 import org.schema.game.client.data.GameClientState;
 import org.schema.game.client.view.gui.PlayerPanel;
 import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;
-import org.schema.game.client.view.gui.faction.newfaction.FactionScrollableListNew;
 import org.schema.game.common.data.player.faction.Faction;
-import org.schema.schine.graphicsengine.forms.gui.newgui.ScrollableTableList;
-
-import javax.swing.*;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
@@ -52,10 +48,10 @@ public class BetterFactions extends StarMod {
                         GameClientState state = playerPanel.getState();
                         panel.set(playerPanel, new NewFactionPanel(state));
 
-                        FactionScrollableListNew fList = new FactionScrollableListNew(p.getState(), p);
+                        NewFactionScrollableList fList = new NewFactionScrollableList(p.getState(), p);
                         Field fListField = FactionPanelNew.class.getDeclaredField("fList");
                         fListField.setAccessible(true);
-                        fListField.set(fList, new NewFactionScrollableList(fList.getState(), p));
+                        fListField.set(p, fList);
                     }
                 } catch (NoSuchFieldException ex) {
                     ex.printStackTrace();
