@@ -1,4 +1,4 @@
-package net.dovtech.betterfactions.gui;
+package dovtech.starmadeplus.gui.faction;
 
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.schine.graphicsengine.core.MouseEvent;

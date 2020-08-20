@@ -1,4 +1,4 @@
-package net.dovtech.betterfactions.gui;
+package dovtech.starmadeplus.gui.faction;
 
 import org.schema.game.client.view.gui.faction.newfaction.FactionScrollableListNew;
 import org.schema.game.common.data.player.faction.Faction;
