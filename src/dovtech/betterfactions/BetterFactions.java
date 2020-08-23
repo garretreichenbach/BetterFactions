@@ -4,10 +4,8 @@ import api.DebugFile;
 import api.common.GameClient;
 import api.config.BlockConfig;
 import api.listener.Listener;
-import api.listener.events.SegmentControllerOverheatEvent;
-import api.listener.events.faction.FactionRelationChangeEvent;
 import api.listener.events.gui.ControlManagerActivateEvent;
-import api.listener.events.player.PlayerDeathEvent;
+import api.listener.events.player.PlayerJoinFactionEvent;
 import api.mod.StarLoader;
 import api.mod.StarMod;
 import api.mod.config.FileConfiguration;
@@ -16,7 +14,12 @@ import dovtech.betterfactions.faction.FactionStats;
 import dovtech.betterfactions.faction.diplo.alliance.Alliance;
 import dovtech.betterfactions.faction.diplo.alliance.coalition.Coalition;
 import dovtech.betterfactions.faction.diplo.relations.FactionRelations;
+import dovtech.betterfactions.faction.government.AllianceGovernmentType;
+import dovtech.betterfactions.faction.war.FactionWar;
+import dovtech.betterfactions.faction.war.WarGoal;
+import dovtech.betterfactions.faction.war.WarParticipant;
 import dovtech.betterfactions.gui.faction.NewFactionPanel;
+import dovtech.betterfactions.gui.faction.NoFactionPanel;
 import org.newdawn.slick.Image;
 import org.schema.game.client.controller.manager.ingame.PlayerGameControlManager;
 import org.schema.game.client.controller.manager.ingame.faction.FactionControlManager;
@@ -24,8 +27,6 @@ import org.schema.game.client.data.GameClientState;
 import org.schema.game.client.view.gui.PlayerPanel;
 import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;
 import org.schema.game.common.data.player.faction.Faction;
-import org.schema.game.common.data.player.faction.FactionRelation;
-import org.schema.game.common.data.world.SimpleTransformableSendableObject;
 import org.schema.game.server.data.GameServerState;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -57,6 +58,7 @@ public class BetterFactions extends StarMod {
     private HashMap<String, Alliance> factionAlliances;
     private HashMap<Faction, Image> factionLogos;
     private HashMap<Alliance, Image> allianceLogos;
+    private ArrayList<FactionWar> wars;
     public Image defaultLogo;
 
     //Config
@@ -81,7 +83,7 @@ public class BetterFactions extends StarMod {
         inst = this;
         setModName("BetterFactions");
         setModAuthor("Dovtech");
-        setModVersion("0.1.15");
+        setModVersion("0.1.16");
         setModDescription("Improves faction interaction and diplomacy.");
 
         resourcesPath = this.getClass().getResource("").getPath();
@@ -99,6 +101,7 @@ public class BetterFactions extends StarMod {
         imageFolder = new File("moddata/BetterFactions/images");
         if(!(imageFolder.exists())) imageFolder.mkdir();
 
+        wars = new ArrayList<>();
         factionLogos = new HashMap<>();
         allianceLogos = new HashMap<>();
 
@@ -134,25 +137,54 @@ public class BetterFactions extends StarMod {
     }
 
     private void registerListeners() {
+        StarLoader.registerListener(PlayerJoinFactionEvent.class, new Listener<PlayerJoinFactionEvent>() {
+            @Override
+            public void onEvent(PlayerJoinFactionEvent playerJoinFactionEvent) {
+                PlayerPanel playerPanel = GameClientState.instance.getWorldDrawer().getGuiDrawer().getPlayerPanel();
+                if(playerPanel != null && playerPanel.isActive()) {
+                    try {
+                        Field factionPanelField = PlayerPanel.class.getDeclaredField("factionPanelNew");
+                        factionPanelField.setAccessible(true);
+                        FactionPanelNew factionPanelNew = (FactionPanelNew) factionPanelField.get(playerPanel);
+                        if(factionPanelNew instanceof NoFactionPanel) {
+                            GameClientState state = playerPanel.getState();
+                            factionPanelField.set(playerPanel, new NewFactionPanel(state));
+                            if(debugMode) DebugFile.log("[DEBUG]: Updated Faction Panel");
+                        }
+                    } catch(NoSuchFieldException | IllegalAccessException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        });
+
 
         StarLoader.registerListener(ControlManagerActivateEvent.class, new Listener<ControlManagerActivateEvent>() {
             @Override
             public void onEvent(ControlManagerActivateEvent event) {
-
                 if(event.isActive()) {
-                    //NewFactionPanel
                     PlayerPanel playerPanel = GameClientState.instance.getWorldDrawer().getGuiDrawer().getPlayerPanel();
-                    try {
-                        Field playerPanelField = PlayerPanel.class.getDeclaredField("factionPanelNew");
-                        playerPanelField.setAccessible(true);
-                        FactionPanelNew factionPanelNew = (FactionPanelNew) playerPanelField.get(playerPanel);
-                        if(!(factionPanelNew instanceof NewFactionPanel)) {
-                            GameClientState state = playerPanel.getState();
-                            playerPanelField.set(playerPanel, new NewFactionPanel(state));
-                            if(debugMode) DebugFile.log("[DEBUG]: Swapped out FactionPanelNew", getMod());
+                    if(playerPanel != null && playerPanel.isActive()) {
+                        try {
+                            Field playerPanelField = PlayerPanel.class.getDeclaredField("factionPanelNew");
+                            playerPanelField.setAccessible(true);
+                            FactionPanelNew factionPanelNew = (FactionPanelNew) playerPanelField.get(playerPanel);
+
+                            if (GameClientState.instance.getFaction() != null) {
+                                if (!(factionPanelNew instanceof NewFactionPanel)) {
+                                    GameClientState state = playerPanel.getState();
+                                    playerPanelField.set(playerPanel, new NewFactionPanel(state));
+                                    if (debugMode) DebugFile.log("[DEBUG]: Swapped out Faction Panel", getMod());
+                                }
+                            } else {
+                                if (!(factionPanelNew instanceof NoFactionPanel)) {
+                                    GameClientState state = playerPanel.getState();
+                                    playerPanelField.set(playerPanel, new NoFactionPanel(state));
+                                }
+                            }
+                        } catch (NoSuchFieldException | IllegalAccessException ex) {
+                            ex.printStackTrace();
                         }
-                    } catch (NoSuchFieldException | IllegalAccessException ex) {
-                        ex.printStackTrace();
                     }
                 }
 
@@ -177,6 +209,7 @@ public class BetterFactions extends StarMod {
             }
         });
 
+        /*
         StarLoader.registerListener(FactionRelationChangeEvent.class, new Listener<FactionRelationChangeEvent>() {
             @Override
             public void onEvent(FactionRelationChangeEvent event) {
@@ -285,6 +318,7 @@ public class BetterFactions extends StarMod {
                 }
             }
         });
+         */
 
         DebugFile.log("Registered Listeners!", this);
     }
@@ -435,5 +469,19 @@ public class BetterFactions extends StarMod {
 
     public HashMap<Alliance, Image> getAllianceLogos() {
         return allianceLogos;
+    }
+
+    public void testFunction() {
+        //Testing Purposes only
+        Alliance alliance = new Alliance("Dual Monarchy", AllianceGovernmentType.CONFEDERATION);
+        alliance.getMembers().add(GameClientState.instance.getFaction());
+        alliance.setAllianceID("0");
+        this.getFactionAlliances().put(alliance.getAllianceID(), alliance);
+
+        WarParticipant attacker = new WarParticipant(GameClientState.instance.getFaction(), new WarGoal(GameClientState.instance.getFaction(), GameClientState.instance.getFactionManager().getFaction(-2), WarGoal.WarGoalType.DEFEAT));
+        WarParticipant defender = new WarParticipant(GameClientState.instance.getFactionManager().getFaction(-2), new WarGoal(GameClientState.instance.getFactionManager().getFaction(-2), GameClientState.instance.getFaction(), WarGoal.WarGoalType.NONE));
+
+        FactionWar holyWar = new FactionWar(attacker, defender);
+        wars.add(holyWar);
     }
 }

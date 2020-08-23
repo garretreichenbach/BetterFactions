@@ -12,6 +12,7 @@ public class Alliance {
     private AllianceGovernmentType governmentType;
     private Image logo;
     private String allianceID;
+    private String description;
 
     public Alliance(String name, AllianceGovernmentType governmentType) {
         this.members = new ArrayList<>();
@@ -19,6 +20,25 @@ public class Alliance {
         this.governmentType = governmentType;
         this.logo = null;
         this.allianceID = null;
+        this.description = getDefaultDescription();
+    }
+
+    private String getDefaultDescription() {
+        switch(governmentType) {
+            case EMPIRE:
+                return "An empire of states under a singular rule.";
+            case FEDERATION:
+                return "A collection of states working together to protect themselves and their interests.";
+            case CONFEDERATION:
+                return "A collection of states with a centralized government made up of officials from each member faction.";
+            case MEGA_CORPORATION:
+                return "A collection of states run by a large corporate conglomerate with major business ties across the galaxy.";
+            case DEFENSIVE_ALLIANCE:
+                return "A group of factions ready to defend themselves and each other in a defensive conflict.";
+            case MILITARY_PACT:
+                return "A group of factions ready to support each other in any sort of offensive or defensive conflict.";
+        }
+        return "No Description";
     }
 
     public ArrayList<Faction> getMembers() {
@@ -57,7 +77,15 @@ public class Alliance {
         return allianceID;
     }
 
-    public void setAllianceID(String pactID) {
-        this.allianceID = pactID;
+    public void setAllianceID(String allianceID) {
+        this.allianceID = allianceID;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }

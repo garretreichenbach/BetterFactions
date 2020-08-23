@@ -8,13 +8,13 @@ import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.input.InputState;
 
-public class NewFactionPanel extends FactionPanelNew {
+public class NoFactionPanel extends FactionPanelNew {
 
     private InputState inputState;
     private GUIContentPane allianceTab;
     private GUIContentPane warsTab;
 
-    public NewFactionPanel(InputState inputState) {
+    public NoFactionPanel(InputState inputState) {
         super(inputState);
         this.inputState = inputState;
     }
@@ -26,19 +26,19 @@ public class NewFactionPanel extends FactionPanelNew {
         //BetterFactions.getInstance().testFunction();
 
         modTabs();
-        createAllianceTab();
+        //createAllianceTab();
         //createWarsTab();
     }
 
     private void modTabs() {
         for(GUIContentPane tab : factionPanel.getTabs()) {
-           if(tab.getTabName().toString().contains("NPC DIPLOMACY")) {
+            if(tab.getTabName().toString().contains("NPC DIPLOMACY")) {
                 tab.setName("FACTION DIPLOMACY");
                 tab.setTabName("FACTION DIPLOMACY");
             } else if(tab.getTabName().toString().contains("LIST")) {
-               tab.setName("FACTION LIST");
-               tab.setTabName("FACTION LIST");
-           }
+                tab.setName("FACTION LIST");
+                tab.setTabName("FACTION LIST");
+            }
         }
     }
 

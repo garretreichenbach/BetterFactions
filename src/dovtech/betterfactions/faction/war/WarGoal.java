@@ -11,10 +11,10 @@ public class WarGoal {
     private WarGoalType warGoalType;
     private ArrayList<Object> demands;
 
-    public WarGoal(Faction faction, Faction target, WarGoalType warGoalType, Object[] demands) {
+    public WarGoal(Faction faction, Faction target, WarGoalType warGoalType) {
         this.faction = faction;
         this.target = target;
-        this.demands = new ArrayList<>(Arrays.asList(demands));
+        //this.demands = new ArrayList<>(Arrays.asList(demands));
         this.warGoalType = warGoalType;
     }
 
@@ -49,6 +49,7 @@ public class WarGoal {
         RIVALRY,
         CREDITS,
         RESOURCES,
-        DIPLOMATIC_INCIDENT
+        DIPLOMATIC_INCIDENT,
+        NONE
     }
 }

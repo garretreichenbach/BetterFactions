@@ -22,7 +22,7 @@ public class Coalition {
         coalitionMembers = new ArrayList<>();
         coalitionMembers.add(coalitionLeader);
         for(WarParticipant warParticipant : war.getAttackers()) {
-            WarGoal coalitionGoal = new WarGoal(warParticipant.getFaction(), this.coalitionTarget, WarGoal.WarGoalType.COALITION, new Object[] {});
+            WarGoal coalitionGoal = new WarGoal(warParticipant.getFaction(), this.coalitionTarget, WarGoal.WarGoalType.COALITION);
             warParticipant.addWarGoal(coalitionGoal);
         }
     }

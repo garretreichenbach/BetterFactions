@@ -5,7 +5,8 @@ public enum AllianceGovernmentType {
     CONFEDERATION("Confederation"),
     DEFENSIVE_ALLIANCE("Defensive Alliance"),
     MEGA_CORPORATION("Mega Corporation"),
-    EMPIRE("Empire");
+    EMPIRE("Empire"),
+    MILITARY_PACT("Military Pact");
 
     public String displayName;
 

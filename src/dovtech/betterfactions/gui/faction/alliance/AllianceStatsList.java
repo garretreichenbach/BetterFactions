@@ -6,7 +6,14 @@ import org.schema.schine.input.InputState;
 
 public class AllianceStatsList extends GUIElementList {
 
+    private Alliance alliance;
+
     public AllianceStatsList(InputState inputState, Alliance alliance) {
         super(inputState);
+        this.alliance = alliance;
+    }
+
+    public Alliance getAlliance() {
+        return alliance;
     }
 }

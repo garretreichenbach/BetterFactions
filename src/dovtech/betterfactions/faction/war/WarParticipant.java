@@ -2,6 +2,7 @@ package dovtech.betterfactions.faction.war;
 
 import org.schema.game.common.data.player.faction.Faction;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class WarParticipant {
 
@@ -10,9 +11,10 @@ public class WarParticipant {
     private double warExhaustion;
     private double warParticipation;
 
-    public WarParticipant(Faction faction, ArrayList<WarGoal> warGoals) {
+    public WarParticipant(Faction faction, WarGoal... warGoals) {
         this.faction = faction;
-        this.warGoals = warGoals;
+        this.warGoals = new ArrayList<>();
+        this.warGoals.addAll(Arrays.asList(warGoals));
         warExhaustion = 0.0;
         warParticipation = 0.0;
     }

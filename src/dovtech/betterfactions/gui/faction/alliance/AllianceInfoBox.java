@@ -18,9 +18,12 @@ public class AllianceInfoBox extends GUIElement {
     private boolean init;
     private float width;
     private float height;
+    private Alliance alliance;
 
-    public AllianceInfoBox(InputState var1) {
-        super(var1);
+    public AllianceInfoBox(InputState inputState, float width, float height) {
+        super(inputState);
+        this.width = width;
+        this.height = height;
     }
 
     @Override
@@ -33,38 +36,39 @@ public class AllianceInfoBox extends GUIElement {
         return height;
     }
 
-    public void setWidth(int width) {
-        this.width = width;
-    }
-
-
-    public void setHeight(int height) {
-        this.height = height;
-    }
-
     @Override
     public void cleanUp() {
     }
 
     @Override
     public void draw() {
-        assert this.init;
-        GlUtil.glPushMatrix();
+        if(!init) this.onInit();
 
+        if(alliance != null) {
+            GlUtil.glPushMatrix();
+            memberList.draw();
+            memberList.drawAttached();
+            description.draw();
+            description.drawAttached();
+            //allianceLogo.draw();
+            GlUtil.glPopMatrix();
 
-
-        GlUtil.glPopMatrix();
+        }
     }
 
     @Override
     public void onInit() {
-        Alliance alliance = BetterFactions.getInstance().getFactionAlliance(GameClientState.instance.getFaction());
-        allianceLogo = BetterFactions.getInstance().defaultLogo;
+        alliance = BetterFactions.getInstance().getFactionAlliance(GameClientState.instance.getFaction());
+        //allianceLogo = BetterFactions.getInstance().defaultLogo;
         if(alliance != null) {
-            allianceLogo = BetterFactions.getInstance().getAllianceLogos().get(alliance);
+            //allianceLogo = BetterFactions.getInstance().getAllianceLogos().get(alliance);
             allianceStats = new AllianceStatsList(getState(), alliance);
+            allianceStats.onInit();
             memberList = new AllianceMemberList(getState(), 150, 70, this, alliance);
             memberList.onInit();
+            description = new GUITextOverlay(15, 15, getState());
+            description.setTextSimple(alliance.getDescription());
+            description.onInit();
         }
 
         this.init = true;
