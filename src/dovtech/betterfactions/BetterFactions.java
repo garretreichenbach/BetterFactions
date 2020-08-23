@@ -4,12 +4,10 @@ import api.DebugFile;
 import api.common.GameClient;
 import api.config.BlockConfig;
 import api.listener.Listener;
-import api.listener.events.gui.ControlManagerActivateEvent;
-import api.listener.events.player.PlayerJoinFactionEvent;
+import api.listener.events.gui.MainWindowTabAddEvent;
 import api.mod.StarLoader;
 import api.mod.StarMod;
 import api.mod.config.FileConfiguration;
-import dovtech.betterfactions.controller.NewFactionControlManager;
 import dovtech.betterfactions.faction.FactionStats;
 import dovtech.betterfactions.faction.diplo.alliance.Alliance;
 import dovtech.betterfactions.faction.diplo.alliance.coalition.Coalition;
@@ -18,21 +16,20 @@ import dovtech.betterfactions.faction.government.AllianceGovernmentType;
 import dovtech.betterfactions.faction.war.FactionWar;
 import dovtech.betterfactions.faction.war.WarGoal;
 import dovtech.betterfactions.faction.war.WarParticipant;
-import dovtech.betterfactions.gui.faction.NewFactionPanel;
-import dovtech.betterfactions.gui.faction.NoFactionPanel;
+import dovtech.betterfactions.gui.faction.alliance.AllianceInfoBox;
+import dovtech.betterfactions.gui.faction.alliance.AllianceResourcesBox;
+import dovtech.betterfactions.gui.faction.alliance.AlliancesScrollableList;
 import org.newdawn.slick.Image;
-import org.schema.game.client.controller.manager.ingame.PlayerGameControlManager;
-import org.schema.game.client.controller.manager.ingame.faction.FactionControlManager;
 import org.schema.game.client.data.GameClientState;
-import org.schema.game.client.view.gui.PlayerPanel;
-import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.server.data.GameServerState;
+import org.schema.schine.common.language.Lng;
+import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.*;
 
 public class BetterFactions extends StarMod {
@@ -83,7 +80,7 @@ public class BetterFactions extends StarMod {
         inst = this;
         setModName("BetterFactions");
         setModAuthor("Dovtech");
-        setModVersion("0.1.16");
+        setModVersion("0.1.17");
         setModDescription("Improves faction interaction and diplomacy.");
 
         resourcesPath = this.getClass().getResource("").getPath();
@@ -137,28 +134,43 @@ public class BetterFactions extends StarMod {
     }
 
     private void registerListeners() {
-        StarLoader.registerListener(PlayerJoinFactionEvent.class, new Listener<PlayerJoinFactionEvent>() {
+
+
+        StarLoader.registerListener(MainWindowTabAddEvent.class, new Listener<MainWindowTabAddEvent>() {
             @Override
-            public void onEvent(PlayerJoinFactionEvent playerJoinFactionEvent) {
-                PlayerPanel playerPanel = GameClientState.instance.getWorldDrawer().getGuiDrawer().getPlayerPanel();
-                if(playerPanel != null && playerPanel.isActive()) {
-                    try {
-                        Field factionPanelField = PlayerPanel.class.getDeclaredField("factionPanelNew");
-                        factionPanelField.setAccessible(true);
-                        FactionPanelNew factionPanelNew = (FactionPanelNew) factionPanelField.get(playerPanel);
-                        if(factionPanelNew instanceof NoFactionPanel) {
-                            GameClientState state = playerPanel.getState();
-                            factionPanelField.set(playerPanel, new NewFactionPanel(state));
-                            if(debugMode) DebugFile.log("[DEBUG]: Updated Faction Panel");
-                        }
-                    } catch(NoSuchFieldException | IllegalAccessException ex) {
-                        ex.printStackTrace();
-                    }
+            public void onEvent(MainWindowTabAddEvent event) {
+                if(event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_FACTION_NEWFACTION_FACTIONPANELNEW_9)) {
+                    GUIContentPane allianceTab = event.createTab("ALLIANCE");
+                    allianceTab.setName("ALLIANCE");
+                    allianceTab.setTextBoxHeightLast(300);
+                    allianceTab.addDivider(300);
+                    allianceTab.addNewTextBox(0, 70);
+                    allianceTab.addNewTextBox(1, 70);
+
+                    AllianceInfoBox allianceInfoBox = new AllianceInfoBox(allianceTab.getState(), 130, 70);
+                    allianceTab.getContent(0, 0).attach(allianceInfoBox);
+
+                    AllianceResourcesBox allianceResourcesBox = new AllianceResourcesBox(allianceTab.getState());
+                    allianceTab.getContent(1, 1).attach(allianceResourcesBox);
+
+                    AlliancesScrollableList alliancesScrollableList = new AlliancesScrollableList(allianceTab.getState(), 150, 100, allianceTab.getContent(1, 0));
+                    alliancesScrollableList.onInit();
+                    allianceTab.getContent(1, 0).attach(alliancesScrollableList);
+
+                    GUIContentPane warsTab = event.createTab("WARS");
+                    warsTab.setName("WARS");
+                    warsTab.setTextBoxHeightLast(300);
+
+                } else if(event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_FACTION_NEWFACTION_FACTIONPANELNEW_2)) {
+                    event.getPane().setName("FACTION DIPLOMACY");
+                } else if(event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_FACTION_NEWFACTION_FACTIONPANELNEW_9)) {
+                    event.getPane().setName("FACTION LIST");
                 }
             }
         });
 
 
+        /*
         StarLoader.registerListener(ControlManagerActivateEvent.class, new Listener<ControlManagerActivateEvent>() {
             @Override
             public void onEvent(ControlManagerActivateEvent event) {
@@ -208,6 +220,7 @@ public class BetterFactions extends StarMod {
                 }
             }
         });
+         */
 
         /*
         StarLoader.registerListener(FactionRelationChangeEvent.class, new Listener<FactionRelationChangeEvent>() {
