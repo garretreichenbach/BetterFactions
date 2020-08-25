@@ -11,6 +11,7 @@ import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
+
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Set;
@@ -59,12 +60,17 @@ public class ContractsScrollableList extends ScrollableTableList<Contract> imple
 
         this.addDropdownFilter(new GUIListFilterDropdown<Contract, Contract.ContractType>(Contract.ContractType.values()) {
             public boolean isOk(Contract.ContractType contractType, Contract contract) {
-                switch(contractType) {
-                    case ALL: return true;
-                    case CARGO_ESCORT: return contract.getContractType().equals(Contract.ContractType.CARGO_ESCORT);
-                    case PRODUCTION: return contract.getContractType().equals(Contract.ContractType.PRODUCTION);
-                    case BOUNTY: return contract.getContractType().equals(Contract.ContractType.BOUNTY);
-                    case MINING: return contract.getContractType().equals(Contract.ContractType.MINING);
+                switch (contractType) {
+                    case ALL:
+                        return true;
+                    case CARGO_ESCORT:
+                        return contract.getContractType().equals(Contract.ContractType.CARGO_ESCORT);
+                    case PRODUCTION:
+                        return contract.getContractType().equals(Contract.ContractType.PRODUCTION);
+                    case BOUNTY:
+                        return contract.getContractType().equals(Contract.ContractType.BOUNTY);
+                    case MINING:
+                        return contract.getContractType().equals(Contract.ContractType.MINING);
                 }
                 return true;
             }
@@ -97,101 +103,99 @@ public class ContractsScrollableList extends ScrollableTableList<Contract> imple
 
     @Override
     public void updateListEntries(GUIElementList guiElementList, Set<Contract> set) {
-        if(guiElementList.size() == 0) {
-            for(Contract contract : set) {
-                if (!(set.contains(contract))) {
-                    GUITextOverlayTable nameTextElement;
-                    (nameTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(contract.getName());
-                    GUIClippedRow nameRowElement;
-                    (nameRowElement = new GUIClippedRow(this.getState())).attach(nameTextElement);
+        for (Contract contract : set) {
+            if (!(set.contains(contract))) {
+                GUITextOverlayTable nameTextElement;
+                (nameTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(contract.getName());
+                GUIClippedRow nameRowElement;
+                (nameRowElement = new GUIClippedRow(this.getState())).attach(nameTextElement);
 
-                    GUITextOverlayTable contractTypeTextElement;
-                    (contractTypeTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(contract.getContractType().displayName);
-                    GUIClippedRow contractTypeRowElement;
-                    (contractTypeRowElement = new GUIClippedRow(this.getState())).attach(contractTypeTextElement);
+                GUITextOverlayTable contractTypeTextElement;
+                (contractTypeTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(contract.getContractType().displayName);
+                GUIClippedRow contractTypeRowElement;
+                (contractTypeRowElement = new GUIClippedRow(this.getState())).attach(contractTypeTextElement);
 
-                    GUITextOverlayTable contractorTextElement;
-                    (contractorTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(String.valueOf(contract.getContractor().getName()));
-                    GUIClippedRow contractorRowElement;
-                    (contractorRowElement = new GUIClippedRow(this.getState())).attach(contractorTextElement);
+                GUITextOverlayTable contractorTextElement;
+                (contractorTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(String.valueOf(contract.getContractor().getName()));
+                GUIClippedRow contractorRowElement;
+                (contractorRowElement = new GUIClippedRow(this.getState())).attach(contractorTextElement);
 
-                    GUITextOverlayTable rewardTextElement;
-                    (rewardTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(String.valueOf(contract.getReward()));
-                    GUIClippedRow rewardRowElement;
-                    (rewardRowElement = new GUIClippedRow(this.getState())).attach(rewardTextElement);
+                GUITextOverlayTable rewardTextElement;
+                (rewardTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(String.valueOf(contract.getReward()));
+                GUIClippedRow rewardRowElement;
+                (rewardRowElement = new GUIClippedRow(this.getState())).attach(rewardTextElement);
 
-                    ContractListRow contractListRow;
-                    (contractListRow = new ContractListRow(this.getState(), contract, nameRowElement, contractTypeRowElement, contractorRowElement, rewardRowElement)).onInit();
+                ContractListRow contractListRow;
+                (contractListRow = new ContractListRow(this.getState(), contract, nameRowElement, contractTypeRowElement, contractorRowElement, rewardRowElement)).onInit();
 
-                    GUIAncor buttonPane = new GUIAncor(getState(), 100, 32);
-                    int buttonDist = 8;
-                    GUITextButton claimContractButton = new GUITextButton(getState(), 100, 24, GUITextButton.ColorPalette.OK, "CLAIM CONTRACT", new GUICallback() {
-                        @Override
-                        public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                            if (mouseEvent.pressedLeftMouse()) {
+                GUIAncor buttonPane = new GUIAncor(getState(), 100, 32);
+                int buttonDist = 8;
+                GUITextButton claimContractButton = new GUITextButton(getState(), 100, 24, GUITextButton.ColorPalette.OK, "CLAIM CONTRACT", new GUICallback() {
+                    @Override
+                    public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                        if (mouseEvent.pressedLeftMouse()) {
 
-                            }
                         }
-
-                        @Override
-                        public boolean isOccluded() {
-                            return !isActive();
-                        }
-                    });
-
-                    GUITextButton viewClaimantsButton = new GUITextButton(getState(), 100, 24, GUITextButton.ColorPalette.TUTORIAL, "VIEW CLAIMANTS", new GUICallback() {
-                        @Override
-                        public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                            if (mouseEvent.pressedLeftMouse()) {
-
-                            }
-                        }
-
-                        @Override
-                        public boolean isOccluded() {
-                            return !isActive();
-                        }
-                    });
-
-                    boolean claimed = true;
-
-                    GUITextButton.ColorPalette colorPalette = GUITextButton.ColorPalette.CANCEL;
-                    if (!(contract.getClaimants().contains(new BetterPlayer(new StarPlayer(GameClient.getClientPlayerState()))))) {
-                        colorPalette = GUITextButton.ColorPalette.TRANSPARENT;
-                        claimed = false;
                     }
-                    final boolean c = claimed;
 
-                    GUITextButton cancelClaimButton = new GUITextButton(getState(), 100, 24, colorPalette, "CANCEL CLAIM", new GUICallback() {
-                        @Override
-                        public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                            if (mouseEvent.pressedLeftMouse() && c) {
+                    @Override
+                    public boolean isOccluded() {
+                        return !isActive();
+                    }
+                });
 
-                            }
+                GUITextButton viewClaimantsButton = new GUITextButton(getState(), 100, 24, GUITextButton.ColorPalette.TUTORIAL, "VIEW CLAIMANTS", new GUICallback() {
+                    @Override
+                    public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                        if (mouseEvent.pressedLeftMouse()) {
+
                         }
+                    }
 
-                        @Override
-                        public boolean isOccluded() {
-                            return !isActive();
-                        }
-                    });
+                    @Override
+                    public boolean isOccluded() {
+                        return !isActive();
+                    }
+                });
 
-                    buttonPane.attach(claimContractButton);
-                    buttonPane.attach(viewClaimantsButton);
-                    buttonPane.attach(cancelClaimButton);
+                boolean claimed = true;
 
-                    contractListRow.expanded = new GUIElementList(getState());
-
-                    claimContractButton.setPos(0, 0, 0);
-                    viewClaimantsButton.setPos(claimContractButton.getPos().x + buttonDist, 0, 0);
-                    cancelClaimButton.setPos(viewClaimantsButton.getPos().x + buttonDist, 0, 0);
-                    buttonPane.setPos(contractListRow.expanded.getPos());
-                    contractListRow.expanded.add(new GUIListElement(buttonPane, buttonPane, getState()));
-                    contractListRow.expanded.attach(buttonPane);
-
-                    contractListRow.onInit();
-                    guiElementList.addWithoutUpdate(contractListRow);
+                GUITextButton.ColorPalette colorPalette = GUITextButton.ColorPalette.CANCEL;
+                if (!(contract.getClaimants().contains(new BetterPlayer(new StarPlayer(GameClient.getClientPlayerState()))))) {
+                    colorPalette = GUITextButton.ColorPalette.TRANSPARENT;
+                    claimed = false;
                 }
+                final boolean c = claimed;
+
+                GUITextButton cancelClaimButton = new GUITextButton(getState(), 100, 24, colorPalette, "CANCEL CLAIM", new GUICallback() {
+                    @Override
+                    public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                        if (mouseEvent.pressedLeftMouse() && c) {
+
+                        }
+                    }
+
+                    @Override
+                    public boolean isOccluded() {
+                        return !isActive();
+                    }
+                });
+
+                buttonPane.attach(claimContractButton);
+                buttonPane.attach(viewClaimantsButton);
+                buttonPane.attach(cancelClaimButton);
+
+                contractListRow.expanded = new GUIElementList(getState());
+
+                claimContractButton.setPos(0, 0, 0);
+                viewClaimantsButton.setPos(claimContractButton.getPos().x + buttonDist, 0, 0);
+                cancelClaimButton.setPos(viewClaimantsButton.getPos().x + buttonDist, 0, 0);
+                buttonPane.setPos(contractListRow.expanded.getPos());
+                contractListRow.expanded.add(new GUIListElement(buttonPane, buttonPane, getState()));
+                contractListRow.expanded.attach(buttonPane);
+
+                contractListRow.onInit();
+                guiElementList.addWithoutUpdate(contractListRow);
             }
         }
         guiElementList.updateDim();
