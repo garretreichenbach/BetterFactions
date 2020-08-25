@@ -96,7 +96,7 @@ public class BetterFactions extends StarMod {
         inst = this;
         setModName("BetterFactions");
         setModAuthor("Dovtech");
-        setModVersion("0.1.19");
+        setModVersion("0.1.20");
         setModDescription("Improves faction interaction and diplomacy.");
 
         resourcesPath = this.getClass().getResource("").getPath();

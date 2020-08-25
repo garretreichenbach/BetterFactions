@@ -1,7 +1,12 @@
 package dovtech.betterfactions.contracts;
 
+import com.bulletphysics.$Stack;
 import dovtech.betterfactions.contracts.target.ContractTarget;
 import dovtech.betterfactions.faction.BetterFaction;
+import dovtech.betterfactions.faction.BetterPlayer;
+
+import java.util.ArrayList;
+import java.util.UUID;
 
 public class Contract {
 
@@ -10,6 +15,8 @@ public class Contract {
     private ContractType contractType;
     private int reward;
     private ContractTarget target;
+    private ArrayList<BetterPlayer> claimants;
+    private String uid;
 
     public Contract(BetterFaction contractor, String name, ContractType contractType, int reward, ContractTarget target) {
         this.name = name;
@@ -17,6 +24,12 @@ public class Contract {
         this.contractType = contractType;
         this.reward = reward;
         this.target = target;
+        this.claimants = new ArrayList<>();
+        this.uid = UUID.randomUUID().toString();
+    }
+
+    public ArrayList<BetterPlayer> getClaimants() {
+        return claimants;
     }
 
     public String getName() {
@@ -37,6 +50,10 @@ public class Contract {
 
     public ContractTarget getTarget() {
         return target;
+    }
+
+    public String getUid() {
+        return uid;
     }
 
     public enum ContractType {
