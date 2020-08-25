@@ -4,12 +4,18 @@ import api.DebugFile;
 import api.common.GameClient;
 import api.common.GameServer;
 import api.config.BlockConfig;
+import api.element.block.Blocks;
+import api.element.inventory.ItemStack;
+import api.entity.StarPlayer;
 import api.listener.Listener;
 import api.listener.events.gui.MainWindowTabAddEvent;
 import api.mod.StarLoader;
 import api.mod.StarMod;
 import api.mod.config.FileConfiguration;
+import dovtech.betterfactions.contracts.Contract;
+import dovtech.betterfactions.contracts.target.*;
 import dovtech.betterfactions.faction.BetterFaction;
+import dovtech.betterfactions.faction.BetterPlayer;
 import dovtech.betterfactions.faction.FactionStats;
 import dovtech.betterfactions.faction.diplo.alliance.Alliance;
 import dovtech.betterfactions.faction.diplo.alliance.coalition.Coalition;
@@ -18,6 +24,7 @@ import dovtech.betterfactions.faction.government.AllianceGovernmentType;
 import dovtech.betterfactions.faction.war.FactionWar;
 import dovtech.betterfactions.faction.war.WarGoal;
 import dovtech.betterfactions.faction.war.WarParticipant;
+import dovtech.betterfactions.gui.contracts.ContractsScrollableList;
 import dovtech.betterfactions.gui.faction.alliance.*;
 import org.newdawn.slick.Image;
 import org.schema.game.client.controller.PlayerGameTextInput;
@@ -29,11 +36,11 @@ import org.schema.schine.common.TextInput;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.core.settings.PrefixNotFoundException;
-import org.schema.schine.graphicsengine.forms.gui.GUICallback;
-import org.schema.schine.graphicsengine.forms.gui.GUIElement;
-import org.schema.schine.graphicsengine.forms.gui.GUITextButton;
-import org.schema.schine.graphicsengine.forms.gui.GUITextOverlay;
+import org.schema.schine.graphicsengine.forms.Sprite;
+import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
+import org.schema.schine.graphicsengine.texture.Texture;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
@@ -63,6 +70,7 @@ public class BetterFactions extends StarMod {
     private HashMap<String, Alliance> factionAlliances;
     private HashMap<BetterFaction, Image> factionLogos;
     private HashMap<Alliance, Image> allianceLogos;
+    private ArrayList<Contract> contracts;
     private ArrayList<FactionWar> wars;
     public Image defaultLogo;
 
@@ -88,7 +96,7 @@ public class BetterFactions extends StarMod {
         inst = this;
         setModName("BetterFactions");
         setModAuthor("Dovtech");
-        setModVersion("0.1.18");
+        setModVersion("0.1.19");
         setModDescription("Improves faction interaction and diplomacy.");
 
         resourcesPath = this.getClass().getResource("").getPath();
@@ -121,7 +129,6 @@ public class BetterFactions extends StarMod {
                 e.printStackTrace();
             }
         }
-
         registerListeners();
     }
 
@@ -134,6 +141,7 @@ public class BetterFactions extends StarMod {
         this.coalitions = new HashMap<>();
         this.relations = new HashMap<>();
         this.factionAlliances = new HashMap<>();
+        this.contracts = new ArrayList<>();
     }
 
     @Override
@@ -147,7 +155,34 @@ public class BetterFactions extends StarMod {
         StarLoader.registerListener(MainWindowTabAddEvent.class, new Listener<MainWindowTabAddEvent>() {
             @Override
             public void onEvent(MainWindowTabAddEvent event) {
-                if(event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_FACTION_NEWFACTION_FACTIONPANELNEW_9)) {
+                if(event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_SHOP_SHOPNEW_SHOPPANELNEW_2)) {
+                    testFunction();
+                    GUIContentPane contractsTab = event.createTab("CONTRACTS");
+                    contractsTab.setName("CONTRACTS");
+                    contractsTab.setTextBoxHeightLast(300);
+
+                    contractsTab.addDivider(300);
+                    /* Faction/Contractor Logo
+                    contractsTab.addNewTextBox(0, 150);
+                    Sprite contractorLogo = new Sprite(new Texture(0, 0, resourcesPath + "/gui/logo/trading-guild-logo.png")); //Default Contractor
+                    GUIOverlay logoOverlay = new GUIOverlay();
+                    contractsTab.getContent(0, 0).attach(logoOverlay);
+                     */
+
+                    GUITextOverlay contractorDescOverlay = new GUITextOverlay(250, 300, contractsTab.getState());
+                    contractorDescOverlay.onInit();
+                    contractorDescOverlay.setTextSimple("Placeholder Text");
+                    contractsTab.getContent(0, 0).attach(contractorDescOverlay);
+
+                    contractsTab.addNewTextBox(0, 85);
+
+                    ContractsScrollableList contractsScrollableList = new ContractsScrollableList(contractsTab.getState(), 500, 300, contractsTab.getContent(1, 0));
+                    contractsScrollableList.onInit();
+                    contractsTab.getContent(1, 0).attach(contractsScrollableList);
+
+
+
+                } else if(event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_FACTION_NEWFACTION_FACTIONPANELNEW_9)) {
                     final GUIContentPane allianceTab = event.createTab("ALLIANCE");
                     allianceTab.setName("ALLIANCE");
                     allianceTab.setTextBoxHeightLast(300);
@@ -525,6 +560,10 @@ public class BetterFactions extends StarMod {
         return false;
     }
 
+    public ArrayList<Contract> getContracts() {
+        return contracts;
+    }
+
     public HashMap<BetterFaction, Image> getFactionLogos() {
         return factionLogos;
     }
@@ -535,6 +574,69 @@ public class BetterFactions extends StarMod {
 
     public void testFunction() {
         //Testing Purposes only
+
+        Random random = new Random();
+        for(int i = 0; i < 10; i ++) {
+            Contract.ContractType randomContractType = Contract.ContractType.BOUNTY;
+            int randomTypeInt = random.nextInt(5 - 1) + 1;
+            switch(randomTypeInt) {
+                case 1:
+                    randomContractType = Contract.ContractType.BOUNTY;
+                    break;
+                case 2:
+                    randomContractType = Contract.ContractType.MINING;
+                    break;
+                case 3:
+                    randomContractType = Contract.ContractType.PRODUCTION;
+                    break;
+                case 4:
+                    randomContractType = Contract.ContractType.CARGO_ESCORT;
+                    break;
+            }
+            int randomReward = (random.nextInt(1000 - 100) + 100) * 1000;
+
+            ContractTarget contractTarget = new PlayerTarget();
+            contractTarget.setTarget(new BetterPlayer(new StarPlayer(GameClient.getClientPlayerState())));
+            String contractName = "";
+            switch(randomContractType) {
+                case MINING:
+                    contractTarget = new MiningTarget();
+                    ItemStack miningTargetStack = new ItemStack(Blocks.THRENS_ORE_RAW.getId());
+                    int randomAmount = (random.nextInt(300 - 1) + 1) * 10;
+                    miningTargetStack.setAmount(randomAmount);
+                    contractTarget.setTarget(miningTargetStack);
+                    contractName = "Mine x" + miningTargetStack.getAmount() + " " + miningTargetStack.getName();
+                    break;
+                case BOUNTY:
+                    contractTarget = new PlayerTarget();
+                    contractTarget.setTarget(new BetterPlayer(new StarPlayer(GameClient.getClientPlayerState())));
+                    contractName = "Kill " + GameClient.getClientPlayerState().getName();
+                    break;
+                case PRODUCTION:
+                    contractTarget = new ProductionTarget();
+                    ItemStack productionTargetStatck = new ItemStack(Blocks.REACTOR_POWER.getId());
+                    int randomProductionAmount = (random.nextInt(300 - 1) + 1) * 10;
+                    productionTargetStatck.setAmount(randomProductionAmount);
+                    contractTarget.setTarget(productionTargetStatck);
+                    contractName = "Produce x" + randomProductionAmount + " " + productionTargetStatck.getName();
+                    break;
+                case CARGO_ESCORT:
+                    contractTarget = new CargoTarget();
+                    ItemStack cargoTargetStack = new ItemStack(Blocks.REACTOR_POWER.getId());
+                    int randomCargoAmount = (random.nextInt(300 - 1) + 1) * 10;
+                    cargoTargetStack.setAmount(randomCargoAmount);
+                    contractTarget.setTarget(cargoTargetStack);
+                    contractName = "Deliver cargo to (15.15.15)";
+                    break;
+            }
+
+
+
+            Contract randomContract = new Contract(new BetterFaction(GameServer.getServerState().getFactionManager().getFaction(-2)), contractName, randomContractType, randomReward, contractTarget);
+            contracts.add(randomContract);
+        }
+
+        /*
         Alliance alliance = new Alliance("Dual Monarchy", AllianceGovernmentType.CONFEDERATION);
         alliance.getMembers().add(new BetterFaction(GameClient.getClientState().getFaction()));
         alliance.setAllianceID("0");
@@ -545,5 +647,6 @@ public class BetterFactions extends StarMod {
 
         FactionWar holyWar = new FactionWar(attacker, defender);
         wars.add(holyWar);
+         */
     }
 }

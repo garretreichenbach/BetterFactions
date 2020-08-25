@@ -11,11 +11,19 @@ public class BetterPlayer {
         this.internalPlayer = internalPlayer;
     }
 
+    public StarPlayer getInternalPlayer() {
+        return internalPlayer;
+    }
+
     public FactionRank getRank() {
         return rank;
     }
 
     public void setRank(FactionRank rank) {
         this.rank = rank;
+    }
+
+    public String getName() {
+        return internalPlayer.getName();
     }
 }
