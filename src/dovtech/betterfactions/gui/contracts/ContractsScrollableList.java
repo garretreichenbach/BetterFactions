@@ -4,6 +4,7 @@ import api.common.GameClient;
 import api.entity.StarPlayer;
 import dovtech.betterfactions.BetterFactions;
 import dovtech.betterfactions.contracts.Contract;
+import dovtech.betterfactions.faction.BetterFaction;
 import dovtech.betterfactions.faction.BetterPlayer;
 import org.hsqldb.lib.StringComparator;
 import org.schema.common.util.CompareTools;
@@ -103,8 +104,8 @@ public class ContractsScrollableList extends ScrollableTableList<Contract> imple
 
     @Override
     public void updateListEntries(GUIElementList guiElementList, Set<Contract> set) {
-        for (Contract contract : set) {
-            if (!(set.contains(contract))) {
+        for(Contract contract : BetterFactions.getInstance().getContracts()) {
+            if(!(set.contains(contract))) {
                 GUITextOverlayTable nameTextElement;
                 (nameTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(contract.getName());
                 GUIClippedRow nameRowElement;

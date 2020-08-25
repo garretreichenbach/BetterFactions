@@ -1,10 +1,8 @@
 package dovtech.betterfactions.contracts;
 
-import com.bulletphysics.$Stack;
 import dovtech.betterfactions.contracts.target.ContractTarget;
 import dovtech.betterfactions.faction.BetterFaction;
 import dovtech.betterfactions.faction.BetterPlayer;
-
 import java.util.ArrayList;
 import java.util.UUID;
 
