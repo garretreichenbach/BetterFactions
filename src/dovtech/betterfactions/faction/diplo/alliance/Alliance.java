@@ -1,13 +1,14 @@
 package dovtech.betterfactions.faction.diplo.alliance;
 
+import dovtech.betterfactions.faction.BetterFaction;
 import dovtech.betterfactions.faction.government.AllianceGovernmentType;
 import org.newdawn.slick.Image;
-import org.schema.game.common.data.player.faction.Faction;
 import java.util.ArrayList;
+import java.util.UUID;
 
 public class Alliance {
 
-    private ArrayList<Faction> members;
+    private ArrayList<BetterFaction> members;
     private String name;
     private AllianceGovernmentType governmentType;
     private Image logo;
@@ -19,7 +20,7 @@ public class Alliance {
         this.name = name;
         this.governmentType = governmentType;
         this.logo = null;
-        this.allianceID = null;
+        this.allianceID = UUID.randomUUID().toString();
         this.description = getDefaultDescription();
     }
 
@@ -41,11 +42,11 @@ public class Alliance {
         return "No Description";
     }
 
-    public ArrayList<Faction> getMembers() {
+    public ArrayList<BetterFaction> getMembers() {
         return members;
     }
 
-    public void setMembers(ArrayList<Faction> members) {
+    public void setMembers(ArrayList<BetterFaction> members) {
         this.members = members;
     }
 

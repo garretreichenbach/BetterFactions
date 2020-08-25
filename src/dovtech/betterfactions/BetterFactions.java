@@ -2,12 +2,14 @@ package dovtech.betterfactions;
 
 import api.DebugFile;
 import api.common.GameClient;
+import api.common.GameServer;
 import api.config.BlockConfig;
 import api.listener.Listener;
 import api.listener.events.gui.MainWindowTabAddEvent;
 import api.mod.StarLoader;
 import api.mod.StarMod;
 import api.mod.config.FileConfiguration;
+import dovtech.betterfactions.faction.BetterFaction;
 import dovtech.betterfactions.faction.FactionStats;
 import dovtech.betterfactions.faction.diplo.alliance.Alliance;
 import dovtech.betterfactions.faction.diplo.alliance.coalition.Coalition;
@@ -16,16 +18,22 @@ import dovtech.betterfactions.faction.government.AllianceGovernmentType;
 import dovtech.betterfactions.faction.war.FactionWar;
 import dovtech.betterfactions.faction.war.WarGoal;
 import dovtech.betterfactions.faction.war.WarParticipant;
-import dovtech.betterfactions.gui.faction.alliance.AllianceInfoBox;
-import dovtech.betterfactions.gui.faction.alliance.AllianceResourcesBox;
-import dovtech.betterfactions.gui.faction.alliance.AlliancesScrollableList;
+import dovtech.betterfactions.gui.faction.alliance.*;
 import org.newdawn.slick.Image;
+import org.schema.game.client.controller.PlayerGameTextInput;
 import org.schema.game.client.data.GameClientState;
+import org.schema.game.client.view.gui.GUITextInputPanel;
 import org.schema.game.common.data.player.faction.Faction;
-import org.schema.game.server.data.GameServerState;
+import org.schema.schine.common.TextCallback;
+import org.schema.schine.common.TextInput;
 import org.schema.schine.common.language.Lng;
+import org.schema.schine.graphicsengine.core.MouseEvent;
+import org.schema.schine.graphicsengine.core.settings.PrefixNotFoundException;
+import org.schema.schine.graphicsengine.forms.gui.GUICallback;
+import org.schema.schine.graphicsengine.forms.gui.GUIElement;
+import org.schema.schine.graphicsengine.forms.gui.GUITextButton;
+import org.schema.schine.graphicsengine.forms.gui.GUITextOverlay;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
@@ -49,11 +57,11 @@ public class BetterFactions extends StarMod {
     private File factionStatsFolder;
     private File factionAlliancesFolder;
     private File imageFolder;
-    private HashMap<Faction, FactionStats> factionStats;
-    private HashMap<Faction, Coalition> coalitions;
-    private HashMap<Faction, ArrayList<FactionRelations>> relations;
+    private HashMap<BetterFaction, FactionStats> factionStats;
+    private HashMap<BetterFaction, Coalition> coalitions;
+    private HashMap<BetterFaction, ArrayList<FactionRelations>> relations;
     private HashMap<String, Alliance> factionAlliances;
-    private HashMap<Faction, Image> factionLogos;
+    private HashMap<BetterFaction, Image> factionLogos;
     private HashMap<Alliance, Image> allianceLogos;
     private ArrayList<FactionWar> wars;
     public Image defaultLogo;
@@ -80,7 +88,7 @@ public class BetterFactions extends StarMod {
         inst = this;
         setModName("BetterFactions");
         setModAuthor("Dovtech");
-        setModVersion("0.1.17");
+        setModVersion("0.1.18");
         setModDescription("Improves faction interaction and diplomacy.");
 
         resourcesPath = this.getClass().getResource("").getPath();
@@ -140,18 +148,57 @@ public class BetterFactions extends StarMod {
             @Override
             public void onEvent(MainWindowTabAddEvent event) {
                 if(event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_FACTION_NEWFACTION_FACTIONPANELNEW_9)) {
-                    GUIContentPane allianceTab = event.createTab("ALLIANCE");
+                    final GUIContentPane allianceTab = event.createTab("ALLIANCE");
                     allianceTab.setName("ALLIANCE");
                     allianceTab.setTextBoxHeightLast(300);
-                    allianceTab.addDivider(300);
-                    allianceTab.addNewTextBox(0, 70);
-                    allianceTab.addNewTextBox(1, 70);
 
-                    AllianceInfoBox allianceInfoBox = new AllianceInfoBox(allianceTab.getState(), 130, 70);
+                    allianceTab.addDivider(700);
+
+                    allianceTab.addNewTextBox(0, 100);
+
+                    AllianceInfoBox allianceInfoBox = new AllianceInfoBox(allianceTab.getState(), 130, 100);
+                    allianceInfoBox.onInit();
                     allianceTab.getContent(0, 0).attach(allianceInfoBox);
 
-                    AllianceResourcesBox allianceResourcesBox = new AllianceResourcesBox(allianceTab.getState());
-                    allianceTab.getContent(1, 1).attach(allianceResourcesBox);
+                    allianceTab.addNewTextBox(1, 60);
+
+                    if(getFactionAlliance(GameClient.getClientState().getFaction()) != null) {
+                        AllianceFleetsList allianceFleetsList = new AllianceFleetsList(allianceTab.getState(), allianceTab.getContent(0, 1));
+                        allianceFleetsList.onInit();
+                        allianceTab.getContent(0, 1).attach(allianceFleetsList);
+
+                        AllianceNewsBox allianceNewsBox = new AllianceNewsBox(allianceTab.getState(), allianceTab.getContent(1, 1));
+                        allianceTab.getContent(1, 1).attach(allianceNewsBox);
+
+                    } else {
+                        if(GameClient.getClientState().getFaction() != null) {
+                            GUITextButton createAllianceButton = new GUITextButton(allianceTab.getState(), 80, 30, "Create Alliance", new GUICallback() {
+                                @Override
+                                public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                                    if(mouseEvent.pressedLeftMouse()) {
+                                        CreateAlliancePanel createAlliancePanel = new CreateAlliancePanel(allianceTab.getState());
+                                        createAlliancePanel.draw();
+                                    }
+                                }
+
+                                @Override
+                                public boolean isOccluded() {
+                                    return false;
+                                }
+                            });
+                            createAllianceButton.onInit();
+                            allianceTab.getContent(0, 1).attach(createAllianceButton);
+                        } else {
+                            GUITextOverlay noAllianceOverlay = new GUITextOverlay(70, 70, allianceTab.getState());
+                            noAllianceOverlay.setTextSimple("No Alliance");
+                            allianceTab.getContent(0, 1).attach(noAllianceOverlay);
+                        }
+
+                        GUITextOverlay noNewsOverlay = new GUITextOverlay(70, 70, allianceTab.getState());
+                        noNewsOverlay.setTextSimple("No News");
+                        allianceTab.getContent(1, 1).attach(noNewsOverlay);
+                    }
+
 
                     AlliancesScrollableList alliancesScrollableList = new AlliancesScrollableList(allianceTab.getState(), 150, 100, allianceTab.getContent(1, 0));
                     alliancesScrollableList.onInit();
@@ -160,6 +207,7 @@ public class BetterFactions extends StarMod {
                     GUIContentPane warsTab = event.createTab("WARS");
                     warsTab.setName("WARS");
                     warsTab.setTextBoxHeightLast(300);
+                    allianceInfoBox.draw();
 
                 } else if(event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_FACTION_NEWFACTION_FACTIONPANELNEW_2)) {
                     event.getPane().setName("FACTION DIPLOMACY");
@@ -349,7 +397,8 @@ public class BetterFactions extends StarMod {
         if(Objects.requireNonNull(factionStatsFolder.listFiles()).length > 0) {
             for(File factionFile : Objects.requireNonNull(factionStatsFolder.listFiles())) {
                 String factionID = factionFile.getName().substring(0, factionFile.getName().indexOf(".smdat") - 1);
-                Faction faction = GameServerState.instance.getFactionManager().getFaction(Integer.parseInt(factionID));
+                Faction internalFaction = GameServer.getServerState().getFactionManager().getFaction(Integer.parseInt(factionID));
+                BetterFaction faction = new BetterFaction(internalFaction);
                 Scanner scan = new Scanner(factionFile);
                 int[] stats = new int[23];
                 for(int i = 0; i < stats.length; i ++) {
@@ -395,16 +444,16 @@ public class BetterFactions extends StarMod {
         return this.config;
     }
 
-    public Map<Faction, FactionStats> getAllFactionStats() {
+    public Map<BetterFaction, FactionStats> getAllFactionStats() {
         return factionStats;
     }
 
-    public FactionStats getFactionStats(Faction faction) throws IOException {
-        File factionFile = new File(factionStatsFolder.getPath() + "/" + faction.getIdFaction() + ".smdat");
+    public FactionStats getFactionStats(BetterFaction faction) throws IOException {
+        File factionFile = new File(factionStatsFolder.getPath() + "/" + faction.getInternalFaction().getIdFaction() + ".smdat");
         if(!factionFile.exists()) {
             factionFile.createNewFile();
             int[] stats = new int[] {
-                    faction.getIdFaction(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, faction.getFriends().size() - 1, faction.getEnemies().size(), 0, 0, 0
+                    faction.getInternalFaction().getIdFaction(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, faction.getAllies().size() - 1, faction.getEnemies().size(), 0, 0, 0
             };
             FactionStats fStats = new FactionStats(stats);
             factionStats.put(faction, fStats);
@@ -476,7 +525,7 @@ public class BetterFactions extends StarMod {
         return false;
     }
 
-    public HashMap<Faction, Image> getFactionLogos() {
+    public HashMap<BetterFaction, Image> getFactionLogos() {
         return factionLogos;
     }
 
@@ -487,7 +536,7 @@ public class BetterFactions extends StarMod {
     public void testFunction() {
         //Testing Purposes only
         Alliance alliance = new Alliance("Dual Monarchy", AllianceGovernmentType.CONFEDERATION);
-        alliance.getMembers().add(GameClientState.instance.getFaction());
+        alliance.getMembers().add(new BetterFaction(GameClient.getClientState().getFaction()));
         alliance.setAllianceID("0");
         this.getFactionAlliances().put(alliance.getAllianceID(), alliance);
 

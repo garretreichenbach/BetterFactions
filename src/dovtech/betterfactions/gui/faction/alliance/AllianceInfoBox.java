@@ -1,9 +1,9 @@
 package dovtech.betterfactions.gui.faction.alliance;
 
+import api.common.GameClient;
 import dovtech.betterfactions.BetterFactions;
 import dovtech.betterfactions.faction.diplo.alliance.Alliance;
 import org.newdawn.slick.Image;
-import org.schema.game.client.data.GameClientState;
 import org.schema.schine.graphicsengine.core.GlUtil;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.GUITextOverlay;
@@ -58,7 +58,7 @@ public class AllianceInfoBox extends GUIElement {
 
     @Override
     public void onInit() {
-        alliance = BetterFactions.getInstance().getFactionAlliance(GameClientState.instance.getFaction());
+        alliance = BetterFactions.getInstance().getFactionAlliance(GameClient.getClientState().getFaction());
         //allianceLogo = BetterFactions.getInstance().defaultLogo;
         if(alliance != null) {
             //allianceLogo = BetterFactions.getInstance().getAllianceLogos().get(alliance);
@@ -67,8 +67,12 @@ public class AllianceInfoBox extends GUIElement {
             memberList = new AllianceMemberList(getState(), 150, 70, this, alliance);
             memberList.onInit();
             description = new GUITextOverlay(15, 15, getState());
-            description.setTextSimple(alliance.getDescription());
             description.onInit();
+            description.setTextSimple(alliance.getDescription());
+        } else {
+            description = new GUITextOverlay(15, 15, getState());
+            description.onInit();
+            description.setTextSimple("No Alliance");
         }
 
         this.init = true;
