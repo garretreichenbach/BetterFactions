@@ -121,6 +121,7 @@ public class BetterFactions extends StarMod {
         //Todo: Only load moddata if in singleplayer or mod is on server
 
         initConfig();
+        /*
         if(GameClient.getClientState() != null) {
             try {
                 loadFactionStats();
@@ -129,6 +130,7 @@ public class BetterFactions extends StarMod {
                 e.printStackTrace();
             }
         }
+         */
         registerListeners();
     }
 
@@ -498,6 +500,7 @@ public class BetterFactions extends StarMod {
         return factionStats.get(faction);
     }
 
+    /*
     public void saveFactionStats(FactionStats fStats) throws IOException {
         int factionID = fStats.getFactionID();
         File factionFile = new File(factionStatsFolder.getPath() + "/" + factionID + ".smdat");
@@ -510,6 +513,7 @@ public class BetterFactions extends StarMod {
         }
         output.close();
     }
+     */
 
     public ArrayList<FactionRelations> getRelations(Faction faction) {
         return relations.get(faction);
