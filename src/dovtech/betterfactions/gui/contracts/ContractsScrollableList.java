@@ -4,7 +4,6 @@ import api.common.GameClient;
 import api.entity.StarPlayer;
 import dovtech.betterfactions.BetterFactions;
 import dovtech.betterfactions.contracts.Contract;
-import dovtech.betterfactions.faction.BetterFaction;
 import dovtech.betterfactions.faction.BetterPlayer;
 import org.hsqldb.lib.StringComparator;
 import org.schema.common.util.CompareTools;
@@ -12,7 +11,6 @@ import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
-
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Set;
@@ -104,100 +102,91 @@ public class ContractsScrollableList extends ScrollableTableList<Contract> imple
 
     @Override
     public void updateListEntries(GUIElementList guiElementList, Set<Contract> set) {
-        for(Contract contract : BetterFactions.getInstance().getContracts()) {
-            if(!(set.contains(contract))) {
-                GUITextOverlayTable nameTextElement;
-                (nameTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(contract.getName());
-                GUIClippedRow nameRowElement;
-                (nameRowElement = new GUIClippedRow(this.getState())).attach(nameTextElement);
+        for(final Contract contract : set) {
+            GUITextOverlayTable nameTextElement;
+            (nameTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(contract.getName());
+            GUIClippedRow nameRowElement;
+            (nameRowElement = new GUIClippedRow(this.getState())).attach(nameTextElement);
 
-                GUITextOverlayTable contractTypeTextElement;
-                (contractTypeTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(contract.getContractType().displayName);
-                GUIClippedRow contractTypeRowElement;
-                (contractTypeRowElement = new GUIClippedRow(this.getState())).attach(contractTypeTextElement);
+            GUITextOverlayTable contractTypeTextElement;
+            (contractTypeTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(contract.getContractType().displayName);
+            GUIClippedRow contractTypeRowElement;
+            (contractTypeRowElement = new GUIClippedRow(this.getState())).attach(contractTypeTextElement);
 
-                GUITextOverlayTable contractorTextElement;
-                (contractorTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(String.valueOf(contract.getContractor().getName()));
-                GUIClippedRow contractorRowElement;
-                (contractorRowElement = new GUIClippedRow(this.getState())).attach(contractorTextElement);
+            GUITextOverlayTable contractorTextElement;
+            (contractorTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(String.valueOf(contract.getContractor().getName()));
+            GUIClippedRow contractorRowElement;
+            (contractorRowElement = new GUIClippedRow(this.getState())).attach(contractorTextElement);
 
-                GUITextOverlayTable rewardTextElement;
-                (rewardTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(String.valueOf(contract.getReward()));
-                GUIClippedRow rewardRowElement;
-                (rewardRowElement = new GUIClippedRow(this.getState())).attach(rewardTextElement);
+            GUITextOverlayTable rewardTextElement;
+            (rewardTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(String.valueOf(contract.getReward()));
+            GUIClippedRow rewardRowElement;
+            (rewardRowElement = new GUIClippedRow(this.getState())).attach(rewardTextElement);
 
-                ContractListRow contractListRow;
-                (contractListRow = new ContractListRow(this.getState(), contract, nameRowElement, contractTypeRowElement, contractorRowElement, rewardRowElement)).onInit();
+            ContractListRow contractListRow;
+            (contractListRow = new ContractListRow(this.getState(), contract, nameRowElement, contractTypeRowElement, contractorRowElement, rewardRowElement)).onInit();
 
-                GUIAncor buttonPane = new GUIAncor(getState(), 100, 32);
-                int buttonDist = 8;
-                GUITextButton claimContractButton = new GUITextButton(getState(), 100, 24, GUITextButton.ColorPalette.OK, "CLAIM CONTRACT", new GUICallback() {
-                    @Override
-                    public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                        if (mouseEvent.pressedLeftMouse()) {
+            GUIAncor buttonPane = new GUIAncor(getState(), 100, 32);
+            GUITextButton claimContractButton = new GUITextButton(getState(), 130, 24, GUITextButton.ColorPalette.OK, "CLAIM CONTRACT", new GUICallback() {
+                @Override
+                public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                    if (mouseEvent.pressedLeftMouse()) {
 
-                        }
                     }
-
-                    @Override
-                    public boolean isOccluded() {
-                        return !isActive();
-                    }
-                });
-
-                GUITextButton viewClaimantsButton = new GUITextButton(getState(), 100, 24, GUITextButton.ColorPalette.TUTORIAL, "VIEW CLAIMANTS", new GUICallback() {
-                    @Override
-                    public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                        if (mouseEvent.pressedLeftMouse()) {
-
-                        }
-                    }
-
-                    @Override
-                    public boolean isOccluded() {
-                        return !isActive();
-                    }
-                });
-
-                boolean claimed = true;
-
-                GUITextButton.ColorPalette colorPalette = GUITextButton.ColorPalette.CANCEL;
-                if (!(contract.getClaimants().contains(new BetterPlayer(new StarPlayer(GameClient.getClientPlayerState()))))) {
-                    colorPalette = GUITextButton.ColorPalette.TRANSPARENT;
-                    claimed = false;
                 }
-                final boolean c = claimed;
 
-                GUITextButton cancelClaimButton = new GUITextButton(getState(), 100, 24, colorPalette, "CANCEL CLAIM", new GUICallback() {
-                    @Override
-                    public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                        if (mouseEvent.pressedLeftMouse() && c) {
+                @Override
+                public boolean isOccluded() {
+                    return !isActive();
+                }
+            });
 
-                        }
+            GUITextButton viewClaimantsButton = new GUITextButton(getState(), 130, 24, GUITextButton.ColorPalette.TUTORIAL, "VIEW CLAIMANTS", new GUICallback() {
+                @Override
+                public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                    if (mouseEvent.pressedLeftMouse()) {
+
                     }
+                }
 
-                    @Override
-                    public boolean isOccluded() {
-                        return !isActive();
+                @Override
+                public boolean isOccluded() {
+                    return !isActive();
+                }
+            });
+
+
+            GUITextButton.ColorPalette colorPalette = GUITextButton.ColorPalette.CANCEL;
+
+            GUITextButton cancelClaimButton = new GUITextButton(getState(), 130, 24, colorPalette, "CANCEL CLAIM", new GUICallback() {
+                @Override
+                public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                    if (mouseEvent.pressedLeftMouse()) {
+
                     }
-                });
+                }
 
-                buttonPane.attach(claimContractButton);
-                buttonPane.attach(viewClaimantsButton);
-                buttonPane.attach(cancelClaimButton);
+                @Override
+                public boolean isOccluded() {
+                    return !isActive();
+                }
+            });
 
-                contractListRow.expanded = new GUIElementList(getState());
+            buttonPane.attach(claimContractButton);
+            buttonPane.attach(viewClaimantsButton);
+            buttonPane.attach(cancelClaimButton);
 
-                claimContractButton.setPos(0, 0, 0);
-                viewClaimantsButton.setPos(claimContractButton.getPos().x + buttonDist, 0, 0);
-                cancelClaimButton.setPos(viewClaimantsButton.getPos().x + buttonDist, 0, 0);
-                buttonPane.setPos(contractListRow.expanded.getPos());
-                contractListRow.expanded.add(new GUIListElement(buttonPane, buttonPane, getState()));
-                contractListRow.expanded.attach(buttonPane);
+            contractListRow.expanded = new GUIElementList(getState());
 
-                contractListRow.onInit();
-                guiElementList.addWithoutUpdate(contractListRow);
-            }
+            claimContractButton.setPos(8, 0, 0);
+            viewClaimantsButton.setPos(claimContractButton.getWidth() + 16, 0, 0);
+            cancelClaimButton.setPos(claimContractButton.getWidth() + 16 + viewClaimantsButton.getWidth() + 8, 0, 0);
+            buttonPane.setPos(contractListRow.expanded.getPos());
+            contractListRow.expanded.add(new GUIListElement(buttonPane, buttonPane, getState()));
+            contractListRow.expanded.attach(buttonPane);
+
+            contractListRow.onInit();
+            guiElementList.addWithoutUpdate(contractListRow);
         }
         guiElementList.updateDim();
     }
