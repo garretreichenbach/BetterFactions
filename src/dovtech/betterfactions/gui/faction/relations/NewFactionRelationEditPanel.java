@@ -1,7 +1,9 @@
 package dovtech.betterfactions.gui.faction.relations;
 
 import dovtech.betterfactions.BetterFactions;
+import dovtech.betterfactions.faction.BetterFaction;
 import dovtech.betterfactions.faction.diplo.relations.FactionRelations;
+import dovtech.betterfactions.util.DataUtil;
 import org.schema.game.client.view.gui.faction.FactionRelationEditPanel;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.schine.graphicsengine.core.MouseEvent;
@@ -9,27 +11,27 @@ import org.schema.schine.graphicsengine.forms.Sprite;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.texture.Texture;
 import org.schema.schine.input.InputState;
+
 import java.util.ArrayList;
 
 public class NewFactionRelationEditPanel extends FactionRelationEditPanel {
 
-    private Faction from;
-    private Faction to;
+    private BetterFaction from;
+    private BetterFaction to;
     private NewFactionRelationDialog dialog;
     private FactionRelations fromRelations;
     private FactionRelations toRelations;
-
     private Sprite opinionModButtonSprite;
     private Sprite fromFactionFlag;
     private Sprite toFactionFlag;
 
     public NewFactionRelationEditPanel(InputState inputState, Faction from, Faction to, NewFactionRelationDialog factionRelationDialog) {
         super(inputState, from, to, factionRelationDialog);
-        this.from = from;
-        this.to = to;
+        this.from = DataUtil.getBetterFaction(from);
+        this.to = DataUtil.getBetterFaction(to);
         this.dialog = factionRelationDialog;
-        this.fromRelations = BetterFactions.getInstance().getRelationsTo(from, to);
-        this.toRelations = BetterFactions.getInstance().getRelationsTo(to, from);
+        this.fromRelations = this.from.getRelations().get(this.to);
+        this.toRelations = this.to.getRelations().get(this.from);
 
         this.opinionModButtonSprite = new Sprite(new Texture(0, fromRelations.getDisplay().spriteID, BetterFactions.getInstance().getResourcesPath() + "/gui/faction-buttons"));
     }
@@ -94,7 +96,7 @@ public class NewFactionRelationEditPanel extends FactionRelationEditPanel {
         ArrayList<GUITextButton> diploButtons = new ArrayList<>();
 
         //Invite to Pact
-        if(BetterFactions.getInstance().getFactionAlliance(from) != null) {
+        if(from.getAlliance() != null) {
             if(fromRelations.getOpinion() >= 50 && toRelations.getOpinion() >= 50) {
                 GUITextButton inviteToPactButton = new GUITextButton(changeRelationAnchor.getState(), 100, 15, friendly, "Invite to Pact", this.dialog);
                 inviteToPactButton.getPos().x = 15;
@@ -111,7 +113,7 @@ public class NewFactionRelationEditPanel extends FactionRelationEditPanel {
         }
 
         //Request To Join Pact
-        if(BetterFactions.getInstance().getFactionAlliance(to) != null) {
+        if(to.getAlliance() != null) {
             if(toRelations.getOpinion() >= 50 && fromRelations.getOpinion() >= 50) {
                 GUITextButton joinPactButton = new GUITextButton(changeRelationAnchor.getState(), 100, 15, friendly, "Ask to Join Pact", this.dialog);
                 joinPactButton.getPos().x = 15;

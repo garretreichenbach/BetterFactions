@@ -2,7 +2,7 @@ package dovtech.betterfactions.contracts;
 
 import dovtech.betterfactions.contracts.target.ContractTarget;
 import dovtech.betterfactions.faction.BetterFaction;
-import dovtech.betterfactions.faction.BetterPlayer;
+import dovtech.betterfactions.player.BetterPlayer;
 import java.util.ArrayList;
 import java.util.UUID;
 
@@ -12,11 +12,11 @@ public class Contract {
     private BetterFaction contractor;
     private ContractType contractType;
     private int reward;
-    private ContractTarget target;
+    private ContractTarget[] target;
     private ArrayList<BetterPlayer> claimants;
     private String uid;
 
-    public Contract(BetterFaction contractor, String name, ContractType contractType, int reward, ContractTarget target) {
+    public Contract(BetterFaction contractor, String name, ContractType contractType, int reward, ContractTarget... target) {
         this.name = name;
         this.contractor = contractor;
         this.contractType = contractType;
@@ -46,7 +46,7 @@ public class Contract {
         return reward;
     }
 
-    public ContractTarget getTarget() {
+    public ContractTarget[] getTarget() {
         return target;
     }
 

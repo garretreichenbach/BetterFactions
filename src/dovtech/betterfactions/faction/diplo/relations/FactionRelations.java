@@ -56,6 +56,10 @@ public class FactionRelations {
         }
     }
 
+    public ArrayList<RelationModifier> getModifiers() {
+        return modifiers;
+    }
+
     public enum RelationModifier {
         //Positive
         MEMBER_OF_ALLIANCE(150),

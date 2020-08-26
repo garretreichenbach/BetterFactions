@@ -4,11 +4,12 @@ import api.common.GameServer;
 import api.entity.StarPlayer;
 import dovtech.betterfactions.entity.fleet.BetterFleet;
 import dovtech.betterfactions.faction.diplo.alliance.Alliance;
+import dovtech.betterfactions.faction.diplo.relations.FactionRelations;
+import dovtech.betterfactions.faction.government.FactionGovernmentType;
+import dovtech.betterfactions.player.BetterPlayer;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.server.data.PlayerNotFountException;
-
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -17,6 +18,9 @@ public class BetterFaction {
     private Faction internalFaction;
     private Alliance alliance;
     private HashMap<BetterPlayer, ArrayList<BetterFleet>> fleets;
+    private HashMap<BetterFaction, FactionRelations> relations;
+    private FactionGovernmentType governmentType;
+    private FactionStats factionStats;
 
     public BetterFaction(Faction internalFaction) {
         this.internalFaction = internalFaction;
@@ -87,5 +91,25 @@ public class BetterFaction {
         }
 
         return membersList;
+    }
+
+    public int getID() {
+        return internalFaction.getIdFaction();
+    }
+
+    public HashMap<BetterFaction, FactionRelations> getRelations() {
+        return relations;
+    }
+
+    public FactionStats getFactionStats() {
+        return factionStats;
+    }
+
+    public void setFactionStats(FactionStats factionStats) {
+        this.factionStats = factionStats;
+    }
+
+    public FactionGovernmentType getGovernmentType() {
+        return governmentType;
     }
 }

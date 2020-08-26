@@ -9,7 +9,7 @@ public class MiningTarget implements ContractTarget {
 
     @Override
     public int getAmount() {
-        return target.getAmount();
+        return -1;
     }
 
     @Override
@@ -25,5 +25,15 @@ public class MiningTarget implements ContractTarget {
     @Override
     public Contract.ContractType getContractType() {
         return Contract.ContractType.MINING;
+    }
+
+    @Override
+    public int[] getLocation() {
+        return null;
+    }
+
+    @Override
+    public void setLocation(int[] coords) {
+
     }
 }

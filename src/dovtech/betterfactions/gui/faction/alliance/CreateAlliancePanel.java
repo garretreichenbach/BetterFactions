@@ -46,16 +46,7 @@ public class CreateAlliancePanel extends GUIElement {
             @Override
             public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                 if(mouseEvent.pressedLeftMouse()) {
-                    ArrayList<Alliance> alliancesList = (ArrayList<Alliance>) BetterFactions.getInstance().getFactionAlliances().values();
-                    ArrayList<String> allianceNames = new ArrayList<>();
-                    for(Alliance alliance : alliancesList) {
-                        allianceNames.add(alliance.getName());
-                    }
-                    if(!(allianceNames.contains(allianceNameInput.getTextInput().getCache()))) {
-                        Alliance newAlliance = new Alliance(allianceNameInput.getTextInput().getCache(), AllianceGovernmentType.valueOf((String) governmentTypeList.getSelectedElement().getContent().getUserPointer()));
-                        newAlliance.getMembers().add(new BetterFaction(GameClient.getClientState().getFaction()));
-                        BetterFactions.getInstance().getFactionAlliances().put(newAlliance.getAllianceID(), newAlliance);
-                    }
+                   //Todo
                 }
             }
 

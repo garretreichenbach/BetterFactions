@@ -1,22 +1,23 @@
 package dovtech.betterfactions.faction.diplo.relations;
 
-import dovtech.betterfactions.BetterFactions;
+import dovtech.betterfactions.faction.BetterFaction;
+import dovtech.betterfactions.util.DataUtil;
 import org.schema.game.common.data.player.faction.Faction;
 
 public class FactionMessage {
 
     private String subject;
     private String message;
-    private Faction from;
-    private Faction to;
+    private BetterFaction from;
+    private BetterFaction to;
     private MessageType messageType;
 
     public FactionMessage(Faction from, Faction to, MessageType messageType) {
-        this.from = from;
-        this.to = to;
+        this.from = DataUtil.getBetterFaction(from);
+        this.to = DataUtil.getBetterFaction(to);
         this.messageType = messageType;
-        String fromAllianceName = BetterFactions.getInstance().getFactionAlliance(from).getName();
-        String toAllianceName = BetterFactions.getInstance().getFactionAlliance(to).getName();
+        String fromAllianceName = this.from.getAlliance().getName();
+        String toAllianceName = this.to.getAlliance().getName();
         switch(messageType) {
             case TEXT:
                 this.subject = "No Title";
@@ -49,11 +50,11 @@ public class FactionMessage {
         this.message = message;
     }
 
-    public Faction getFrom() {
+    public BetterFaction getFrom() {
         return from;
     }
 
-    public Faction getTo() {
+    public BetterFaction getTo() {
         return to;
     }
 

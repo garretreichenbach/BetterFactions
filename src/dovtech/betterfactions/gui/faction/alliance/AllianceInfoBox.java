@@ -1,8 +1,8 @@
 package dovtech.betterfactions.gui.faction.alliance;
 
 import api.common.GameClient;
-import dovtech.betterfactions.BetterFactions;
 import dovtech.betterfactions.faction.diplo.alliance.Alliance;
+import dovtech.betterfactions.util.DataUtil;
 import org.newdawn.slick.Image;
 import org.schema.schine.graphicsengine.core.GlUtil;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
@@ -58,7 +58,7 @@ public class AllianceInfoBox extends GUIElement {
 
     @Override
     public void onInit() {
-        alliance = BetterFactions.getInstance().getFactionAlliance(GameClient.getClientState().getFaction());
+        alliance = DataUtil.getBetterFaction(GameClient.getClientState().getFaction()).getAlliance();
         //allianceLogo = BetterFactions.getInstance().defaultLogo;
         if(alliance != null) {
             //allianceLogo = BetterFactions.getInstance().getAllianceLogos().get(alliance);

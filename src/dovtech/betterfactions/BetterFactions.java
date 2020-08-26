@@ -15,36 +15,19 @@ import api.mod.config.FileConfiguration;
 import dovtech.betterfactions.contracts.Contract;
 import dovtech.betterfactions.contracts.target.*;
 import dovtech.betterfactions.faction.BetterFaction;
-import dovtech.betterfactions.faction.BetterPlayer;
-import dovtech.betterfactions.faction.FactionStats;
-import dovtech.betterfactions.faction.diplo.alliance.Alliance;
-import dovtech.betterfactions.faction.diplo.alliance.coalition.Coalition;
-import dovtech.betterfactions.faction.diplo.relations.FactionRelations;
-import dovtech.betterfactions.faction.government.AllianceGovernmentType;
-import dovtech.betterfactions.faction.war.FactionWar;
-import dovtech.betterfactions.faction.war.WarGoal;
-import dovtech.betterfactions.faction.war.WarParticipant;
+import dovtech.betterfactions.player.BetterPlayer;
 import dovtech.betterfactions.gui.contracts.ContractsScrollableList;
 import dovtech.betterfactions.gui.faction.alliance.*;
+import dovtech.betterfactions.util.DataUtil;
 import org.newdawn.slick.Image;
-import org.schema.game.client.controller.PlayerGameTextInput;
-import org.schema.game.client.data.GameClientState;
-import org.schema.game.client.view.gui.GUITextInputPanel;
-import org.schema.game.common.data.player.faction.Faction;
-import org.schema.schine.common.TextCallback;
-import org.schema.schine.common.TextInput;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
-import org.schema.schine.graphicsengine.core.settings.PrefixNotFoundException;
-import org.schema.schine.graphicsengine.forms.Sprite;
-import org.schema.schine.graphicsengine.forms.gui.*;
+import org.schema.schine.graphicsengine.forms.gui.GUICallback;
+import org.schema.schine.graphicsengine.forms.gui.GUIElement;
+import org.schema.schine.graphicsengine.forms.gui.GUITextButton;
+import org.schema.schine.graphicsengine.forms.gui.GUITextOverlay;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
-import org.schema.schine.graphicsengine.texture.Texture;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 public class BetterFactions extends StarMod {
@@ -60,18 +43,7 @@ public class BetterFactions extends StarMod {
 
     //Server
     private File moddataFolder;
-    private File StarMadePlusDataFolder;
-    private File factionStatsFolder;
-    private File factionAlliancesFolder;
-    private File imageFolder;
-    private HashMap<BetterFaction, FactionStats> factionStats;
-    private HashMap<BetterFaction, Coalition> coalitions;
-    private HashMap<BetterFaction, ArrayList<FactionRelations>> relations;
-    private HashMap<String, Alliance> factionAlliances;
-    private HashMap<BetterFaction, Image> factionLogos;
-    private HashMap<Alliance, Image> allianceLogos;
-    private ArrayList<Contract> contracts;
-    private ArrayList<FactionWar> wars;
+    private File betterFactionsDataFolder;
     public Image defaultLogo;
 
     //Config
@@ -96,41 +68,17 @@ public class BetterFactions extends StarMod {
         inst = this;
         setModName("BetterFactions");
         setModAuthor("Dovtech");
-        setModVersion("0.1.20");
+        setModVersion("0.2.1");
         setModDescription("Improves faction interaction and diplomacy.");
 
         resourcesPath = this.getClass().getResource("").getPath();
 
         moddataFolder = new File("moddata");
         if(!moddataFolder.exists()) moddataFolder.mkdir();
-        StarMadePlusDataFolder = new File("moddata/BetterFactions");
-        if(!StarMadePlusDataFolder.exists()) StarMadePlusDataFolder.mkdir();
-
-        factionStatsFolder = new File("moddata/BetterFactions/factions");
-        factionAlliancesFolder = new File("moddata/BetterFactions/alliances");
-        if(!(factionStatsFolder.exists())) factionStatsFolder.mkdir();
-        if(!(factionAlliancesFolder.exists())) factionAlliancesFolder.mkdir();
-
-        imageFolder = new File("moddata/BetterFactions/images");
-        if(!(imageFolder.exists())) imageFolder.mkdir();
-
-        wars = new ArrayList<>();
-        factionLogos = new HashMap<>();
-        allianceLogos = new HashMap<>();
-
-        //Todo: Only load moddata if in singleplayer or mod is on server
+        betterFactionsDataFolder = new File("moddata/BetterFactions");
+        if(!betterFactionsDataFolder.exists()) betterFactionsDataFolder.mkdir();
 
         initConfig();
-        /*
-        if(GameClient.getClientState() != null) {
-            try {
-                loadFactionStats();
-                loadFactionAlliances();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
-        }
-         */
         registerListeners();
     }
 
@@ -138,12 +86,6 @@ public class BetterFactions extends StarMod {
     public void onEnable() {
         super.onEnable();
         DebugFile.log("Enabled", this);
-
-        this.factionStats = new HashMap<>();
-        this.coalitions = new HashMap<>();
-        this.relations = new HashMap<>();
-        this.factionAlliances = new HashMap<>();
-        this.contracts = new ArrayList<>();
     }
 
     @Override
@@ -152,13 +94,18 @@ public class BetterFactions extends StarMod {
     }
 
     private void registerListeners() {
-
-
         StarLoader.registerListener(MainWindowTabAddEvent.class, new Listener<MainWindowTabAddEvent>() {
             @Override
             public void onEvent(MainWindowTabAddEvent event) {
-                if(event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_SHOP_SHOPNEW_SHOPPANELNEW_2)) {
+                if(event.getTitle().equals("placeholder")) {
+                    GUIContentPane playerContractsTab = event.createTab("CONTRACTS");
+                    playerContractsTab.setName("CONTRACTS");
+                    playerContractsTab.setTextBoxHeightLast(300);
+
+                } else if(event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_SHOP_SHOPNEW_SHOPPANELNEW_2)) {
+
                     testFunction();
+
                     GUIContentPane contractsTab = event.createTab("CONTRACTS");
                     contractsTab.setName("CONTRACTS");
                     contractsTab.setTextBoxHeightLast(300);
@@ -199,20 +146,19 @@ public class BetterFactions extends StarMod {
 
                     allianceTab.addNewTextBox(1, 60);
 
-                    if(getFactionAlliance(GameClient.getClientState().getFaction()) != null) {
-                        AllianceFleetsList allianceFleetsList = new AllianceFleetsList(allianceTab.getState(), allianceTab.getContent(0, 1));
-                        allianceFleetsList.onInit();
-                        allianceTab.getContent(0, 1).attach(allianceFleetsList);
+                    if(GameClient.getClientState().getFaction() != null) {
+                        BetterFaction faction = DataUtil.getBetterFaction(GameClient.getClientState().getFaction());
+                        if(faction.getAlliance() != null) {
+                            AllianceFleetsList allianceFleetsList = new AllianceFleetsList(allianceTab.getState(), allianceTab.getContent(0, 1));
+                            allianceFleetsList.onInit();
+                            allianceTab.getContent(0, 1).attach(allianceFleetsList);
 
-                        AllianceNewsBox allianceNewsBox = new AllianceNewsBox(allianceTab.getState(), allianceTab.getContent(1, 1));
-                        allianceTab.getContent(1, 1).attach(allianceNewsBox);
-
-                    } else {
-                        if(GameClient.getClientState().getFaction() != null) {
+                            AllianceNewsBox allianceNewsBox = new AllianceNewsBox(allianceTab.getState(), allianceTab.getContent(1, 1));
+                            allianceTab.getContent(1, 1).attach(allianceNewsBox);
                             GUITextButton createAllianceButton = new GUITextButton(allianceTab.getState(), 80, 30, "Create Alliance", new GUICallback() {
                                 @Override
                                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                                    if(mouseEvent.pressedLeftMouse()) {
+                                    if (mouseEvent.pressedLeftMouse()) {
                                         CreateAlliancePanel createAlliancePanel = new CreateAlliancePanel(allianceTab.getState());
                                         createAlliancePanel.draw();
                                     }
@@ -253,59 +199,6 @@ public class BetterFactions extends StarMod {
                 }
             }
         });
-
-
-        /*
-        StarLoader.registerListener(ControlManagerActivateEvent.class, new Listener<ControlManagerActivateEvent>() {
-            @Override
-            public void onEvent(ControlManagerActivateEvent event) {
-                if(event.isActive()) {
-                    PlayerPanel playerPanel = GameClientState.instance.getWorldDrawer().getGuiDrawer().getPlayerPanel();
-                    if(playerPanel != null && playerPanel.isActive()) {
-                        try {
-                            Field playerPanelField = PlayerPanel.class.getDeclaredField("factionPanelNew");
-                            playerPanelField.setAccessible(true);
-                            FactionPanelNew factionPanelNew = (FactionPanelNew) playerPanelField.get(playerPanel);
-
-                            if (GameClientState.instance.getFaction() != null) {
-                                if (!(factionPanelNew instanceof NewFactionPanel)) {
-                                    GameClientState state = playerPanel.getState();
-                                    playerPanelField.set(playerPanel, new NewFactionPanel(state));
-                                    if (debugMode) DebugFile.log("[DEBUG]: Swapped out Faction Panel", getMod());
-                                }
-                            } else {
-                                if (!(factionPanelNew instanceof NoFactionPanel)) {
-                                    GameClientState state = playerPanel.getState();
-                                    playerPanelField.set(playerPanel, new NoFactionPanel(state));
-                                }
-                            }
-                        } catch (NoSuchFieldException | IllegalAccessException ex) {
-                            ex.printStackTrace();
-                        }
-                    }
-                }
-
-
-                if(event.isActive() && event.getControlManager() instanceof PlayerGameControlManager) {
-                    try {
-                        PlayerGameControlManager playerGameControlManager = (PlayerGameControlManager) event.getControlManager();
-                        if(debugMode) DebugFile.log("[DEBUG]: PlayerGameControlManager activated", getMod());
-
-                        //NewFactionControlManager
-                        Field factionControlManagerField = PlayerGameControlManager.class.getDeclaredField("factionControlManager");
-                        factionControlManagerField.setAccessible(true);
-                        FactionControlManager factionControlManager = (FactionControlManager) factionControlManagerField.get(playerGameControlManager);
-                        if(!(factionControlManager instanceof NewFactionControlManager)) {
-                            //factionControlManagerField.set(playerGameControlManager, new NewFactionControlManager(GameClientState.instance));
-                            if(debugMode)DebugFile.log("[DEBUG]: Swapped out FactionControlManager", getMod());
-                        }
-                    } catch(NoSuchFieldException | IllegalAccessException | NullPointerException ex) {
-                        ex.printStackTrace();
-                    }
-                }
-            }
-        });
-         */
 
         /*
         StarLoader.registerListener(FactionRelationChangeEvent.class, new Listener<FactionRelationChangeEvent>() {
@@ -430,49 +323,6 @@ public class BetterFactions extends StarMod {
         this.guardianFactionID = this.config.getInt("guardian-faction-id");
     }
 
-    private void loadFactionStats() throws FileNotFoundException {
-        if(Objects.requireNonNull(factionStatsFolder.listFiles()).length > 0) {
-            for(File factionFile : Objects.requireNonNull(factionStatsFolder.listFiles())) {
-                String factionID = factionFile.getName().substring(0, factionFile.getName().indexOf(".smdat") - 1);
-                Faction internalFaction = GameServer.getServerState().getFactionManager().getFaction(Integer.parseInt(factionID));
-                BetterFaction faction = new BetterFaction(internalFaction);
-                Scanner scan = new Scanner(factionFile);
-                int[] stats = new int[23];
-                for(int i = 0; i < stats.length; i ++) {
-                    stats[i] = Integer.parseInt(scan.nextLine());
-                }
-                FactionStats fStats = new FactionStats(stats);
-                this.factionStats.put(faction, fStats);
-            }
-        } else {
-            DebugFile.log("Faction Stats folder is empty, ignoring for now...", this);
-        }
-    }
-
-    private void loadFactionAlliances() throws FileNotFoundException {
-        if(Objects.requireNonNull(factionAlliancesFolder.listFiles()).length > 0) {
-            for(File allianceFile : Objects.requireNonNull(factionAlliancesFolder.listFiles())) {
-                /*
-                String allianceID = allianceFile.getName().substring(0, allianceFile.getName().indexOf(".smdat") - 1);
-                Scanner scan = new Scanner(allianceFile);
-                String allianceName = scan.nextLine();
-                AllianceGovernmentType governmentType = AllianceGovernmentType.valueOf(scan.nextLine());
-                int logoUploaderID = scan.nextInt();
-                FactionLogo logo = new FactionLogo(logoUploaderID, allianceID, scan.nextLine());
-                ArrayList<Faction> members = new ArrayList<>();
-                while(scan.hasNextInt()) {
-                    members.add(GameServerState.instance.getFactionManager().getFaction(scan.nextInt()));
-                }
-                Alliance alliance = new Alliance(allianceName, governmentType);
-                alliance.setMembers(members);
-                alliance.setLogo(logo);
-                alliance.setAllianceID(allianceID);
-                this.factionAlliances.put(allianceID, alliance);
-                 */
-            }
-        }
-    }
-
     public static BetterFactions getInstance() {
         return inst;
     }
@@ -481,99 +331,8 @@ public class BetterFactions extends StarMod {
         return this.config;
     }
 
-    public Map<BetterFaction, FactionStats> getAllFactionStats() {
-        return factionStats;
-    }
-
-    public FactionStats getFactionStats(BetterFaction faction) throws IOException {
-        File factionFile = new File(factionStatsFolder.getPath() + "/" + faction.getInternalFaction().getIdFaction() + ".smdat");
-        if(!factionFile.exists()) {
-            factionFile.createNewFile();
-            int[] stats = new int[] {
-                    faction.getInternalFaction().getIdFaction(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, faction.getAllies().size() - 1, faction.getEnemies().size(), 0, 0, 0
-            };
-            FactionStats fStats = new FactionStats(stats);
-            factionStats.put(faction, fStats);
-            return fStats;
-        }
-
-        return factionStats.get(faction);
-    }
-
-    /*
-    public void saveFactionStats(FactionStats fStats) throws IOException {
-        int factionID = fStats.getFactionID();
-        File factionFile = new File(factionStatsFolder.getPath() + "/" + factionID + ".smdat");
-        if(factionFile.exists()) {
-            factionFile.delete();
-        }
-        FileWriter output = new FileWriter(factionFile.getPath());
-        for(int i = 0; i < fStats.getStats().length; i ++) {
-            output.write(fStats.getStats()[i] + "\n");
-        }
-        output.close();
-    }
-     */
-
-    public ArrayList<FactionRelations> getRelations(Faction faction) {
-        return relations.get(faction);
-    }
-
-    public FactionRelations getRelationsTo(Faction from, Faction to) {
-        ArrayList<FactionRelations> relList = this.relations.get(from);
-        for(FactionRelations rel : relList) {
-            if(rel.getTo().equals(to)) {
-                return rel;
-            }
-        }
-
-        return new FactionRelations(from, to);
-    }
-
     public String getResourcesPath() {
         return resourcesPath;
-    }
-
-    public HashMap<String, Alliance> getFactionAlliances() {
-        return factionAlliances;
-    }
-
-    public Alliance getFactionAlliance(Faction faction) {
-        for(Alliance alliance : this.factionAlliances.values()) {
-            if(alliance.getMembers().contains(faction)) return alliance;
-        }
-
-        return null;
-    }
-
-    private int calcAggressionScore(FactionStats fStats) { //Todo:Redo this so that you loose aggression score over time
-        int newAggressionScore = fStats.getAggressionScore();
-        if(fStats.getAttackingWars() <= 5) {
-            newAggressionScore += 5;
-        } else if(fStats.getAttackingWars() <= 10) {
-            newAggressionScore += 12;
-        } else if(fStats.getAttackingWars() <= 15) {
-            newAggressionScore += 20;
-        } else if(fStats.getAttackingWars() > 15) {
-            newAggressionScore += 30;
-        }
-        return newAggressionScore;
-    }
-
-    private boolean calcCoalitionChance(FactionStats fStats) {
-        return false;
-    }
-
-    public ArrayList<Contract> getContracts() {
-        return contracts;
-    }
-
-    public HashMap<BetterFaction, Image> getFactionLogos() {
-        return factionLogos;
-    }
-
-    public HashMap<Alliance, Image> getAllianceLogos() {
-        return allianceLogos;
     }
 
     public void testFunction() {
@@ -630,14 +389,15 @@ public class BetterFactions extends StarMod {
                     int randomCargoAmount = (random.nextInt(300 - 1) + 1) * 10;
                     cargoTargetStack.setAmount(randomCargoAmount);
                     contractTarget.setTarget(cargoTargetStack);
-                    contractName = "Deliver cargo to (15.15.15)";
+                    contractTarget.setLocation(new int[] {2, 2, 2});
+                    contractName = "Deliver cargo to (" + contractTarget.getLocation()[0] + "." + contractTarget.getLocation()[1] + "." + contractTarget.getLocation()[2] + ")";
                     break;
             }
 
 
 
             Contract randomContract = new Contract(new BetterFaction(GameServer.getServerState().getFactionManager().getFaction(-2)), contractName, randomContractType, randomReward, contractTarget);
-            contracts.add(randomContract);
+            DataUtil.saveContract(randomContract);
         }
 
         /*

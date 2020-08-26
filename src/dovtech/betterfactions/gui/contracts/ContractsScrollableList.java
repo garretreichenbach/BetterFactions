@@ -1,10 +1,7 @@
 package dovtech.betterfactions.gui.contracts;
 
-import api.common.GameClient;
-import api.entity.StarPlayer;
-import dovtech.betterfactions.BetterFactions;
 import dovtech.betterfactions.contracts.Contract;
-import dovtech.betterfactions.faction.BetterPlayer;
+import dovtech.betterfactions.util.DataUtil;
 import org.hsqldb.lib.StringComparator;
 import org.schema.common.util.CompareTools;
 import org.schema.schine.graphicsengine.core.MouseEvent;
@@ -97,7 +94,7 @@ public class ContractsScrollableList extends ScrollableTableList<Contract> imple
 
     @Override
     protected Collection<Contract> getElementList() {
-        return BetterFactions.getInstance().getContracts();
+        return DataUtil.getAllContracts();
     }
 
     @Override

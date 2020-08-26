@@ -81,12 +81,14 @@ public class AlliancesScrollableList extends ScrollableTableList<Alliance> imple
 
     @Override
     protected Collection<Alliance> getElementList() {
-        return BetterFactions.getInstance().getFactionAlliances().values();
+        //Todo
+        return null;
     }
 
     @Override
     public void updateListEntries(GUIElementList guiElementList, Set<Alliance> set) {
-
+        //Todo
+        /*
         for(Alliance alliance : BetterFactions.getInstance().getFactionAlliances().values()) {
 
             GUITextOverlayTable nameTextElement;
@@ -108,6 +110,8 @@ public class AlliancesScrollableList extends ScrollableTableList<Alliance> imple
             (allianceListRow = new AllianceListRow(this.getState(), alliance, nameRowElement, governmentRowElement, sizeRowElement)).onInit();
             guiElementList.addWithoutUpdate(allianceListRow);
         }
+
+         */
         guiElementList.updateDim();
     }
 

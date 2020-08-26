@@ -1,7 +1,7 @@
 package dovtech.betterfactions.contracts.target;
 
 import dovtech.betterfactions.contracts.Contract;
-import dovtech.betterfactions.faction.BetterPlayer;
+import dovtech.betterfactions.player.BetterPlayer;
 
 public class PlayerTarget implements ContractTarget {
 
@@ -25,5 +25,15 @@ public class PlayerTarget implements ContractTarget {
     @Override
     public Contract.ContractType getContractType() {
         return Contract.ContractType.BOUNTY;
+    }
+
+    @Override
+    public int[] getLocation() {
+        return null;
+    }
+
+    @Override
+    public void setLocation(int[] coords) {
+
     }
 }

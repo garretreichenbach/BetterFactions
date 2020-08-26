@@ -11,4 +11,8 @@ public interface ContractTarget {
     void setTarget(Object target);
 
     Contract.ContractType getContractType();
+
+    int[] getLocation();
+
+    void setLocation(int[] coords);
 }

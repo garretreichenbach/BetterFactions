@@ -40,12 +40,7 @@ public class AllianceMemberList extends ScrollableTableList<BetterFaction> {
 
         this.addColumn("Government", 5.0F, new Comparator<BetterFaction>() {
             public int compare(BetterFaction o1, BetterFaction o2) {
-                try {
-                    return BetterFactions.getInstance().getFactionStats(o1).getGovernmentType().toString().compareTo(BetterFactions.getInstance().getFactionStats(o2).getGovernmentType().toString());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                return 0;
+                return o1.getGovernmentType().compareTo(o2.getGovernmentType());
             }
         });
 
@@ -68,12 +63,7 @@ public class AllianceMemberList extends ScrollableTableList<BetterFaction> {
 
         this.addDropdownFilter(new GUIListFilterDropdown<BetterFaction, FactionGovernmentType>(FactionGovernmentType.values()) {
             public boolean isOk(FactionGovernmentType factionGovernmentType, BetterFaction faction) {
-                try {
-                    return BetterFactions.getInstance().getFactionStats(faction).getGovernmentType().equals(factionGovernmentType);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                return true;
+                return faction.getGovernmentType().equals(factionGovernmentType);
             }
 
         }, new CreateGUIElementInterface<FactionGovernmentType>() {
@@ -117,7 +107,7 @@ public class AllianceMemberList extends ScrollableTableList<BetterFaction> {
                 (nameRowElement = new GUIClippedRow(this.getState())).attach(nameTextElement);
 
                 GUITextOverlayTable governmentTextElement;
-                (governmentTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(BetterFactions.getInstance().getFactionStats(faction).getGovernmentType().displayName);
+                (governmentTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(faction.getGovernmentType().displayName);
                 GUIClippedRow governmentRowElement;
                 (governmentRowElement = new GUIClippedRow(this.getState())).attach(governmentTextElement);
 
@@ -129,7 +119,7 @@ public class AllianceMemberList extends ScrollableTableList<BetterFaction> {
                 AllianceMemberListRow memberListRow;
                 (memberListRow = new AllianceMemberListRow(this.getState(), faction, nameRowElement, governmentRowElement, sizeRowElement)).onInit();
                 guiElementList.addWithoutUpdate(memberListRow);
-            } catch(IOException | PlayerNotFountException e) {
+            } catch(PlayerNotFountException e) {
                 e.printStackTrace();
             }
         }
