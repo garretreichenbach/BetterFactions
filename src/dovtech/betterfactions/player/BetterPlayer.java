@@ -35,4 +35,8 @@ public class BetterPlayer {
     public ArrayList<Contract> getContracts() {
         return contracts;
     }
+
+    public void setContracts(ArrayList<Contract> contracts) {
+        this.contracts = contracts;
+    }
 }

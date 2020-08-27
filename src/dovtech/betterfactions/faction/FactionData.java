@@ -18,7 +18,7 @@ public class FactionData implements Serializable {
         }
         this.factionStats = faction.getFactionStats();
 
-        this.opinions = new String[faction.getRelations().keySet().size()][];
+        this.opinions = new String[faction.getRelations().keySet().size()][0];
 
         for(int f = 0; f < faction.getRelations().keySet().size(); f ++) {
             BetterFaction target = (BetterFaction) faction.getRelations().keySet().toArray()[f];

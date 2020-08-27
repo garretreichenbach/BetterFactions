@@ -24,6 +24,8 @@ public class BetterFaction {
 
     public BetterFaction(Faction internalFaction) {
         this.internalFaction = internalFaction;
+        this.factionStats = new FactionStats();
+        this.relations = new HashMap<>();
     }
 
     public Faction getInternalFaction() {
@@ -94,7 +96,10 @@ public class BetterFaction {
     }
 
     public int getID() {
-        return internalFaction.getIdFaction();
+        if(internalFaction != null) {
+            return internalFaction.getIdFaction();
+        }
+        return 0;
     }
 
     public HashMap<BetterFaction, FactionRelations> getRelations() {

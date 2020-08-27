@@ -14,8 +14,8 @@ public class FactionStats {
     public int defeats;
     public int coalitionsParticipated;
     public int coalitionsAgainst;
-    public int shipsDestroyed;
-    public int shipsLost;
+    public int entitiesKilled;
+    public int entitiesLost;
     public int stationsDestroyed;
     public int stationsLost;
     public int playersKilled;

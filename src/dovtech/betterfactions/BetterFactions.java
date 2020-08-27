@@ -8,25 +8,32 @@ import api.element.block.Blocks;
 import api.element.inventory.ItemStack;
 import api.entity.StarPlayer;
 import api.listener.Listener;
+import api.listener.events.SegmentControllerOverheatEvent;
+import api.listener.events.faction.FactionRelationChangeEvent;
+import api.listener.events.gui.GUITopBarCreateEvent;
 import api.listener.events.gui.MainWindowTabAddEvent;
+import api.listener.events.player.PlayerDeathEvent;
 import api.mod.StarLoader;
 import api.mod.StarMod;
 import api.mod.config.FileConfiguration;
 import dovtech.betterfactions.contracts.Contract;
 import dovtech.betterfactions.contracts.target.*;
+import dovtech.betterfactions.controller.ContractsMenuControlManager;
 import dovtech.betterfactions.faction.BetterFaction;
 import dovtech.betterfactions.player.BetterPlayer;
 import dovtech.betterfactions.gui.contracts.ContractsScrollableList;
 import dovtech.betterfactions.gui.faction.alliance.*;
 import dovtech.betterfactions.util.DataUtil;
 import org.newdawn.slick.Image;
+import org.schema.game.client.controller.manager.AbstractControlManager;
+import org.schema.game.client.view.gui.newgui.GUITopBar;
+import org.schema.game.common.data.player.faction.Faction;
+import org.schema.game.common.data.player.faction.FactionRelation;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
-import org.schema.schine.graphicsengine.forms.gui.GUICallback;
-import org.schema.schine.graphicsengine.forms.gui.GUIElement;
-import org.schema.schine.graphicsengine.forms.gui.GUITextButton;
-import org.schema.schine.graphicsengine.forms.gui.GUITextOverlay;
+import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
+import org.schema.schine.input.InputState;
 import java.io.*;
 import java.util.*;
 
@@ -55,7 +62,7 @@ public class BetterFactions extends StarMod {
     };
 
     //Config Settings
-    private boolean debugMode;
+    public boolean debugMode;
     private boolean guardianFactionEnabled;
     private int guardianFactionID;
 
@@ -68,15 +75,15 @@ public class BetterFactions extends StarMod {
         inst = this;
         setModName("BetterFactions");
         setModAuthor("Dovtech");
-        setModVersion("0.2.1");
+        setModVersion("0.2.4");
         setModDescription("Improves faction interaction and diplomacy.");
 
         resourcesPath = this.getClass().getResource("").getPath();
 
         moddataFolder = new File("moddata");
-        if(!moddataFolder.exists()) moddataFolder.mkdir();
+        if (!moddataFolder.exists()) moddataFolder.mkdir();
         betterFactionsDataFolder = new File("moddata/BetterFactions");
-        if(!betterFactionsDataFolder.exists()) betterFactionsDataFolder.mkdir();
+        if (!betterFactionsDataFolder.exists()) betterFactionsDataFolder.mkdir();
 
         initConfig();
         registerListeners();
@@ -94,15 +101,79 @@ public class BetterFactions extends StarMod {
     }
 
     private void registerListeners() {
+
+        StarLoader.registerListener(GUITopBarCreateEvent.class, new Listener<GUITopBarCreateEvent>() {
+            @Override
+            public void onEvent(final GUITopBarCreateEvent guiTopBarCreateEvent) {
+                GUITopBar.ExpandedButton dropDownButton = guiTopBarCreateEvent.getDropdownButtons().get(guiTopBarCreateEvent.getDropdownButtons().size() - 1);
+                dropDownButton.addExpandedButton("CONTRACTS", new GUICallback() {
+                    @Override
+                    public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                        if(mouseEvent.pressedLeftMouse()) {
+                            for(AbstractControlManager controlManager : GameClient.getClientState().getGlobalGameControlManager().getControlManagers()) {
+                                controlManager.setActive(false);
+                            }
+                            ContractsMenuControlManager contractsMenuControlManager = new ContractsMenuControlManager(GameClient.getClientState());
+                            contractsMenuControlManager.setActive(true);
+
+                        }
+                    }
+
+                    @Override
+                    public boolean isOccluded() {
+                        return false;
+                    }
+                }, new GUIActivationHighlightCallback() {
+                    @Override
+                    public boolean isHighlighted(InputState inputState) {
+                        return DataUtil.getContracts(new StarPlayer(GameClient.getClientPlayerState())).size() > 0;
+                    }
+
+                    @Override
+                    public boolean isVisible(InputState inputState) {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean isActive(InputState inputState) {
+                        return true;
+                    }
+                });
+
+                dropDownButton.addExpandedButton("STATS", new GUICallback() {
+                    @Override
+                    public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+
+                    }
+
+                    @Override
+                    public boolean isOccluded() {
+                        return false;
+                    }
+                }, new GUIActivationHighlightCallback() {
+                    @Override
+                    public boolean isHighlighted(InputState inputState) {
+                        return false; //Todo
+                    }
+
+                    @Override
+                    public boolean isVisible(InputState inputState) {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean isActive(InputState inputState) {
+                        return true;
+                    }
+                });
+            }
+        });
+
+
         StarLoader.registerListener(MainWindowTabAddEvent.class, new Listener<MainWindowTabAddEvent>() {
             @Override
             public void onEvent(MainWindowTabAddEvent event) {
-                if(event.getTitle().equals("placeholder")) {
-                    GUIContentPane playerContractsTab = event.createTab("CONTRACTS");
-                    playerContractsTab.setName("CONTRACTS");
-                    playerContractsTab.setTextBoxHeightLast(300);
-
-                } else if(event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_SHOP_SHOPNEW_SHOPPANELNEW_2)) {
+                if (event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_SHOP_SHOPNEW_SHOPPANELNEW_2)) {
 
                     testFunction();
 
@@ -130,8 +201,7 @@ public class BetterFactions extends StarMod {
                     contractsTab.getContent(1, 0).attach(contractsScrollableList);
 
 
-
-                } else if(event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_FACTION_NEWFACTION_FACTIONPANELNEW_9)) {
+                } else if (event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_FACTION_NEWFACTION_FACTIONPANELNEW_9)) {
                     final GUIContentPane allianceTab = event.createTab("ALLIANCE");
                     allianceTab.setName("ALLIANCE");
                     allianceTab.setTextBoxHeightLast(300);
@@ -146,9 +216,9 @@ public class BetterFactions extends StarMod {
 
                     allianceTab.addNewTextBox(1, 60);
 
-                    if(GameClient.getClientState().getFaction() != null) {
+                    if (GameClient.getClientState().getFaction() != null) {
                         BetterFaction faction = DataUtil.getBetterFaction(GameClient.getClientState().getFaction());
-                        if(faction.getAlliance() != null) {
+                        if (faction.getAlliance() != null) {
                             AllianceFleetsList allianceFleetsList = new AllianceFleetsList(allianceTab.getState(), allianceTab.getContent(0, 1));
                             allianceFleetsList.onInit();
                             allianceTab.getContent(0, 1).attach(allianceFleetsList);
@@ -192,85 +262,44 @@ public class BetterFactions extends StarMod {
                     warsTab.setTextBoxHeightLast(300);
                     allianceInfoBox.draw();
 
-                } else if(event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_FACTION_NEWFACTION_FACTIONPANELNEW_2)) {
+                } else if (event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_FACTION_NEWFACTION_FACTIONPANELNEW_2)) {
                     event.getPane().setName("FACTION DIPLOMACY");
-                } else if(event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_FACTION_NEWFACTION_FACTIONPANELNEW_9)) {
+                } else if (event.getTitle().equals(Lng.ORG_SCHEMA_GAME_CLIENT_VIEW_GUI_FACTION_NEWFACTION_FACTIONPANELNEW_9)) {
                     event.getPane().setName("FACTION LIST");
                 }
             }
         });
 
-        /*
         StarLoader.registerListener(FactionRelationChangeEvent.class, new Listener<FactionRelationChangeEvent>() {
             @Override
             public void onEvent(FactionRelationChangeEvent event) {
-                try {
-                    Faction from = event.getFrom();
-                    Faction to = event.getTo();
-                    FactionStats fromStats = getFactionStats(from);
-                    FactionStats toStats = getFactionStats(to);
-                    fromStats.setEnemyCount(from.getEnemies().size());
-                    toStats.setEnemyCount(to.getEnemies().size());
-                    fromStats.setAllyCount(from.getFriends().size() - 1);
-                    toStats.setAllyCount(to.getFriends().size() - 1);
-                    fromStats.setCurrentTerritoryCount(from.clientLastTurnSytemsCount); //I'm not sure if this is the actual count of controlled systems
-                    toStats.setCurrentTerritoryCount(to.clientLastTurnSytemsCount); //I'm not sure if this is the actual count of controlled systems
-
-                    if(event.getNewRelation().equals(FactionRelation.RType.ENEMY)) {
-                        fromStats.setAttackingWars(fromStats.getAttackingWars() + 1);
-                        fromStats.setAggressionScore(calcAggressionScore(fromStats));
-                        if(fromStats.getAggressionScore() >= 30) {
-                            if(calcCoalitionChance(fromStats) && guardianFactionEnabled) {
-
-                                //Coalition coalition = new Coalition(from, GameServerState.instance.getFactionManager().getFaction(guardianFactionID));
-
-
-                                //fromStats.setCoalitionsAgainst(fromStats.getCoalitionsAgainst() + 1);
-                                //toStats.setCoalitionsParticipated(toStats.getCoalitionsParticipated() + 1);
-                                //coalitions.put(from, coalition);
-                            }
-                        }
-                        toStats.setDefendingWars(toStats.getDefendingWars() + 1);
-                    }
-
-                    factionStats.remove(from);
-                    factionStats.remove(to);
-                    factionStats.put(from, fromStats);
-                    factionStats.put(to, toStats);
-                    saveFactionStats(fromStats);
-                    saveFactionStats(toStats);
-                } catch(IOException exception) {
-                    exception.printStackTrace();
+                BetterFaction from = DataUtil.getBetterFaction(event.getFrom());
+                BetterFaction to = DataUtil.getBetterFaction(event.getTo());
+                if (event.getNewRelation().equals(FactionRelation.RType.ENEMY)) {
+                    from.getFactionStats().offensiveWars += 1;
+                    to.getFactionStats().defensiveWars += 1;
                 }
+                DataUtil.saveFaction(from);
+                DataUtil.saveFaction(to);
+
             }
         });
 
         StarLoader.registerListener(PlayerDeathEvent.class, new Listener<PlayerDeathEvent>() {
             @Override
             public void onEvent(PlayerDeathEvent event) {
-                Faction from = GameServerState.instance.getFactionManager().getFaction(event.getDamager().getFactionId());
-                Faction to = GameServerState.instance.getFactionManager().getFaction(event.getPlayer().getFactionId());
-                try {
-                    FactionStats fromStats = getFactionStats(from);
-                    FactionStats toStats = getFactionStats(to);
-                    fromStats.setEnemyCount(from.getEnemies().size());
-                    toStats.setEnemyCount(to.getEnemies().size());
-                    fromStats.setAllyCount(from.getFriends().size() - 1);
-                    toStats.setAllyCount(to.getFriends().size() - 1);
-                    fromStats.setCurrentTerritoryCount(from.clientLastTurnSytemsCount); //I'm not sure if this is the actual count of controlled systems
-                    toStats.setCurrentTerritoryCount(to.clientLastTurnSytemsCount); //I'm not sure if this is the actual count of controlled systems
+                Faction fromFaction = GameServer.getServerState().getFactionManager().getFaction(event.getDamager().getFactionId());
+                Faction toFaction = GameServer.getServerState().getFactionManager().getFaction(event.getPlayer().getFactionId());
+                if (fromFaction != null) {
+                    BetterFaction from = DataUtil.getBetterFaction(fromFaction);
+                    from.getFactionStats().playersKilled += 1;
+                    DataUtil.saveFaction(from);
+                }
 
-                    fromStats.setPlayersKilled(fromStats.getPlayersKilled() + 1);
-                    toStats.setPlayersLost(toStats.getPlayersLost() + 1);
-
-                    factionStats.remove(from);
-                    factionStats.remove(to);
-                    factionStats.put(from, fromStats);
-                    factionStats.put(to, toStats);
-                    saveFactionStats(fromStats);
-                    saveFactionStats(toStats);
-                } catch (IOException e) {
-                    e.printStackTrace();
+                if (toFaction != null) {
+                    BetterFaction to = DataUtil.getBetterFaction(toFaction);
+                    to.getFactionStats().playersLost += 1;
+                    DataUtil.saveFaction(to);
                 }
             }
         });
@@ -278,38 +307,21 @@ public class BetterFactions extends StarMod {
         StarLoader.registerListener(SegmentControllerOverheatEvent.class, new Listener<SegmentControllerOverheatEvent>() {
             @Override
             public void onEvent(SegmentControllerOverheatEvent event) {
-                Faction from = GameServerState.instance.getFactionManager().getFaction(event.getLastDamager().getFactionId());
-                Faction to = GameServerState.instance.getFactionManager().getFaction(event.getEntity().getFactionId());
-                try {
-                    FactionStats fromStats = getFactionStats(from);
-                    FactionStats toStats = getFactionStats(to);
-                    fromStats.setEnemyCount(from.getEnemies().size());
-                    toStats.setEnemyCount(to.getEnemies().size());
-                    fromStats.setAllyCount(from.getFriends().size() - 1);
-                    toStats.setAllyCount(to.getFriends().size() - 1);
-                    fromStats.setCurrentTerritoryCount(from.clientLastTurnSytemsCount); //I'm not sure if this is the actual count of controlled systems
-                    toStats.setCurrentTerritoryCount(to.clientLastTurnSytemsCount); //I'm not sure if this is the actual count of controlled systems
+                Faction fromFaction = GameServer.getServerState().getFactionManager().getFaction(event.getLastDamager().getFactionId());
+                Faction toFaction = GameServer.getServerState().getFactionManager().getFaction(event.getEntity().getFactionId());
+                if (fromFaction != null) {
+                    BetterFaction from = DataUtil.getBetterFaction(fromFaction);
+                    from.getFactionStats().entitiesKilled += 1;
+                    DataUtil.saveFaction(from);
+                }
 
-                    if(event.getEntity().getType().equals(SimpleTransformableSendableObject.EntityType.SPACE_STATION)) {
-                        fromStats.setStationsDestroyed(fromStats.getStationsDestroyed() + 1);
-                        toStats.setStationsLost(toStats.getStationsLost() + 1);
-                    } else if(event.getEntity().getType().equals(SimpleTransformableSendableObject.EntityType.SHIP)) {
-                        fromStats.setShipsDestroyed(fromStats.getShipsDestroyed() + 1);
-                        toStats.setShipsLost(toStats.getShipsLost() + 1);
-                    }
-
-                    factionStats.remove(from);
-                    factionStats.remove(to);
-                    factionStats.put(from, fromStats);
-                    factionStats.put(to, toStats);
-                    saveFactionStats(fromStats);
-                    saveFactionStats(toStats);
-                } catch (IOException e) {
-                    e.printStackTrace();
+                if (toFaction != null) {
+                    BetterFaction to = DataUtil.getBetterFaction(toFaction);
+                    to.getFactionStats().entitiesLost += 1;
+                    DataUtil.saveFaction(to);
                 }
             }
         });
-         */
 
         DebugFile.log("Registered Listeners!", this);
     }
@@ -339,10 +351,10 @@ public class BetterFactions extends StarMod {
         //Testing Purposes only
 
         Random random = new Random();
-        for(int i = 0; i < 10; i ++) {
+        for (int i = 0; i < 10; i++) {
             Contract.ContractType randomContractType = Contract.ContractType.BOUNTY;
             int randomTypeInt = random.nextInt(5 - 1) + 1;
-            switch(randomTypeInt) {
+            switch (randomTypeInt) {
                 case 1:
                     randomContractType = Contract.ContractType.BOUNTY;
                     break;
@@ -361,7 +373,7 @@ public class BetterFactions extends StarMod {
             ContractTarget contractTarget = new PlayerTarget();
             contractTarget.setTarget(new BetterPlayer(new StarPlayer(GameClient.getClientPlayerState())));
             String contractName = "";
-            switch(randomContractType) {
+            switch (randomContractType) {
                 case MINING:
                     contractTarget = new MiningTarget();
                     ItemStack miningTargetStack = new ItemStack(Blocks.THRENS_ORE_RAW.getId());
@@ -389,11 +401,10 @@ public class BetterFactions extends StarMod {
                     int randomCargoAmount = (random.nextInt(300 - 1) + 1) * 10;
                     cargoTargetStack.setAmount(randomCargoAmount);
                     contractTarget.setTarget(cargoTargetStack);
-                    contractTarget.setLocation(new int[] {2, 2, 2});
+                    contractTarget.setLocation(new int[]{2, 2, 2});
                     contractName = "Deliver cargo to (" + contractTarget.getLocation()[0] + "." + contractTarget.getLocation()[1] + "." + contractTarget.getLocation()[2] + ")";
                     break;
             }
-
 
 
             Contract randomContract = new Contract(new BetterFaction(GameServer.getServerState().getFactionManager().getFaction(-2)), contractName, randomContractType, randomReward, contractTarget);

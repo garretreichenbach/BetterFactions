@@ -16,10 +16,9 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Set;
 
-public class ContractsScrollableList extends ScrollableTableList<Contract> implements GUIActiveInterface {
+public class PlayerContractsScrollableList extends ScrollableTableList<Contract> implements GUIActiveInterface {
 
-
-    public ContractsScrollableList(InputState state, float var2, float var3, GUIElement guiElement) {
+    public PlayerContractsScrollableList(InputState state, float var2, float var3, GUIElement guiElement) {
         super(state, var2, var3, guiElement);
     }
 
@@ -97,11 +96,11 @@ public class ContractsScrollableList extends ScrollableTableList<Contract> imple
 
     @Override
     protected Collection<Contract> getElementList() {
-        return DataUtil.getAllContracts();
+        return DataUtil.getContracts(new StarPlayer(GameClient.getClientPlayerState()));
     }
 
     @Override
-    public void updateListEntries(GUIElementList guiElementList, final Set<Contract> set) {
+    public void updateListEntries(GUIElementList guiElementList, Set<Contract> set) {
         for (final Contract contract : set) {
             GUITextOverlayTable nameTextElement;
             (nameTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(contract.getName());
@@ -129,32 +128,8 @@ public class ContractsScrollableList extends ScrollableTableList<Contract> imple
             GUIAncor buttonPane = new GUIAncor(getState(), 100, 32);
 
             final StarPlayer player = new StarPlayer(GameClient.getClientPlayerState());
-
             final BetterPlayer betterPlayer = new BetterPlayer(player);
             betterPlayer.setContracts(DataUtil.getContracts(player));
-            GUITextButton claimContractButton = new GUITextButton(getState(), 130, 24, GUITextButton.ColorPalette.OK, "CLAIM CONTRACT", new GUICallback() {
-                @Override
-                public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                    if (mouseEvent.pressedLeftMouse()) {
-                        getState().getController().queueUIAudio("0022_menu_ui - enter");
-                        Contract c = getSelectedRow().f;
-                        BetterPlayer bP = new BetterPlayer(player);
-                        bP.setContracts(DataUtil.getContracts(player));
-                        bP.getContracts().add(c);
-                        c.getClaimants().add(bP);
-                        DataUtil.savePlayer(bP);
-                        //Todo
-                    }
-                }
-
-                @Override
-                public boolean isOccluded() {
-                    return !isActive();
-                }
-            });
-            buttonPane.attach(claimContractButton);
-            claimContractButton.setPos(8, 0, 0);
-
 
             GUITextButton viewClaimantsButton = new GUITextButton(getState(), 130, 24, GUITextButton.ColorPalette.TUTORIAL, "VIEW CLAIMANTS", new GUICallback() {
                 @Override
@@ -171,11 +146,14 @@ public class ContractsScrollableList extends ScrollableTableList<Contract> imple
                 }
             });
 
+            buttonPane.attach(viewClaimantsButton);
+            viewClaimantsButton.setPos(8, 0, 0);
+
             GUITextButton cancelClaimButton = new GUITextButton(getState(), 130, 24, GUITextButton.ColorPalette.CANCEL, "CANCEL CLAIM", new GUICallback() {
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                     if (mouseEvent.pressedLeftMouse()) {
-                        if (getSelectedRow() != null && getSelectedRow().f != null && DataUtil.getContracts(player).contains(getSelectedRow().f)) {
+                        if (getSelectedRow().f != null && getSelectedRow().f != null && DataUtil.getContracts(player).contains(getSelectedRow().f)) {
                             getState().getController().queueUIAudio("0022_menu_ui - back");
                             betterPlayer.getContracts().remove(contract);
                             contract.getClaimants().remove(betterPlayer);
@@ -191,9 +169,7 @@ public class ContractsScrollableList extends ScrollableTableList<Contract> imple
                 }
             });
             buttonPane.attach(cancelClaimButton);
-            cancelClaimButton.setPos(claimContractButton.getWidth() + 16 + viewClaimantsButton.getWidth() + 8, 0, 0);
-            buttonPane.attach(viewClaimantsButton);
-            viewClaimantsButton.setPos(claimContractButton.getWidth() + 16, 0, 0);
+            cancelClaimButton.setPos(viewClaimantsButton.getWidth() + 16, 0, 0);
 
             contractListRow.expanded = new GUIElementList(getState());
 

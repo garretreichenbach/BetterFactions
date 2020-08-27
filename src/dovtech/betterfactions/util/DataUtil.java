@@ -1,9 +1,11 @@
 package dovtech.betterfactions.util;
 
+import api.DebugFile;
 import api.common.GameServer;
 import api.element.block.Blocks;
 import api.element.inventory.ItemStack;
 import api.entity.StarPlayer;
+import dovtech.betterfactions.BetterFactions;
 import dovtech.betterfactions.contracts.Contract;
 import dovtech.betterfactions.contracts.ContractData;
 import dovtech.betterfactions.contracts.target.*;
@@ -28,11 +30,18 @@ public class DataUtil {
                 playerDataFolder.mkdir();
             }
 
-            FileInputStream playerDataFile = new FileInputStream(playerDataFolder.getPath() + "/" + internalPlayer.getId() + ".smdat");
+            File pData = new File(playerDataFolder.getPath() + "/" + internalPlayer.getName() + ".smdat");
+            if(!(pData.exists())) {
+                savePlayer(new BetterPlayer(internalPlayer));
+            }
+
+            FileInputStream playerDataFile = new FileInputStream(pData.getPath());
             ObjectInputStream playerDataInput = new ObjectInputStream(playerDataFile);
             PlayerData playerData = (PlayerData) playerDataInput.readObject();
             for(String uid : playerData.contracts) {
-                playerContracts.add(getContractFromUUID(uid));
+                Contract contract = getContractFromUUID(uid);
+                playerContracts.add(contract);
+                if(BetterFactions.getInstance().debugMode) DebugFile.log("[DEBUG]: Added Contract " + contract.getName() + " to player " + internalPlayer.getName(), BetterFactions.getInstance());
             }
         } catch(IOException | ClassNotFoundException e) {
             e.printStackTrace();
@@ -50,7 +59,12 @@ public class DataUtil {
                 factionDataFolder.mkdir();
             }
 
-            FileInputStream factionDataFile = new FileInputStream(factionDataFolder.getPath() + "/" + internalFaction.getIdFaction() + ".smdat");
+            File factionFile = new File(factionDataFolder.getPath() + "/" + faction.getID() + ".smdat");
+            if(!(factionFile.exists())) {
+                saveFaction(new BetterFaction(internalFaction));
+            }
+
+            FileInputStream factionDataFile = new FileInputStream(factionFile.getPath());
             ObjectInputStream factionDataInput = new ObjectInputStream(factionDataFile);
             FactionData factionData = (FactionData) factionDataInput.readObject();
             faction.setFactionStats(factionData.factionStats);
@@ -58,7 +72,18 @@ public class DataUtil {
         } catch(IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
+
+        if(BetterFactions.getInstance().debugMode) DebugFile.log("[DEBUG]: Converted Faction " + internalFaction.getName() + " to BetterFaction", BetterFactions.getInstance());
         return faction;
+    }
+
+    public static ArrayList<BetterFaction> getAllFactions() {
+        ArrayList<BetterFaction> factions = new ArrayList<>();
+        for(Faction f : GameServer.getServerState().getFactionManager().getFactionCollection()) {
+            BetterFaction faction = getBetterFaction(f);
+            factions.add(faction);
+        }
+        return factions;
     }
 
     public static Contract getContractFromUUID(String uid) {
@@ -80,12 +105,7 @@ public class DataUtil {
                 contractsFolder.mkdir();
             }
 
-            for(File contractFile : Objects.requireNonNull(contractsFolder.listFiles(new FilenameFilter() {
-                @Override
-                public boolean accept(File dir, String name) {
-                    return name.endsWith(".smdat");
-                }
-            }))) {
+            for(File contractFile : Objects.requireNonNull(contractsFolder.listFiles())) {
                 FileInputStream contractDataFile = new FileInputStream(contractFile.getPath());
                 ObjectInputStream contractDataInput = new ObjectInputStream(contractDataFile);
                 ContractData contractData = (ContractData) contractDataInput.readObject();
@@ -136,6 +156,7 @@ public class DataUtil {
 
                 Contract contract = new Contract(getBetterFaction(GameServer.getServerState().getFactionManager().getFaction(contractData.contractorID)), contractData.display, contractType, contractData.reward, contractTarget);
                 contracts.add(contract);
+                if(BetterFactions.getInstance().debugMode) DebugFile.log("[DEBUG]: Found Contract " + contract.getName() + " and added it to list", BetterFactions.getInstance());
             }
 
         } catch(IOException | ClassNotFoundException | PlayerNotFountException e) {
@@ -154,11 +175,72 @@ public class DataUtil {
         ContractData contractData = new ContractData(contract);
 
         try {
-            FileOutputStream contractDataFile = new FileOutputStream(contractsFolder.getPath() + "/" + contract.getUid() + ".smdat");
-            ObjectOutputStream contractDataOutput = new ObjectOutputStream(contractDataFile);
-            contractDataOutput.writeObject(contractData);
-            contractDataFile.close();
-        } catch (IOException e) {
+            File contractDataFile = new File(contractsFolder.getPath() + "/" + contract.getUid() + ".smdat");
+            if(contractDataFile.exists()) {
+                contractDataFile.delete();
+            }
+
+            FileOutputStream contractDataOutput = new FileOutputStream(contractDataFile.getPath());
+            ObjectOutputStream contractDataOutputStream = new ObjectOutputStream(contractDataOutput);
+            contractDataOutputStream.writeObject(contractData);
+            contractDataOutputStream.close();
+            contractDataOutput.close();
+
+            if(BetterFactions.getInstance().debugMode) DebugFile.log("[DEBUG]: Successfully saved Contract " + contract.getName(), BetterFactions.getInstance());
+
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void saveFaction(BetterFaction faction) {
+        File factionsFolder = new File("moddata/BetterFactions/faction");
+        if(!(factionsFolder.exists())) {
+            factionsFolder.mkdir();
+        }
+
+        FactionData factionData = new FactionData(faction);
+
+        try {
+            File factionDataFile = new File(factionsFolder.getPath() + "/" + faction.getID() + ".smdat");
+            if(factionDataFile.exists()) {
+                factionDataFile.delete();
+            }
+
+            FileOutputStream factionDataOutput = new FileOutputStream(factionDataFile.getPath());
+            ObjectOutputStream factionDataOutputStream = new ObjectOutputStream(factionDataOutput);
+            factionDataOutputStream.writeObject(factionData);
+            factionDataOutputStream.close();
+            factionDataOutput.close();
+            if(BetterFactions.getInstance().debugMode) DebugFile.log("[DEBUG]: Successfully saved Faction " + faction.getName(), BetterFactions.getInstance());
+
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void savePlayer(BetterPlayer player) {
+        File playerFolder = new File("moddata/BetterFactions/player");
+        if(!(playerFolder.exists())) {
+            playerFolder.mkdir();
+        }
+        PlayerData playerData = new PlayerData(player);
+
+        try {
+            File playerDataFile = new File(playerFolder.getPath() + "/" + player.getName() + ".smdat");
+            if(playerDataFile.exists()) {
+                playerDataFile.delete();
+            }
+
+            FileOutputStream playerDataOutput = new FileOutputStream(playerDataFile.getPath());
+            ObjectOutputStream playerDataOutputStream = new ObjectOutputStream(playerDataOutput);
+            playerDataOutputStream.writeObject(playerData);
+            playerDataOutputStream.close();
+            playerDataOutput.close();
+
+            if(BetterFactions.getInstance().debugMode) DebugFile.log("[DEBUG]: Successfully saved Player " + player.getName(), BetterFactions.getInstance());
+
+        } catch(IOException e) {
             e.printStackTrace();
         }
     }
