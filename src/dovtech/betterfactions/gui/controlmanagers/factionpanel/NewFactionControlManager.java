@@ -1,4 +1,4 @@
-package dovtech.betterfactions.controller;
+package dovtech.betterfactions.gui.controlmanagers.factionpanel;
 
 import dovtech.betterfactions.gui.faction.relations.NewFactionRelationDialog;
 import org.schema.common.util.StringTools;

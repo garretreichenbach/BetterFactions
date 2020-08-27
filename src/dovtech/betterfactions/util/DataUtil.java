@@ -43,6 +43,9 @@ public class DataUtil {
                 playerContracts.add(contract);
                 if(BetterFactions.getInstance().debugMode) DebugFile.log("[DEBUG]: Added Contract " + contract.getName() + " to player " + internalPlayer.getName(), BetterFactions.getInstance());
             }
+            playerDataInput.close();
+            playerDataFile.close();
+
         } catch(IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -68,6 +71,9 @@ public class DataUtil {
             ObjectInputStream factionDataInput = new ObjectInputStream(factionDataFile);
             FactionData factionData = (FactionData) factionDataInput.readObject();
             faction.setFactionStats(factionData.factionStats);
+
+            factionDataInput.close();
+            factionDataFile.close();
 
         } catch(IOException | ClassNotFoundException e) {
             e.printStackTrace();
@@ -156,6 +162,9 @@ public class DataUtil {
 
                 Contract contract = new Contract(getBetterFaction(GameServer.getServerState().getFactionManager().getFaction(contractData.contractorID)), contractData.display, contractType, contractData.reward, contractTarget);
                 contracts.add(contract);
+
+                contractDataInput.close();
+                contractDataFile.close();
                 if(BetterFactions.getInstance().debugMode) DebugFile.log("[DEBUG]: Found Contract " + contract.getName() + " and added it to list", BetterFactions.getInstance());
             }
 

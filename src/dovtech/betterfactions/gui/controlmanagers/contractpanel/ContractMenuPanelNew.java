@@ -1,4 +1,4 @@
-package dovtech.betterfactions.controller;
+package dovtech.betterfactions.gui.controlmanagers.contractpanel;
 
 import dovtech.betterfactions.gui.contracts.PlayerContractsScrollableList;
 import org.schema.game.client.data.GameClientState;
@@ -8,14 +8,14 @@ import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIMainWindow;
 import org.schema.schine.input.InputState;
 
-public class ContractManagerPanelNew extends GUIMainWindow implements GUIActiveInterface {
+public class ContractMenuPanelNew extends GUIMainWindow implements GUIActiveInterface {
 
-    private ContractManagerPanel managerPanel;
+    private ContractMenuPanel managerPanel;
     private GUIContentPane contractsPane;
     private GUIContentPane historyPane;
     private boolean init;
 
-    public ContractManagerPanelNew(InputState state, ContractManagerPanel managerPanel) {
+    public ContractMenuPanelNew(InputState state, ContractMenuPanel managerPanel) {
         super(state, 800, 500, "PLAYERCONTRACTSPANEL");
         this.managerPanel = managerPanel;
     }

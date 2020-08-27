@@ -18,7 +18,7 @@ import api.mod.StarMod;
 import api.mod.config.FileConfiguration;
 import dovtech.betterfactions.contracts.Contract;
 import dovtech.betterfactions.contracts.target.*;
-import dovtech.betterfactions.controller.ContractsMenuControlManager;
+import dovtech.betterfactions.gui.controlmanagers.contractpanel.ContractMenuControlManager;
 import dovtech.betterfactions.faction.BetterFaction;
 import dovtech.betterfactions.player.BetterPlayer;
 import dovtech.betterfactions.gui.contracts.ContractsScrollableList;
@@ -111,10 +111,12 @@ public class BetterFactions extends StarMod {
                     public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                         if(mouseEvent.pressedLeftMouse()) {
                             for(AbstractControlManager controlManager : GameClient.getClientState().getGlobalGameControlManager().getControlManagers()) {
-                                controlManager.setActive(false);
+                                if(!(controlManager instanceof ContractMenuControlManager)) {
+                                    controlManager.setActive(false);
+                                }
                             }
-                            ContractsMenuControlManager contractsMenuControlManager = new ContractsMenuControlManager(GameClient.getClientState());
-                            contractsMenuControlManager.setActive(true);
+                            ContractMenuControlManager contractMenuControlManager = new ContractMenuControlManager(GameClient.getClientState());
+                            contractMenuControlManager.setActive(true);
 
                         }
                     }

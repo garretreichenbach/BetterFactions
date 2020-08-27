@@ -2,7 +2,9 @@ package dovtech.betterfactions.player;
 
 import api.entity.StarPlayer;
 import dovtech.betterfactions.contracts.Contract;
+import dovtech.betterfactions.faction.BetterFaction;
 import dovtech.betterfactions.faction.FactionRank;
+import dovtech.betterfactions.util.DataUtil;
 import java.util.ArrayList;
 
 public class BetterPlayer {
@@ -38,5 +40,9 @@ public class BetterPlayer {
 
     public void setContracts(ArrayList<Contract> contracts) {
         this.contracts = contracts;
+    }
+
+    public BetterFaction getFaction() {
+        return DataUtil.getBetterFaction(internalPlayer.getFaction().getInternalFaction());
     }
 }
