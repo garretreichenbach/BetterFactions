@@ -1,8 +1,9 @@
 package dovtech.betterfactions.faction;
 
 import dovtech.betterfactions.faction.government.FactionGovernmentType;
+import java.io.Serializable;
 
-public class FactionStats {
+public class FactionStats implements Serializable {
 
     public FactionGovernmentType governmentType;
     public int reputationScore;

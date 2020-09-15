@@ -3,7 +3,9 @@ package dovtech.betterfactions.gui.contracts;
 import api.common.GameClient;
 import api.entity.StarPlayer;
 import dovtech.betterfactions.contracts.Contract;
+import dovtech.betterfactions.gui.controlmanagers.contractpanel.ContractMenuControlManager;
 import dovtech.betterfactions.gui.controlmanagers.viewclaimantspanel.ClaimantsMenuControlManager;
+import dovtech.betterfactions.gui.controlmanagers.viewclaimantspanel.ClaimantsMenuPanel;
 import dovtech.betterfactions.player.BetterPlayer;
 import dovtech.betterfactions.util.DataUtil;
 import org.hsqldb.lib.StringComparator;
@@ -137,14 +139,16 @@ public class ContractsScrollableList extends ScrollableTableList<Contract> imple
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                     if(mouseEvent.pressedLeftMouse()) {
-                        getState().getController().queueUIAudio("0022_menu_ui - enter");
-                        Contract c = getSelectedRow().f;
-                        BetterPlayer bP = new BetterPlayer(player);
-                        bP.setContracts(DataUtil.getContracts(player));
-                        bP.getContracts().add(c);
-                        c.getClaimants().add(bP);
-                        DataUtil.savePlayer(bP);
-                        //Todo
+                        if(getSelectedRow() != null && getSelectedRow().f != null) {
+                            getState().getController().queueUIAudio("0022_menu_ui - enter");
+                            Contract c = getSelectedRow().f;
+                            BetterPlayer bP = new BetterPlayer(player);
+                            bP.setContracts(DataUtil.getContracts(player));
+                            bP.getContracts().add(c);
+                            c.getClaimants().add(bP);
+                            DataUtil.savePlayer(bP);
+                            //Todo
+                        }
                     }
                 }
 
@@ -168,6 +172,12 @@ public class ContractsScrollableList extends ScrollableTableList<Contract> imple
                                     controlManager.setActive(false);
                                 }
                             }
+                            for(DialogInterface p : getState().getController().getPlayerInputs()) {
+                                if(!(p instanceof ClaimantsMenuControlManager)) {
+                                    p.deactivate();
+                                }
+                            }
+
                             ClaimantsMenuControlManager claimantsMenuControlManager = new ClaimantsMenuControlManager(GameClient.getClientState(), getSelectedRow().f);
                             claimantsMenuControlManager.setActive(true);
                         }

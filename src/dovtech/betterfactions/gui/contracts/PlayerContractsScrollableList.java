@@ -143,6 +143,12 @@ public class PlayerContractsScrollableList extends ScrollableTableList<Contract>
                                     controlManager.setActive(false);
                                 }
                             }
+
+                            for(DialogInterface p : getState().getController().getPlayerInputs()) {
+                                if(!(p instanceof ClaimantsMenuControlManager)) {
+                                    p.deactivate();
+                                }
+                            }
                             ClaimantsMenuControlManager claimantsMenuControlManager = new ClaimantsMenuControlManager(GameClient.getClientState(), getSelectedRow().f);
                             claimantsMenuControlManager.setActive(true);
                         }

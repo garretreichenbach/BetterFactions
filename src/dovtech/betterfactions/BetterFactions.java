@@ -20,6 +20,7 @@ import dovtech.betterfactions.contracts.Contract;
 import dovtech.betterfactions.contracts.target.*;
 import dovtech.betterfactions.gui.controlmanagers.contractpanel.ContractMenuControlManager;
 import dovtech.betterfactions.faction.BetterFaction;
+import dovtech.betterfactions.gui.controlmanagers.viewclaimantspanel.ClaimantsMenuControlManager;
 import dovtech.betterfactions.player.BetterPlayer;
 import dovtech.betterfactions.gui.contracts.ContractsScrollableList;
 import dovtech.betterfactions.gui.faction.alliance.*;
@@ -32,6 +33,7 @@ import org.schema.game.common.data.player.faction.FactionRelation;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.*;
+import org.schema.schine.graphicsengine.forms.gui.newgui.DialogInterface;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.input.InputState;
 import java.io.*;
@@ -115,6 +117,12 @@ public class BetterFactions extends StarMod {
                                     controlManager.setActive(false);
                                 }
                             }
+                            for(DialogInterface p : GameClient.getClientState().getController().getPlayerInputs()) {
+                                if(!(p instanceof ContractMenuControlManager)) {
+                                    p.deactivate();
+                                }
+                            }
+
                             ContractMenuControlManager contractMenuControlManager = new ContractMenuControlManager(GameClient.getClientState());
                             contractMenuControlManager.setActive(true);
 
