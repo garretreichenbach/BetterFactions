@@ -1,40 +1,43 @@
 package dovtech.betterfactions.contracts;
 
+import api.entity.StarPlayer;
 import dovtech.betterfactions.contracts.target.ContractTarget;
-import dovtech.betterfactions.faction.BetterFaction;
-import dovtech.betterfactions.player.BetterPlayer;
+import org.schema.game.common.data.player.faction.Faction;
 import java.util.ArrayList;
-import java.util.UUID;
 
 public class Contract {
 
     private String name;
-    private BetterFaction contractor;
+    private Faction contractor;
     private ContractType contractType;
     private int reward;
     private ContractTarget[] target;
-    private ArrayList<BetterPlayer> claimants;
+    private ArrayList<StarPlayer> claimants;
     private String uid;
 
-    public Contract(BetterFaction contractor, String name, ContractType contractType, int reward, ContractTarget... target) {
+    public Contract(Faction contractor, String name, ContractType contractType, int reward, String uid, ContractTarget... target) {
         this.name = name;
         this.contractor = contractor;
         this.contractType = contractType;
         this.reward = reward;
         this.target = target;
         this.claimants = new ArrayList<>();
-        this.uid = UUID.randomUUID().toString();
+        this.uid = uid;
     }
 
-    public ArrayList<BetterPlayer> getClaimants() {
+    public ArrayList<StarPlayer> getClaimants() {
         return claimants;
+    }
+
+    public void setClaimants(ArrayList<StarPlayer> claimants) {
+        this.claimants = claimants;
     }
 
     public String getName() {
         return name;
     }
 
-    public BetterFaction getContractor() {
+    public Faction getContractor() {
         return contractor;
     }
 

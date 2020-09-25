@@ -1,11 +1,11 @@
 package dovtech.betterfactions.contracts.target;
 
+import api.entity.StarPlayer;
 import dovtech.betterfactions.contracts.Contract;
-import dovtech.betterfactions.player.BetterPlayer;
 
 public class PlayerTarget implements ContractTarget {
 
-    private BetterPlayer target;
+    private StarPlayer target;
 
     @Override
     public int getAmount() {
@@ -13,13 +13,13 @@ public class PlayerTarget implements ContractTarget {
     }
 
     @Override
-    public BetterPlayer getTarget() {
+    public StarPlayer getTarget() {
         return target;
     }
 
     @Override
     public void setTarget(Object target) {
-        this.target = (BetterPlayer) target;
+        this.target = (StarPlayer) target;
     }
 
     @Override

@@ -1,17 +1,30 @@
 package dovtech.betterfactions.player;
 
-import java.io.Serializable;
+import api.entity.StarPlayer;
+import dovtech.betterfactions.contracts.Contract;
+import java.util.ArrayList;
 
-public class PlayerData implements Serializable {
+public class PlayerData {
 
-    public int playerID;
-    public String[] contracts;
+    private String playerName;
+    private ArrayList<Contract> contracts;
+    private ArrayList<PlayerHistory> history;
 
-    public PlayerData(BetterPlayer player) {
-        this.playerID = player.getInternalPlayer().getId();
-        this.contracts = new String[player.getContracts().size()];
-        for(int i = 0; i < contracts.length; i ++) {
-           contracts[i] = player.getContracts().get(i).getUid();
-        }
+    public PlayerData(StarPlayer player) {
+        this.playerName = player.getName();
+        this.contracts = new ArrayList<>();
+        this.history = new ArrayList<>();
+    }
+
+    public ArrayList<Contract> getContracts() {
+        return contracts;
+    }
+
+    public ArrayList<PlayerHistory> getHistory() {
+        return history;
+    }
+
+    public String getPlayerName() {
+        return playerName;
     }
 }
