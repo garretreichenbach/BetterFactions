@@ -2,7 +2,7 @@
   "name": "BetterFactions",
   "author": "TheDerpGamer",
   "description": "Improves faction interaction and diplomacy.",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "starmade_version": "0.202.108",
   "client_mod": true,
   "server_mod": false,

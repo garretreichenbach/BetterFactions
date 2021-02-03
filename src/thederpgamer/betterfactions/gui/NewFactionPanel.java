@@ -9,10 +9,13 @@ import thederpgamer.betterfactions.gui.federation.FederationDiplomacyTab;
 import thederpgamer.betterfactions.gui.federation.FederationManagementTab;
 import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;
 import org.schema.schine.input.InputState;
+import thederpgamer.betterfactions.utils.FactionUtils;
+import thederpgamer.betterfactions.utils.FederationUtils;
+import java.util.Objects;
 
 /**
  * NewFactionPanel.java
- * Improved verion of FactionPanelNew
+ * Improved version of FactionPanelNew
  * ==================================================
  * Created 01/30/2021
  * @author TheDerpGamer
@@ -34,8 +37,11 @@ public class NewFactionPanel extends FactionPanelNew {
     }
 
     public Federation getFederation() {
-        //Todo
-        return null;
+        if(getOwnFaction() != null) {
+            return FederationUtils.getFederation(Objects.requireNonNull(FactionUtils.getFactionData(getOwnFaction())));
+        } else {
+            return null;
+        }
     }
 
     public boolean isInFederation() {
@@ -48,10 +54,6 @@ public class NewFactionPanel extends FactionPanelNew {
 
     @Override
     public void recreateTabs() {
-        Object beforeTab = null;
-        if (factionPanel.getSelectedTab() < factionPanel.getTabs().size()) {
-            beforeTab = factionPanel.getTabs().get(factionPanel.getSelectedTab()).getTabName();
-        }
         factionPanel.clearTabs();
 
         (factionNewsTab = new FactionNewsTab(inputState, factionPanel, this)).onInit();
@@ -73,14 +75,9 @@ public class NewFactionPanel extends FactionPanelNew {
             }
         }
 
+        (optionsTab = new FactionOptionsTab(inputState, factionPanel, this)).onInit();
+        factionPanel.getTabs().add(optionsTab);
+
         factionPanel.activeInterface = this;
-        if (beforeTab != null) {
-            for (int i = 0; i < factionPanel.getTabs().size(); i++) {
-                if (factionPanel.getTabs().get(i).getTabName().equals(beforeTab)) {
-                    factionPanel.setSelectedTab(i);
-                    break;
-                }
-            }
-        }
     }
 }

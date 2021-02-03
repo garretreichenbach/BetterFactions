@@ -1,4 +1,4 @@
-package thederpgamer.betterfactions.data;
+package thederpgamer.betterfactions.data.faction;
 
 import api.common.GameClient;
 import api.common.GameCommon;
@@ -15,8 +15,9 @@ import java.io.Serializable;
  * Created 01/30/2021
  * @author TheDerpGamer
  */
-public class FactionData implements Serializable {
+public class FactionData implements FactionScore, Serializable {
 
+    //Info
     private int factionId;
     private int federationId;
     private String factionName;
@@ -31,6 +32,22 @@ public class FactionData implements Serializable {
         factionDescription = faction.getDescription();
     }
 
+    public int getFactionId() {
+        return factionId;
+    }
+
+    public String getFactionName() {
+        return factionName;
+    }
+
+    public String getFactionDescription() {
+        return factionDescription;
+    }
+
+    public String getFactionInfo() {
+        return factionInfo;
+    }
+
     public int getFederationId() {
         return federationId;
     }
@@ -42,7 +59,7 @@ public class FactionData implements Serializable {
     private String getInfo(Faction faction) {
         StringBuilder builder = new StringBuilder();
         String federation = "Non-Aligned";
-        FactionData factionData = FactionUtils.getFactionInfo(faction);
+        FactionData factionData = FactionUtils.getFactionData(faction);
         if(FederationUtils.getFederation(factionData) != null) federation = FederationUtils.getFederation(factionData).getName();
         builder.append(federation);
         builder.append("\nSize: ").append(faction.getMembersUID().keySet().size());
@@ -59,7 +76,7 @@ public class FactionData implements Serializable {
                 return "Own Faction";
             } else {
                 Faction playerFaction = GameCommon.getGameState().getFactionManager().getFaction(playerFactionId);
-                FactionData playerFactionData = FactionUtils.getFactionInfo(playerFaction);
+                FactionData playerFactionData = FactionUtils.getFactionData(playerFaction);
                 if(playerFactionData.getFederationId() != -1) {
                     if(federationId != -1) {
                         if(playerFactionData.getFederationId() == federationId) {
@@ -98,8 +115,35 @@ public class FactionData implements Serializable {
         return "Todo";
     }
 
-    @Override
-    public String toString() {
+    public String getInfoString() {
         return factionInfo + "\n\n" + factionDescription;
+    }
+
+    public String[] getDataArray() {
+        String[] dataArray = new String[3];
+        dataArray[0] = "NAME: " + factionName;
+        dataArray[1] = "ID: " + factionId;
+        dataArray[2] = "FED: " + federationId;
+        return dataArray;
+    }
+
+    public String[] getScoreArray() {
+        String[] scoreArray = new String[6];
+        scoreArray[0] = "FP: " + factionPoints;
+        scoreArray[1] = "INFL: " + influenceScore;
+        scoreArray[2] = "TER: " + territoryScore;
+        scoreArray[3] = "ECON: " + economicScore;
+        scoreArray[4] = "MIL: " + militaryScore;
+        scoreArray[5] = "AGR: " + aggressionScore;
+        return scoreArray;
+    }
+
+    public String[] getInfoArray() {
+        String[] infoArray = new String[9];
+        String[] dataArray = getDataArray();
+        String[] scoreArray = getScoreArray();
+        System.arraycopy(dataArray, 0, infoArray, 0, dataArray.length);
+        System.arraycopy(scoreArray, 0, infoArray, dataArray.length, scoreArray.length);
+        return infoArray;
     }
 }

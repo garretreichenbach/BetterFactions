@@ -3,7 +3,7 @@ package thederpgamer.betterfactions.utils;
 import api.common.GameCommon;
 import api.mod.config.PersistentObjectUtil;
 import thederpgamer.betterfactions.BetterFactions;
-import thederpgamer.betterfactions.data.FactionData;
+import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.game.faction.Federation;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,21 +17,21 @@ import java.util.HashMap;
  */
 public class FederationUtils {
 
+    private static final boolean isClient = GameCommon.isClientConnectedToServer() || GameCommon.isOnSinglePlayer();
     private static final boolean isServer = GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer();
     private static HashMap<Integer, Federation> federations = new HashMap<>();
-    public static HashMap<Integer, Federation> clientDataMap = new HashMap<>();
+
+    public static HashMap<Integer, Federation> getAllFederations() {
+        if(isServer) {
+            return federations;
+        } else {
+            return null;
+        }
+    }
 
     public static Federation getFederation(FactionData factionData) {
         if(factionData.getFederationId() != -1) {
-            if (isServer) {
-                return federations.get(factionData.getFederationId());
-            } else {
-                if(clientDataMap.containsKey(factionData.getFederationId())) {
-                    return clientDataMap.get(factionData.getFederationId());
-                } else {
-                    return null;
-                }
-            }
+            return federations.get(factionData.getFederationId());
         } else {
             return null;
         }
@@ -52,7 +52,7 @@ public class FederationUtils {
 
     public static void loadData() {
         if(isServer) {
-            ArrayList<Object> objects = PersistentObjectUtil.getObjects(BetterFactions.getInstance(), Federation.class);
+            ArrayList<Object> objects = PersistentObjectUtil.getObjects(BetterFactions.getInstance().getSkeleton(), Federation.class);
             for(Object object : objects) {
                 Federation federation = (Federation) object;
                 federations.put(federation.getId(), federation);
@@ -63,9 +63,15 @@ public class FederationUtils {
     public static void saveData() {
         if(isServer) {
             for(Federation federation : federations.values()) {
-                PersistentObjectUtil.addObject(BetterFactions.getInstance(), federation);
+                PersistentObjectUtil.addObject(BetterFactions.getInstance().getSkeleton(), federation);
             }
-            PersistentObjectUtil.save(BetterFactions.getInstance());
+            PersistentObjectUtil.save(BetterFactions.getInstance().getSkeleton());
+        }
+    }
+
+    public static void updateFromServer(ArrayList<Federation> federationsList) {
+        if(isClient) {
+            for(Federation fed : federationsList) federations.put(fed.getId(), fed);
         }
     }
 }

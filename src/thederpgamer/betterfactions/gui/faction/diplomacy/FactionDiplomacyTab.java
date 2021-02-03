@@ -43,7 +43,7 @@ public class FactionDiplomacyTab extends GUIContentPane {
 
         if(guiPanel.isInFaction()) {
             infoPanel.setNameText(guiPanel.getOwnFaction().getName());
-            infoPanel.setInfoText(FactionUtils.getFactionInfo(guiPanel.getOwnFaction()).toString());
+            infoPanel.setInfoText(FactionUtils.getFactionData(guiPanel.getOwnFaction()).getInfoString());
         }
     }
 }
