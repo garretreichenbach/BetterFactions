@@ -1,23 +1,24 @@
-package dovtech.betterfactions.gui.faction;
+package thederpgamer.betterfactions.gui.faction;
 
+import thederpgamer.betterfactions.gui.NewFactionPanel;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIWindowInterface;
 import org.schema.schine.input.InputState;
 
 /**
- * FactionDiplomacyTab.java
+ * FactionNewsTab.java
  * <Description>
  * ==================================================
  * Created 01/30/2021
  * @author TheDerpGamer
  */
-public class FactionDiplomacyTab extends GUIContentPane {
+public class FactionNewsTab extends GUIContentPane {
 
     private NewFactionPanel guiPanel;
 
-    public FactionDiplomacyTab(InputState state, GUIWindowInterface window, NewFactionPanel guiPanel) {
-        super(state, window, Lng.str("FACTION DIPLOMACY"));
+    public FactionNewsTab(InputState state, GUIWindowInterface window, NewFactionPanel guiPanel) {
+        super(state, window, Lng.str("NEWS"));
         this.guiPanel = guiPanel;
     }
 }

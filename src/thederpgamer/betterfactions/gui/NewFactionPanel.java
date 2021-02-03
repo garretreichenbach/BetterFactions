@@ -1,6 +1,12 @@
-package dovtech.betterfactions.gui.faction;
+package thederpgamer.betterfactions.gui;
 
-import dovtech.betterfactions.data.faction.Federation;
+import thederpgamer.betterfactions.game.faction.Federation;
+import thederpgamer.betterfactions.gui.faction.FactionManagementTab;
+import thederpgamer.betterfactions.gui.faction.FactionNewsTab;
+import thederpgamer.betterfactions.gui.faction.FactionOptionsTab;
+import thederpgamer.betterfactions.gui.faction.diplomacy.FactionDiplomacyTab;
+import thederpgamer.betterfactions.gui.federation.FederationDiplomacyTab;
+import thederpgamer.betterfactions.gui.federation.FederationManagementTab;
 import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;
 import org.schema.schine.input.InputState;
 
@@ -27,16 +33,16 @@ public class NewFactionPanel extends FactionPanelNew {
         this.inputState = inputState;
     }
 
-    private Federation getFederation() {
+    public Federation getFederation() {
         //Todo
         return null;
     }
 
-    private boolean isInFederation() {
+    public boolean isInFederation() {
         return getFederation() != null;
     }
 
-    private boolean isInFaction() {
+    public boolean isInFaction() {
         return getOwnFaction() != null;
     }
 

@@ -1,5 +1,6 @@
-package dovtech.betterfactions.gui.faction;
+package thederpgamer.betterfactions.gui.federation;
 
+import thederpgamer.betterfactions.gui.NewFactionPanel;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIWindowInterface;

@@ -1,11 +1,11 @@
-package dovtech.betterfactions;
+package thederpgamer.betterfactions;
 
 import api.listener.Listener;
 import api.listener.events.gui.PlayerGUICreateEvent;
 import api.mod.StarLoader;
 import api.mod.StarMod;
 import api.mod.config.FileConfiguration;
-import dovtech.betterfactions.gui.faction.NewFactionPanel;
+import thederpgamer.betterfactions.gui.NewFactionPanel;
 import java.lang.reflect.Field;
 
 public class BetterFactions extends StarMod {
@@ -19,7 +19,8 @@ public class BetterFactions extends StarMod {
     }
 
     //Data
-    private final String version = "0.4.1";
+    private final String version = "0.4.2";
+    public final String defaultLogo = "Todo";
 
     //Config
     private final String[] defaultConfig = {
@@ -30,23 +31,19 @@ public class BetterFactions extends StarMod {
     public int saveInterval = 12000;
 
     @Override
-    public void onGameStart() {
-        inst = this;
-        initialize();
-    }
-
-    @Override
     public void onEnable() {
+        inst = this;
         initConfig();
         registerListeners();
+        registerPackets();
     }
 
-    private void initialize() {
-        setModName("BetterFactions");
-        setModAuthor("TheDerpGamer");
-        setModDescription("Improves faction interaction and diplomacy.");
-        setModSMVersion("0.202.108");
-        setModVersion(version);
+    private void initConfig() {
+        FileConfiguration config = getConfig("config");
+        config.saveDefault(defaultConfig);
+
+        this.debugMode = config.getConfigurableBoolean("debug-mode", false);
+        this.saveInterval = config.getConfigurableInt("save-interval", 12000);
     }
 
     private void registerListeners() {
@@ -66,11 +63,7 @@ public class BetterFactions extends StarMod {
         }, this);
     }
 
-    private void initConfig() {
-        FileConfiguration config = getConfig("config");
-        config.saveDefault(defaultConfig);
+    private void registerPackets() {
 
-        this.debugMode = config.getConfigurableBoolean("debug-mode", false);
-        this.saveInterval = config.getConfigurableInt("save-interval", 12000);
     }
 }
