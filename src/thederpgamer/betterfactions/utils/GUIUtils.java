@@ -98,6 +98,7 @@ public class GUIUtils {
         return screenRes;
     }
 
+    /*
     public static GUIMainWindow getCurrentActiveWindow() {
         try {
             if (getPlayerGameControlManager().isAnyMenuActive()) {
@@ -171,4 +172,5 @@ public class GUIUtils {
     public static PlayerPanel getPlayerPanel() {
         return GameClient.getClientState().getWorldDrawer().getGuiDrawer().getPlayerPanel();
     }
+     */
 }

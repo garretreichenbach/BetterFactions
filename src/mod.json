@@ -7,7 +7,7 @@
   "client_mod": false,
   "server_mod": false,
   "main_class": "thederpgamer.betterfactions.BetterFactions",
-  "smd_resource_id": -1,
+  "smd_resource_id": 99999,
   "dependencies": [
     -1
   ],

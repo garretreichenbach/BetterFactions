@@ -53,7 +53,14 @@ public class NewFactionPanel extends FactionPanelNew {
     }
 
     @Override
+    public void onInit() {
+        super.onInit();
+        recreateTabs();
+    }
+
+    @Override
     public void recreateTabs() {
+        factionPanel.activeInterface = this;
         factionPanel.clearTabs();
 
         (factionNewsTab = new FactionNewsTab(inputState, factionPanel, this)).onInit();
@@ -77,7 +84,5 @@ public class NewFactionPanel extends FactionPanelNew {
 
         (optionsTab = new FactionOptionsTab(inputState, factionPanel, this)).onInit();
         factionPanel.getTabs().add(optionsTab);
-
-        factionPanel.activeInterface = this;
     }
 }

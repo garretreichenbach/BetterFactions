@@ -22,8 +22,9 @@ import java.util.Objects;
  * Created 01/30/2021
  * @author TheDerpGamer
  */
-public class FactionInfoPanel extends GUIInnerTextbox implements GUIPositioningInterface {
+public class FactionInfoPanel extends GUIInnerTextbox {
 
+    private GUIPositioningInterface posInterface;
     private FactionLogoOverlay factionLogo;
     private PositionableGUITextOverlay nameOverlay;
     private PositionableGUITextOverlay infoOverlay;
@@ -37,17 +38,22 @@ public class FactionInfoPanel extends GUIInnerTextbox implements GUIPositioningI
     public void onInit() {
         super.onInit();
 
-        (factionLogo = new FactionLogoOverlay(Objects.requireNonNull(ImageUtils.getImage(BetterFactions.getInstance().defaultLogo)), getState())).onInit();
-        GUIUtils.orientateInsideFrame(factionLogo, factionLogo, Orientation.Horizontal.MIDDLE, Orientation.Vertical.TOP);
+        (factionLogo = new FactionLogoOverlay(ImageUtils.getImage(BetterFactions.getInstance().defaultLogo), getState())).onInit();
+        attach(factionLogo);
 
         (nameOverlay = new PositionableGUITextOverlay(getState())).onInit();
-        GUIUtils.orientateInsideFrame(nameOverlay, nameOverlay, Orientation.Horizontal.MIDDLE, Orientation.Vertical.MIDDLE);
+        attach(nameOverlay);
 
         (infoOverlay = new PositionableGUITextOverlay(getState())).onInit();
-        GUIUtils.orientateInsideFrame(infoOverlay, infoOverlay, Orientation.Horizontal.MIDDLE, Orientation.Vertical.BOTTOM);
+        attach(infoOverlay);
 
+        orientateElements();
+    }
 
-        if(BetterFactions.getInstance().debugMode) createCornerPosText();
+    public void orientateElements() {
+        GUIUtils.orientateInsideFrame(factionLogo, factionLogo.getPosInterface(), Orientation.Horizontal.MIDDLE, Orientation.Vertical.TOP);
+        GUIUtils.orientateInsideFrame(nameOverlay, nameOverlay.getPosInterface(), Orientation.Horizontal.MIDDLE, Orientation.Vertical.MIDDLE);
+        GUIUtils.orientateInsideFrame(infoOverlay, infoOverlay.getPosInterface(), Orientation.Horizontal.MIDDLE, Orientation.Vertical.BOTTOM);
     }
 
     @Override
@@ -99,29 +105,39 @@ public class FactionInfoPanel extends GUIInnerTextbox implements GUIPositioningI
         factionLogo.setFaction(faction);
     }
 
-    @Override
-    public Vector2f[] getCorners() {
-        Vector2f[] corners = new Vector2f[5];
-        corners[0] = new Vector2f(getPos().x - (getWidth() / 2), getPos().y - (getHeight() / 2));
-        corners[1] = new Vector2f(getPos().x + (getWidth() / 2), getPos().y - (getHeight() / 2));
-        corners[2] = new Vector2f(getPos().x - (getWidth() / 2), getPos().y + (getHeight() / 2));
-        corners[3] = new Vector2f(getPos().x + (getWidth() / 2), getPos().y + (getHeight() / 2));
-        corners[4] = new Vector2f(getPos().x, getPos().y);
-        return corners;
+    public GUIPositioningInterface getPosInterface() {
+        if(posInterface == null) createPosInterface();
+        return posInterface;
     }
 
-    @Override
-    public void createCornerPosText() {
-        if(BetterFactions.getInstance().debugMode) {
-            cornerPosText = new GUITextOverlay[5];
-            for(int i = 0; i < cornerPosText.length; i ++) {
-                Vector2f corner = getCorners()[i];
-                GUITextOverlay cornerText = new GUITextOverlay(10, 10, getState());
-                cornerText.onInit();
-                cornerText.setPos(corner.x, corner.y, getPos().z);
-                attach(cornerText);
-                cornerPosText[i] = cornerText;
+    public void createPosInterface() {
+        posInterface = new GUIPositioningInterface() {
+            @Override
+            public Vector2f[] getCorners() {
+                Vector2f[] corners = new Vector2f[5];
+                corners[0] = new Vector2f(getPos().x - (getWidth() / 2), getPos().y - (getHeight() / 2));
+                corners[1] = new Vector2f(getPos().x + (getWidth() / 2), getPos().y - (getHeight() / 2));
+                corners[2] = new Vector2f(getPos().x - (getWidth() / 2), getPos().y + (getHeight() / 2));
+                corners[3] = new Vector2f(getPos().x + (getWidth() / 2), getPos().y + (getHeight() / 2));
+                corners[4] = new Vector2f(getPos().x, getPos().y);
+                return corners;
             }
-        }
+
+            @Override
+            public void createCornerPosText() {
+                if(BetterFactions.getInstance().debugMode) {
+                    cornerPosText = new GUITextOverlay[5];
+                    for(int i = 0; i < cornerPosText.length; i ++) {
+                        Vector2f corner = getCorners()[i];
+                        GUITextOverlay cornerText = new GUITextOverlay(10, 10, getState());
+                        cornerText.onInit();
+                        cornerText.setPos(corner.x, corner.y, getPos().z);
+                        attach(cornerText);
+                        cornerPosText[i] = cornerText;
+                    }
+                }
+            }
+        };
+        posInterface.createCornerPosText();
     }
 }

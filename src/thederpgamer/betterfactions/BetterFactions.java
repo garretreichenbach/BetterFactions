@@ -1,21 +1,19 @@
 package thederpgamer.betterfactions;
 
+import api.common.GameClient;
 import api.common.GameCommon;
 import api.common.GameServer;
 import api.listener.Listener;
-import api.listener.events.controller.ClientInitializeEvent;
-import api.listener.events.controller.ServerInitializeEvent;
 import api.listener.events.gui.PlayerGUICreateEvent;
 import api.listener.events.input.KeyPressEvent;
-import api.listener.events.network.ClientLoginEvent;
 import api.listener.events.player.PlayerJoinFactionEvent;
 import api.listener.events.player.PlayerLeaveFactionEvent;
 import api.mod.StarLoader;
 import api.mod.StarMod;
 import api.mod.config.FileConfiguration;
-import api.mod.config.SyncedConfigUtil;
 import api.network.packets.PacketUtil;
 import api.utils.StarRunnable;
+import org.schema.game.client.view.gui.PlayerPanel;
 import org.schema.game.common.data.player.PlayerState;
 import thederpgamer.betterfactions.gui.NewFactionPanel;
 import thederpgamer.betterfactions.network.server.UpdateClientDataPacket;
@@ -57,16 +55,7 @@ public class BetterFactions extends StarMod {
         loadData();
         registerListeners();
         registerPackets();
-    }
-
-    @Override
-    public void onClientCreated(ClientInitializeEvent event) {
-        startClientTimers();
-    }
-
-    @Override
-    public void onServerCreated(ServerInitializeEvent event) {
-        startServerTimers();
+        if(isServer()) startServerTimers();
     }
 
     private void initConfig() {
@@ -84,22 +73,17 @@ public class BetterFactions extends StarMod {
     }
 
     private void registerListeners() {
-        StarLoader.registerListener(ClientLoginEvent.class, new Listener<ClientLoginEvent>() {
-            @Override
-            public void onEvent(ClientLoginEvent event) {
-                SyncedConfigUtil.sendConfigToClient(event.getServerProcessor(), config);
-            }
-        }, this);
-
         StarLoader.registerListener(PlayerGUICreateEvent.class, new Listener<PlayerGUICreateEvent>() {
             @Override
             public void onEvent(PlayerGUICreateEvent event) {
                 try {
-                    Field factionPanelNewField = event.getPlayerPanel().getClass().getDeclaredField("factionPanelNew");
+                    PlayerPanel playerPanel = GameClient.getClientState().getWorldDrawer().getGuiDrawer().getPlayerPanel();
+                    Field factionPanelNewField = playerPanel.getClass().getDeclaredField("factionPanelNew");
                     factionPanelNewField.setAccessible(true);
-                    newFactionPanel = new NewFactionPanel(event.getPlayerPanel().getState());
-                    newFactionPanel.onInit();
-                    factionPanelNewField.set(event.getPlayerPanel(), newFactionPanel);
+                    if(!(factionPanelNewField.get(playerPanel) instanceof NewFactionPanel)) {
+                        (newFactionPanel = new NewFactionPanel(playerPanel.getState())).onInit();
+                        factionPanelNewField.set(playerPanel, newFactionPanel);
+                    }
                 } catch (NoSuchFieldException | IllegalAccessException e) {
                     e.printStackTrace();
                 }
@@ -108,7 +92,7 @@ public class BetterFactions extends StarMod {
 
         StarLoader.registerListener(KeyPressEvent.class, new Listener<KeyPressEvent>() {
             @Override
-            public void onEvent(final KeyPressEvent event) {
+            public void onEvent(KeyPressEvent event) {
                 if (event.getKey() == 210 || event.getKey() == 260) {
                     if (debugMode) showDebugText = !showDebugText;
                 }
@@ -135,11 +119,7 @@ public class BetterFactions extends StarMod {
     }
 
     private void registerPackets() {
-        PacketUtil.registerPacket(UpdateClientDataPacket.class);
-    }
-
-    private void startClientTimers() {
-
+        //PacketUtil.registerPacket(UpdateClientDataPacket.class);
     }
 
     private void startServerTimers() {
