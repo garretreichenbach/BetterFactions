@@ -55,7 +55,6 @@ public class NewFactionPanel extends FactionPanelNew {
     @Override
     public void onInit() {
         super.onInit();
-        recreateTabs();
     }
 
     @Override
