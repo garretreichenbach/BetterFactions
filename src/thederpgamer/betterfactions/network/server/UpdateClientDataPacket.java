@@ -1,6 +1,5 @@
 package thederpgamer.betterfactions.network.server;
 
-import api.common.GameCommon;
 import api.network.Packet;
 import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;

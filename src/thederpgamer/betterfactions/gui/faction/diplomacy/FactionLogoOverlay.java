@@ -1,59 +1,48 @@
 package thederpgamer.betterfactions.gui.faction.diplomacy;
 
-import api.utils.StarRunnable;
+import api.common.GameClient;
+import api.common.GameCommon;
+import api.utils.gui.SimplePlayerTextInput;
 import org.schema.game.common.data.player.faction.Faction;
-import thederpgamer.betterfactions.BetterFactions;
-import thederpgamer.betterfactions.gui.elements.PositionableGUITextOverlay;
-import thederpgamer.betterfactions.gui.elements.data.GUIPositioningInterface;
-import thederpgamer.betterfactions.gui.elements.data.Orientation;
-import thederpgamer.betterfactions.utils.GUIUtils;
-import thederpgamer.betterfactions.utils.ImageUtils;
-import org.schema.schine.graphicsengine.forms.font.FontLibrary;
+import org.schema.schine.graphicsengine.core.MouseEvent;
+import org.schema.schine.graphicsengine.forms.Sprite;
+import org.schema.schine.graphicsengine.forms.gui.GUICallback;
+import org.schema.schine.graphicsengine.forms.gui.GUIElement;
+import org.schema.schine.graphicsengine.forms.gui.GUIOverlay;
 import org.schema.schine.graphicsengine.forms.gui.GUITextOverlay;
-import org.schema.schine.graphicsengine.forms.gui.newgui.GUIInnerTextbox;
 import org.schema.schine.input.InputState;
+import thederpgamer.betterfactions.BetterFactions;
+import thederpgamer.betterfactions.gui.elements.data.GUIPositioningInterface;
+import thederpgamer.betterfactions.utils.ImageUtils;
 import javax.vecmath.Vector2f;
-import java.util.Objects;
+import java.util.Locale;
 
 /**
- * FactionInfoPanel.java
+ * FactionLogoOverlay.java
  * <Description>
  * ==================================================
- * Created 01/30/2021
+ * Created 02/03/2021
  * @author TheDerpGamer
  */
-public class FactionInfoPanel extends GUIInnerTextbox implements GUIPositioningInterface {
+public class FactionLogoOverlay extends GUIOverlay implements GUICallback, GUIPositioningInterface {
 
-    private FactionLogoOverlay factionLogo;
-    private PositionableGUITextOverlay nameOverlay;
-    private PositionableGUITextOverlay infoOverlay;
+    private Faction faction;
     private GUITextOverlay[] cornerPosText;
 
-    public FactionInfoPanel(InputState inputState) {
-        super(inputState);
+    public FactionLogoOverlay(Sprite sprite, InputState inputState) {
+        super(sprite, inputState);
+        faction = null;
     }
 
     @Override
     public void onInit() {
         super.onInit();
-
-        (factionLogo = new FactionLogoOverlay(Objects.requireNonNull(ImageUtils.getImage(BetterFactions.getInstance().defaultLogo)), getState())).onInit();
-        GUIUtils.orientateInsideFrame(factionLogo, factionLogo, Orientation.Horizontal.MIDDLE, Orientation.Vertical.TOP);
-
-        (nameOverlay = new PositionableGUITextOverlay(getState())).onInit();
-        GUIUtils.orientateInsideFrame(nameOverlay, nameOverlay, Orientation.Horizontal.MIDDLE, Orientation.Vertical.MIDDLE);
-
-        (infoOverlay = new PositionableGUITextOverlay(getState())).onInit();
-        GUIUtils.orientateInsideFrame(infoOverlay, infoOverlay, Orientation.Horizontal.MIDDLE, Orientation.Vertical.BOTTOM);
-
-
         if(BetterFactions.getInstance().debugMode) createCornerPosText();
     }
 
     @Override
     public void draw() {
         super.draw();
-
         if(BetterFactions.getInstance().debugMode) {
             if(BetterFactions.getInstance().showDebugText) {
                 for(GUITextOverlay posTextOverlay : cornerPosText) {
@@ -69,34 +58,40 @@ public class FactionInfoPanel extends GUIInnerTextbox implements GUIPositioningI
         }
     }
 
-    public void updateLogo(final String newPath) {
-        factionLogo.setSprite(ImageUtils.getImage(newPath));
-        if(factionLogo.getSprite().getName().equals("tempLogo")) {
-            new StarRunnable() {
+    @Override
+    public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+        if(faction != null && getClientFaction() != null && faction.getIdFaction() == getClientFaction().getIdFaction()) { //Todo: Faction permissions check
+            new SimplePlayerTextInput("Change Faction Logo", "Link to image (check server rules)") {
                 @Override
-                public void run() {
-                    if(!factionLogo.getSprite().getName().equals("tempLogo")) {
-                        cancel();
+                public boolean onInput(String s) {
+                    if((s.startsWith("https://") || s.startsWith("http://")) && (s.toLowerCase(Locale.ROOT).endsWith(".png")
+                            || s.toLowerCase(Locale.ROOT).endsWith(".jpg") || s.toLowerCase(Locale.ROOT).endsWith(".jpeg"))) {
+                        setSprite(ImageUtils.getImage(s));
+                        return true;
                     } else {
-                        factionLogo.setSprite(ImageUtils.getImage(newPath));
+                        return false;
                     }
                 }
-            }.runTimer(BetterFactions.getInstance(), 1000);
+            };
         }
     }
 
-    public void setNameText(String nameText) {
-        nameOverlay.setTextSimple(nameText);
-        nameOverlay.setFont(FontLibrary.FontSize.BIG.getFont());
-    }
-
-    public void setInfoText(String newText) {
-        infoOverlay.setTextSimple(newText);
-        infoOverlay.setFont(FontLibrary.FontSize.MEDIUM.getFont());
+    @Override
+    public boolean isOccluded() {
+        return false;
     }
 
     public void setFaction(Faction faction) {
-        factionLogo.setFaction(faction);
+        this.faction = faction;
+    }
+
+    public Faction getClientFaction() {
+        int factionId = GameClient.getClientPlayerState().getFactionId();
+        if(factionId != 0) {
+            return GameCommon.getGameState().getFactionManager().getFaction(factionId);
+        } else {
+            return null;
+        }
     }
 
     @Override

@@ -1,4 +1,4 @@
-package thederpgamer.betterfactions.data;
+package thederpgamer.betterfactions.gui.elements;
 
 import com.bulletphysics.linearmath.Transform;
 import org.schema.schine.graphicsengine.forms.Sprite;

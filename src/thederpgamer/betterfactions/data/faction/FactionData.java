@@ -23,6 +23,7 @@ public class FactionData implements FactionScore, Serializable {
     private String factionName;
     private String factionInfo;
     private String factionDescription;
+    private String factionLogo;
 
     public FactionData(Faction faction) {
         factionId = faction.getIdFaction();
@@ -30,6 +31,7 @@ public class FactionData implements FactionScore, Serializable {
         factionName = faction.getName();
         factionInfo = getInfo(faction);
         factionDescription = faction.getDescription();
+        factionLogo = "https://i.imgur.com/8wKjlBR.png";
     }
 
     public int getFactionId() {
@@ -54,6 +56,10 @@ public class FactionData implements FactionScore, Serializable {
 
     public void setFederationId(int federationId) {
         this.federationId = federationId;
+    }
+
+    public String getFactionLogo() {
+        return factionLogo;
     }
 
     private String getInfo(Faction faction) {

@@ -21,4 +21,19 @@ public class FederationDiplomacyTab extends GUIContentPane {
         super(state, window, Lng.str("FEDERATION DIPLOMACY"));
         this.guiPanel = guiPanel;
     }
+
+    @Override
+    public void onInit() {
+        super.onInit();
+    }
+
+    @Override
+    public void draw() {
+        super.draw();
+        if(guiPanel.isInFaction()) {
+
+        } else {
+            cleanUp();
+        }
+    }
 }

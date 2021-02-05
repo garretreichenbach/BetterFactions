@@ -3,7 +3,6 @@ package thederpgamer.betterfactions.utils;
 import api.utils.textures.StarLoaderTexture;
 import thederpgamer.betterfactions.BetterFactions;
 import org.schema.schine.graphicsengine.forms.Sprite;
-
 import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -30,11 +29,17 @@ public class ImageUtils {
     public static Sprite getImage(String url) {
         Sprite bufferedImage = imgCache.get(url);
         if (bufferedImage != null) {
-            return bufferedImage;
+            return scaleSprite(bufferedImage, 256, 256);
         } else {
             fetchImage(url);
-            return null;
+            return scaleSprite(getDefaultLogo(), 256, 256);
         }
+    }
+
+    public static Sprite scaleSprite(Sprite sprite, int width, int height) {
+        sprite.setWidth(width);
+        sprite.setHeight(height);
+        return sprite;
     }
 
     private static void fetchImage(final String url) {
@@ -69,5 +74,15 @@ public class ImageUtils {
             e.printStackTrace();
         }
         return image;
+    }
+
+    public static Sprite getDefaultLogo() {
+        try {
+            BufferedImage bufferedImage = ImageIO.read(BetterFactions.getInstance().getJarResource("resources/images/temp-logo.png"));
+            return StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), "tempLogo");
+        } catch (IOException exception) {
+            exception.printStackTrace();
+            return null;
+        }
     }
 }

@@ -1,68 +1,36 @@
-package thederpgamer.betterfactions.gui.faction.diplomacy;
+package thederpgamer.betterfactions.gui.elements;
 
 import org.schema.schine.graphicsengine.forms.gui.GUITextOverlay;
-import thederpgamer.betterfactions.BetterFactions;
-import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.gui.NewFactionPanel;
-import org.schema.schine.common.language.Lng;
-import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
-import org.schema.schine.graphicsengine.forms.gui.newgui.GUIWindowInterface;
 import org.schema.schine.input.InputState;
+import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.gui.elements.data.GUIPositioningInterface;
-import thederpgamer.betterfactions.utils.FactionUtils;
 import javax.vecmath.Vector2f;
 
 /**
- * FactionDiplomacyTab.java
+ * PositionableGUITextOverlay.java
  * <Description>
  * ==================================================
- * Created 01/30/2021
+ * Created 02/05/2021
+ *
  * @author TheDerpGamer
  */
-public class FactionDiplomacyTab extends GUIContentPane implements GUIPositioningInterface {
+public class PositionableGUITextOverlay extends GUITextOverlay implements GUIPositioningInterface {
 
-    private NewFactionPanel guiPanel;
-    private FactionInfoPanel infoPanel;
-    private FactionActionsPanel actionsPanel;
-    private FactionListPanel listPanel;
     private GUITextOverlay[] cornerPosText;
 
-    public FactionDiplomacyTab(InputState state, GUIWindowInterface window, NewFactionPanel guiPanel) {
-        super(state, window, Lng.str("FACTION DIPLOMACY"));
-        this.guiPanel = guiPanel;
+    public PositionableGUITextOverlay(InputState inputState) {
+        super(10, 10, inputState);
     }
 
     @Override
     public void onInit() {
         super.onInit();
-
-        setTextBoxHeightLast(270);
-        addDivider(224);
-        infoPanel = new FactionInfoPanel(getState());
-        addNewTextBox(0, 70);
-        actionsPanel = new FactionActionsPanel(getState());
-        listPanel = new FactionListPanel(getState());
-
-        infoPanel.onInit();
-        actionsPanel.onInit();
-        listPanel.onInit();
-
-        if(guiPanel.isInFaction()) {
-            FactionData factionData = FactionUtils.getFactionData(guiPanel.getOwnFaction());
-            infoPanel.setFaction(guiPanel.getOwnFaction());
-            infoPanel.setNameText(guiPanel.getOwnFaction().getName());
-            infoPanel.setInfoText(factionData.getInfoString());
-            infoPanel.updateLogo(factionData.getFactionLogo());
-        } else {
-            infoPanel.setNameText("No Faction");
-        }
         if(BetterFactions.getInstance().debugMode) createCornerPosText();
     }
 
     @Override
     public void draw() {
         super.draw();
-
         if(BetterFactions.getInstance().debugMode) {
             if(BetterFactions.getInstance().showDebugText) {
                 for(GUITextOverlay posTextOverlay : cornerPosText) {

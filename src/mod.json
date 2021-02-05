@@ -2,12 +2,12 @@
   "name": "BetterFactions",
   "author": "TheDerpGamer",
   "description": "Improves faction interaction and diplomacy.",
-  "version": "0.4.3",
+  "version": "0.4.6",
   "starmade_version": "0.202.108",
-  "client_mod": true,
+  "client_mod": false,
   "server_mod": false,
-  "main_class": "net.thederpgamer.betterfactions.BetterFactions",
-  "smd_resource_id": 0,
+  "main_class": "thederpgamer.betterfactions.BetterFactions",
+  "smd_resource_id": -1,
   "dependencies": [
     -1
   ],

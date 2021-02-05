@@ -3,8 +3,13 @@ package thederpgamer.betterfactions;
 import api.common.GameCommon;
 import api.common.GameServer;
 import api.listener.Listener;
+import api.listener.events.controller.ClientInitializeEvent;
+import api.listener.events.controller.ServerInitializeEvent;
 import api.listener.events.gui.PlayerGUICreateEvent;
+import api.listener.events.input.KeyPressEvent;
 import api.listener.events.network.ClientLoginEvent;
+import api.listener.events.player.PlayerJoinFactionEvent;
+import api.listener.events.player.PlayerLeaveFactionEvent;
 import api.mod.StarLoader;
 import api.mod.StarMod;
 import api.mod.config.FileConfiguration;
@@ -29,8 +34,10 @@ public class BetterFactions extends StarMod {
     }
 
     //Data
-    public final String defaultLogo = "Todo";
+    public final String defaultLogo = "https://i.imgur.com/8wKjlBR.png";
     public int lastClientUpdate = 0;
+    public boolean showDebugText = false;
+    private NewFactionPanel newFactionPanel;
 
     //Config
     public FileConfiguration config;
@@ -50,16 +57,25 @@ public class BetterFactions extends StarMod {
         loadData();
         registerListeners();
         registerPackets();
-        startTimers();
+    }
+
+    @Override
+    public void onClientCreated(ClientInitializeEvent event) {
+        startClientTimers();
+    }
+
+    @Override
+    public void onServerCreated(ServerInitializeEvent event) {
+        startServerTimers();
     }
 
     private void initConfig() {
         config = getConfig("config");
         config.saveDefault(defaultConfig);
 
-        this.debugMode = config.getConfigurableBoolean("debug-mode", false);
-        this.saveInterval = config.getConfigurableInt("save-interval", 12000);
-        this.clientUpdateInterval = config.getConfigurableInt("client-update-interval", 3500);
+        debugMode = config.getConfigurableBoolean("debug-mode", false);
+        saveInterval = config.getConfigurableInt("save-interval", 12000);
+        clientUpdateInterval = config.getConfigurableInt("client-update-interval", 3500);
     }
 
     private void loadData() {
@@ -81,11 +97,38 @@ public class BetterFactions extends StarMod {
                 try {
                     Field factionPanelNewField = event.getPlayerPanel().getClass().getDeclaredField("factionPanelNew");
                     factionPanelNewField.setAccessible(true);
-                    NewFactionPanel newFactionPanel = new NewFactionPanel(event.getPlayerPanel().getState());
+                    newFactionPanel = new NewFactionPanel(event.getPlayerPanel().getState());
                     newFactionPanel.onInit();
                     factionPanelNewField.set(event.getPlayerPanel(), newFactionPanel);
                 } catch (NoSuchFieldException | IllegalAccessException e) {
                     e.printStackTrace();
+                }
+            }
+        }, this);
+
+        StarLoader.registerListener(KeyPressEvent.class, new Listener<KeyPressEvent>() {
+            @Override
+            public void onEvent(final KeyPressEvent event) {
+                if (event.getKey() == 210 || event.getKey() == 260) {
+                    if (debugMode) showDebugText = !showDebugText;
+                }
+            }
+        }, this);
+
+        StarLoader.registerListener(PlayerJoinFactionEvent.class, new Listener<PlayerJoinFactionEvent>() {
+            @Override
+            public void onEvent(PlayerJoinFactionEvent event) {
+                if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
+                    newFactionPanel.recreateTabs();
+                }
+            }
+        }, this);
+
+        StarLoader.registerListener(PlayerLeaveFactionEvent.class, new Listener<PlayerLeaveFactionEvent>() {
+            @Override
+            public void onEvent(PlayerLeaveFactionEvent event) {
+                if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
+                    newFactionPanel.recreateTabs();
                 }
             }
         }, this);
@@ -95,28 +138,30 @@ public class BetterFactions extends StarMod {
         PacketUtil.registerPacket(UpdateClientDataPacket.class);
     }
 
-    private void startTimers() {
-        if(isServer()) {
-            new StarRunnable(){
-                @Override
-                public void run() {
-                    FactionUtils.saveData();
-                    FederationUtils.saveData();
-                }
-            }.runLater(this, saveInterval);
+    private void startClientTimers() {
 
-            new StarRunnable() {
-                @Override
-                public void run() {
-                    if(lastClientUpdate >= clientUpdateInterval) {
-                        UpdateClientDataPacket packet = new UpdateClientDataPacket();
-                        for(PlayerState playerState : GameServer.getServerState().getPlayerStatesByName().values()) {
-                            PacketUtil.sendPacket(playerState, packet);
-                        }
+    }
+
+    private void startServerTimers() {
+        new StarRunnable() {
+            @Override
+            public void run() {
+                FactionUtils.saveData();
+                FederationUtils.saveData();
+            }
+        }.runTimer(this, saveInterval);
+
+        new StarRunnable() {
+            @Override
+            public void run() {
+                if (lastClientUpdate >= clientUpdateInterval) {
+                    UpdateClientDataPacket packet = new UpdateClientDataPacket();
+                    for (PlayerState playerState : GameServer.getServerState().getPlayerStatesByName().values()) {
+                        PacketUtil.sendPacket(playerState, packet);
                     }
                 }
-            }.runLater(this, clientUpdateInterval);
-        }
+            }
+        }.runTimer(this, clientUpdateInterval);
     }
 
     public boolean isServer() {

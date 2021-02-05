@@ -21,4 +21,19 @@ public class FederationManagementTab extends GUIContentPane {
         super(state, window, Lng.str("FEDERATION MANAGEMENT"));
         this.guiPanel = guiPanel;
     }
+
+    @Override
+    public void onInit() {
+        super.onInit();
+    }
+
+    @Override
+    public void draw() {
+        super.draw();
+        if(guiPanel.isInFaction() && guiPanel.isInFederation()) {
+
+        } else {
+            cleanUp();
+        }
+    }
 }
