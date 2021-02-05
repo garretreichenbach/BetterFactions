@@ -5,6 +5,7 @@ import org.schema.schine.graphicsengine.forms.gui.newgui.GUIInnerTextbox;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.gui.elements.data.GUIPositioningInterface;
+
 import javax.vecmath.Vector2f;
 
 /**

@@ -1,6 +1,5 @@
 package thederpgamer.betterfactions;
 
-import api.common.GameClient;
 import api.common.GameCommon;
 import api.common.GameServer;
 import api.listener.Listener;
@@ -77,7 +76,7 @@ public class BetterFactions extends StarMod {
             @Override
             public void onEvent(PlayerGUICreateEvent event) {
                 try {
-                    PlayerPanel playerPanel = GameClient.getClientState().getWorldDrawer().getGuiDrawer().getPlayerPanel();
+                    PlayerPanel playerPanel = event.getPlayerPanel();
                     Field factionPanelNewField = playerPanel.getClass().getDeclaredField("factionPanelNew");
                     factionPanelNewField.setAccessible(true);
                     if(!(factionPanelNewField.get(playerPanel) instanceof NewFactionPanel)) {
@@ -119,7 +118,7 @@ public class BetterFactions extends StarMod {
     }
 
     private void registerPackets() {
-        //PacketUtil.registerPacket(UpdateClientDataPacket.class);
+        PacketUtil.registerPacket(UpdateClientDataPacket.class);
     }
 
     private void startServerTimers() {

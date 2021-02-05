@@ -13,7 +13,6 @@ import org.schema.schine.graphicsengine.forms.gui.GUITextOverlay;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIInnerTextbox;
 import org.schema.schine.input.InputState;
 import javax.vecmath.Vector2f;
-import java.util.Objects;
 
 /**
  * FactionInfoPanel.java
