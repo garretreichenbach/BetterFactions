@@ -28,9 +28,7 @@ import org.schema.game.client.view.gui.weapon.WeaponPanelNew;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActiveInterface;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIMainWindow;
-import thederpgamer.betterfactions.gui.elements.data.GUIPositioningInterface;
 import thederpgamer.betterfactions.gui.elements.data.Orientation;
-
 import javax.vecmath.Vector2f;
 import java.awt.*;
 import java.lang.reflect.Field;
@@ -44,14 +42,25 @@ import java.lang.reflect.Field;
  */
 public class GUIUtils {
 
-    public static void orientateInsideFrame(GUIElement element, GUIPositioningInterface posInterface, Orientation.Horizontal horizontal, Orientation.Vertical vertical) {
+    public static Vector2f[] getCorners(GUIElement guiElement) {
+        Vector2f[] corners = new Vector2f[5];
+        Vector2f currentPos = new Vector2f(guiElement.getPos().x, guiElement.getPos().y);
+        corners[0] = new Vector2f(currentPos.x - (guiElement.getWidth() / 2), currentPos.y - (guiElement.getHeight() / 2));
+        corners[1] = new Vector2f(currentPos.x + (guiElement.getWidth() / 2), currentPos.y - (guiElement.getHeight() / 2));
+        corners[2] = new Vector2f(currentPos.x - (guiElement.getWidth() / 2), currentPos.y + (guiElement.getHeight() / 2));
+        corners[3] = new Vector2f(currentPos.x + (guiElement.getWidth() / 2), currentPos.y + (guiElement.getHeight() / 2));
+        corners[4] = new Vector2f(currentPos.x, currentPos.y);
+        return corners;
+    }
+
+    public static void orientateInsideFrame(GUIElement element, Orientation.Horizontal horizontal, Orientation.Vertical vertical) {
         Vector2f[] corners = new Vector2f[] {
-                posInterface.getCorners()[0],
-                posInterface.getCorners()[1],
-                posInterface.getCorners()[2],
-                posInterface.getCorners()[3]
+                getCorners(element)[0],
+                getCorners(element)[1],
+                getCorners(element)[2],
+                getCorners(element)[3]
         };
-        Vector2f center = posInterface.getCorners()[4];
+        Vector2f center = getCorners(element)[4];
         float newX = element.getPos().x;
         float newY = element.getPos().y;
 
