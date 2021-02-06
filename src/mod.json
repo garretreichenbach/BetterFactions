@@ -11,6 +11,6 @@
   "dependencies": [
     -1
   ],
-  "core_mod": true,
-  "requires_class_resize": true
+  "core_mod": false,
+  "requires_class_resize": false
 }

@@ -17,8 +17,8 @@ import java.util.HashMap;
  */
 public class FederationUtils {
 
-    private static final boolean isClient = GameCommon.isClientConnectedToServer() || GameCommon.isOnSinglePlayer();
-    private static final boolean isServer = GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer();
+    private static final boolean isClient = BetterFactions.getInstance().isClient();
+    private static final boolean isServer = BetterFactions.getInstance().isServer();
     private static HashMap<Integer, Federation> federations = new HashMap<>();
 
     public static HashMap<Integer, Federation> getAllFederations() {

@@ -27,13 +27,16 @@ public class ImageUtils {
 
     @Nullable
     public static Sprite getImage(String url) {
-        Sprite bufferedImage = imgCache.get(url);
-        if (bufferedImage != null) {
-            return scaleSprite(bufferedImage, 256, 256);
-        } else {
-            fetchImage(url);
-            return scaleSprite(getDefaultLogo(), 256, 256);
-        }
+        try {
+            Sprite bufferedImage = imgCache.get(url);
+            if (bufferedImage != null) {
+                return scaleSprite(bufferedImage, 256, 256);
+            } else {
+                fetchImage(url);
+                return scaleSprite(getDefaultLogo(), 256, 256);
+            }
+        } catch (Exception ignored) { }
+        return scaleSprite(getDefaultLogo(), 256, 256);
     }
 
     public static Sprite scaleSprite(Sprite sprite, int width, int height) {
@@ -79,7 +82,9 @@ public class ImageUtils {
     public static Sprite getDefaultLogo() {
         try {
             BufferedImage bufferedImage = ImageIO.read(BetterFactions.getInstance().getJarResource("resources/images/temp-logo.png"));
-            return StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), "tempLogo");
+            Sprite sprite = StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), "tempLogo");
+            scaleSprite(sprite, 256, 256);
+            return sprite;
         } catch (IOException exception) {
             exception.printStackTrace();
             return null;

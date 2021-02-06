@@ -28,7 +28,6 @@ import org.schema.game.client.view.gui.weapon.WeaponPanelNew;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActiveInterface;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIMainWindow;
-import thederpgamer.betterfactions.gui.elements.data.Orientation;
 import javax.vecmath.Vector2f;
 import java.awt.*;
 import java.lang.reflect.Field;
@@ -45,50 +44,26 @@ public class GUIUtils {
     public static Vector2f[] getCorners(GUIElement guiElement) {
         Vector2f[] corners = new Vector2f[5];
         Vector2f currentPos = new Vector2f(guiElement.getPos().x, guiElement.getPos().y);
-        corners[0] = new Vector2f(currentPos.x - (guiElement.getWidth() / 2), currentPos.y - (guiElement.getHeight() / 2));
-        corners[1] = new Vector2f(currentPos.x + (guiElement.getWidth() / 2), currentPos.y - (guiElement.getHeight() / 2));
-        corners[2] = new Vector2f(currentPos.x - (guiElement.getWidth() / 2), currentPos.y + (guiElement.getHeight() / 2));
-        corners[3] = new Vector2f(currentPos.x + (guiElement.getWidth() / 2), currentPos.y + (guiElement.getHeight() / 2));
-        corners[4] = new Vector2f(currentPos.x, currentPos.y);
+        corners[0] = new Vector2f(currentPos.x, currentPos.y);
+        corners[1] = new Vector2f(currentPos.x + guiElement.getWidth(), currentPos.y);
+        corners[2] = new Vector2f(currentPos.x, currentPos.y + guiElement.getHeight());
+        corners[3] = new Vector2f(currentPos.x + guiElement.getWidth(), currentPos.y + guiElement.getHeight());
+        corners[4] = new Vector2f((corners[1].x - corners[0].x) / 2, (corners[2].y - corners[0].y) / 2);
         return corners;
     }
 
-    public static void orientateInsideFrame(GUIElement element, Orientation.Horizontal horizontal, Orientation.Vertical vertical) {
-        Vector2f[] corners = new Vector2f[] {
-                getCorners(element)[0],
-                getCorners(element)[1],
-                getCorners(element)[2],
-                getCorners(element)[3]
-        };
-        Vector2f center = getCorners(element)[4];
-        float newX = element.getPos().x;
-        float newY = element.getPos().y;
-
-        switch(horizontal) {
-            case LEFT:
-                newX = corners[0].x + element.getWidth();
-                break;
-            case MIDDLE:
-                newX = center.x;
-                break;
-            case RIGHT:
-                newX = corners[1].x - element.getWidth();
-                break;
+    public static int getQuadrant(float x, float y) {
+        if(x < 0 && y < 0) {
+            return 1;
+        } else if(x > 0 && y < 0) {
+            return 2;
+        } else if(x < 0 && y > 0) {
+            return 3;
+        } else if(x > 0 && y > 0) {
+            return 4;
+        } else {
+            return 0;
         }
-
-        switch(vertical) {
-            case TOP:
-                newY = corners[0].y + element.getHeight();
-                break;
-            case MIDDLE:
-                newY = center.y;
-                break;
-            case BOTTOM:
-                newY = corners[3].y - element.getHeight();
-                break;
-        }
-        element.getPos().x = newX;
-        element.getPos().y = newY;
     }
 
     public static void adaptElementToScreen(GUIElement element) {

@@ -1,10 +1,9 @@
 package thederpgamer.betterfactions;
 
-import api.common.GameCommon;
 import api.common.GameServer;
 import api.listener.Listener;
+import api.listener.events.faction.FactionCreateEvent;
 import api.listener.events.gui.PlayerGUICreateEvent;
-import api.listener.events.input.KeyPressEvent;
 import api.listener.events.player.PlayerJoinFactionEvent;
 import api.listener.events.player.PlayerLeaveFactionEvent;
 import api.mod.StarLoader;
@@ -12,8 +11,10 @@ import api.mod.StarMod;
 import api.mod.config.FileConfiguration;
 import api.network.packets.PacketUtil;
 import api.utils.StarRunnable;
+import org.schema.game.client.data.GameClientState;
 import org.schema.game.client.view.gui.PlayerPanel;
 import org.schema.game.common.data.player.PlayerState;
+import org.schema.game.server.data.GameServerState;
 import thederpgamer.betterfactions.gui.NewFactionPanel;
 import thederpgamer.betterfactions.network.server.UpdateClientDataPacket;
 import thederpgamer.betterfactions.utils.FactionUtils;
@@ -33,7 +34,6 @@ public class BetterFactions extends StarMod {
     //Data
     public final String defaultLogo = "https://i.imgur.com/8wKjlBR.png";
     public int lastClientUpdate = 0;
-    public boolean showDebugText = false;
     private NewFactionPanel newFactionPanel;
 
     //Config
@@ -89,18 +89,19 @@ public class BetterFactions extends StarMod {
             }
         }, this);
 
-        StarLoader.registerListener(KeyPressEvent.class, new Listener<KeyPressEvent>() {
+        StarLoader.registerListener(FactionCreateEvent.class, new Listener<FactionCreateEvent>() {
             @Override
-            public void onEvent(KeyPressEvent event) {
-                if (event.getKey() == 210 || event.getKey() == 260) {
-                    if (debugMode) showDebugText = !showDebugText;
-                }
+            public void onEvent(FactionCreateEvent event) {
+                FactionUtils.saveData();
+                FederationUtils.saveData();
             }
         }, this);
 
         StarLoader.registerListener(PlayerJoinFactionEvent.class, new Listener<PlayerJoinFactionEvent>() {
             @Override
             public void onEvent(PlayerJoinFactionEvent event) {
+                FactionUtils.saveData();
+                FederationUtils.saveData();
                 if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
                     newFactionPanel.recreateTabs();
                 }
@@ -110,6 +111,8 @@ public class BetterFactions extends StarMod {
         StarLoader.registerListener(PlayerLeaveFactionEvent.class, new Listener<PlayerLeaveFactionEvent>() {
             @Override
             public void onEvent(PlayerLeaveFactionEvent event) {
+                FactionUtils.saveData();
+                FederationUtils.saveData();
                 if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
                     newFactionPanel.recreateTabs();
                 }
@@ -144,10 +147,10 @@ public class BetterFactions extends StarMod {
     }
 
     public boolean isServer() {
-        return GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer();
+        return GameServerState.instance != null;
     }
 
     public boolean isClient() {
-        return GameCommon.isClientConnectedToServer() || GameCommon.isOnSinglePlayer();
+        return GameClientState.instance != null;
     }
 }

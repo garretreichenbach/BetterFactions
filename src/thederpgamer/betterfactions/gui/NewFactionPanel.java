@@ -1,9 +1,9 @@
 package thederpgamer.betterfactions.gui;
 
+import api.common.GameClient;
 import thederpgamer.betterfactions.game.faction.Federation;
 import thederpgamer.betterfactions.gui.faction.FactionManagementTab;
 import thederpgamer.betterfactions.gui.faction.FactionNewsTab;
-import thederpgamer.betterfactions.gui.faction.FactionOptionsTab;
 import thederpgamer.betterfactions.gui.faction.diplomacy.FactionDiplomacyTab;
 import thederpgamer.betterfactions.gui.federation.FederationDiplomacyTab;
 import thederpgamer.betterfactions.gui.federation.FederationManagementTab;
@@ -29,7 +29,6 @@ public class NewFactionPanel extends FactionPanelNew {
     private FactionManagementTab factionManagementTab;
     private FederationDiplomacyTab federationDiplomacyTab;
     private FederationManagementTab federationManagementTab;
-    private FactionOptionsTab optionsTab;
 
     public NewFactionPanel(InputState inputState) {
         super(inputState);
@@ -45,11 +44,11 @@ public class NewFactionPanel extends FactionPanelNew {
     }
 
     public boolean isInFederation() {
-        return getFederation() != null;
+        return isInFaction() && FactionUtils.getFactionData(getOwnFaction()) != null && FactionUtils.getFactionData(getOwnFaction()).getFederationId() != -1;
     }
 
     public boolean isInFaction() {
-        return getOwnFaction() != null;
+        return FactionUtils.inFaction(GameClient.getClientPlayerState());
     }
 
     @Override
@@ -80,8 +79,5 @@ public class NewFactionPanel extends FactionPanelNew {
                 factionPanel.getTabs().add(federationManagementTab);
             }
         }
-
-        (optionsTab = new FactionOptionsTab(inputState, factionPanel, this)).onInit();
-        factionPanel.getTabs().add(optionsTab);
     }
 }
