@@ -2,7 +2,6 @@ package thederpgamer.betterfactions.gui.faction.diplomacy;
 
 import api.utils.StarRunnable;
 import org.schema.game.common.data.player.faction.Faction;
-import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
 import org.schema.schine.graphicsengine.forms.gui.GUIIconButton;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.utils.ImageUtils;
@@ -16,7 +15,6 @@ import org.schema.schine.input.InputState;
  * <Description>
  * ==================================================
  * Created 01/30/2021
- *
  * @author TheDerpGamer
  */
 public class FactionInfoPanel extends GUIInnerTextbox {
@@ -26,9 +24,8 @@ public class FactionInfoPanel extends GUIInnerTextbox {
     private GUITextOverlay nameOverlay;
     private GUITextOverlay infoOverlay;
 
-    public FactionInfoPanel(InputState inputState, GUIAncor anchor) {
+    public FactionInfoPanel(InputState inputState) {
         super(inputState);
-        anchor.attach(this);
     }
 
     @Override

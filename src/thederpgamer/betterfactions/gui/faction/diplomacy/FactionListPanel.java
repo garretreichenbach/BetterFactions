@@ -1,6 +1,5 @@
 package thederpgamer.betterfactions.gui.faction.diplomacy;
 
-import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIInnerTextbox;
 import org.schema.schine.input.InputState;
 
@@ -13,9 +12,8 @@ import org.schema.schine.input.InputState;
  */
 public class FactionListPanel extends GUIInnerTextbox {
 
-    public FactionListPanel(InputState inputState, GUIAncor anchor) {
+    public FactionListPanel(InputState inputState) {
         super(inputState);
-        anchor.attach(this);
     }
 
     @Override
