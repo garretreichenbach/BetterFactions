@@ -2,6 +2,7 @@ package thederpgamer.betterfactions.gui.faction.diplomacy;
 
 import api.common.GameClient;
 import api.common.GameCommon;
+import org.newdawn.slick.Color;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
@@ -24,10 +25,10 @@ public class FactionDiplomacyTab extends GUIContentPane {
     private NewFactionPanel guiPanel;
     private FactionInfoPanel infoPanel;
     private FactionActionsPanel actionsPanel;
-    private FactionListPanel listPanel;
+    private FactionDiplomacyList factionList;
 
     public FactionDiplomacyTab(InputState state, GUIWindowInterface window, NewFactionPanel guiPanel) {
-        super(state, window, Lng.str("FACTION DIPLOMACY"));
+        super(state, window, Lng.str("FACTION LIST"));
         this.guiPanel = guiPanel;
         this.selectedFaction = null;
     }
@@ -41,23 +42,32 @@ public class FactionDiplomacyTab extends GUIContentPane {
 
         (infoPanel = new FactionInfoPanel(getState(), getContent(0, 0))).onInit();
         (actionsPanel = new FactionActionsPanel(getState(), getContent(0, 1))).onInit();
-        (listPanel = new FactionListPanel(getState(), getContent(1, 0))).onInit();
+        (factionList = new FactionDiplomacyList(getState(), getContent(1, 0), this)).onInit();
 
-        if (selectedFaction != null && FactionUtils.inFaction(GameClient.getClientPlayerState()) && FactionUtils.getFaction(GameClient.getClientPlayerState()).getIdFaction() != selectedFaction.getIdFaction()) {
+        if(selectedFaction != null && FactionUtils.inFaction(GameClient.getClientPlayerState()) && FactionUtils.getFaction(GameClient.getClientPlayerState()).getIdFaction() != selectedFaction.getIdFaction()) {
             infoPanel.setFaction(selectedFaction);
-            infoPanel.setNameText(selectedFaction.getName());
+            String relation = Lng.str(FactionUtils.getFactionData(selectedFaction).getRelationString());
+            if(relation.equals(Lng.str("Own Faction")) || relation.equals(Lng.str("Allied")) || relation.equals(Lng.str("In Federation"))) {
+                infoPanel.setNameText(selectedFaction.getName(), Color.green);
+            } else if(relation.equals(Lng.str("Neutral"))) {
+                infoPanel.setNameText(selectedFaction.getName(), Color.blue);
+            } else if(relation.equals(Lng.str("At War")) || relation.equals(Lng.str("Personal Enemy"))) {
+                infoPanel.setNameText(selectedFaction.getName(), Color.red);
+            } else {
+                infoPanel.setNameText(selectedFaction.getName());
+            }
             FactionData factionData = FactionUtils.getFactionData(selectedFaction);
-            if (factionData != null) {
+            if(factionData != null) {
                 infoPanel.setInfoText(factionData.getInfoString());
                 infoPanel.updateLogo(factionData.getFactionLogo());
             }
             actionsPanel.setFaction(selectedFaction);
-        } else if (GameClient.getClientPlayerState().getFactionId() != 0) {
+        } else if(GameClient.getClientPlayerState().getFactionId() != 0) {
             Faction faction = GameCommon.getGameState().getFactionManager().getFaction(GameClient.getClientPlayerState().getFactionId());
             infoPanel.setFaction(faction);
-            infoPanel.setNameText(faction.getName());
+            infoPanel.setNameText(faction.getName(), Color.green);
             FactionData factionData = FactionUtils.getFactionData(faction);
-            if (factionData != null) {
+            if(factionData != null) {
                 infoPanel.setInfoText(factionData.getInfoString());
                 infoPanel.updateLogo(factionData.getFactionLogo());
             }
@@ -69,5 +79,13 @@ public class FactionDiplomacyTab extends GUIContentPane {
 
     public void setSelectedFaction(Faction selectedFaction) {
         this.selectedFaction = selectedFaction;
+        infoPanel.setFaction(selectedFaction);
+        infoPanel.setNameText(selectedFaction.getName());
+        FactionData factionData = FactionUtils.getFactionData(selectedFaction);
+        if(factionData != null) {
+            infoPanel.setInfoText(factionData.getInfoString());
+            infoPanel.updateLogo(factionData.getFactionLogo());
+        }
+        actionsPanel.setFaction(selectedFaction);
     }
 }

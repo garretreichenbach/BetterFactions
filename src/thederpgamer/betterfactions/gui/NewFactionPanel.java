@@ -58,6 +58,7 @@ public class NewFactionPanel extends FactionPanelNew {
 
     @Override
     public void recreateTabs() {
+        int selectedTab = factionPanel.getSelectedTab();
         factionPanel.activeInterface = this;
         factionPanel.clearTabs();
 
@@ -79,5 +80,6 @@ public class NewFactionPanel extends FactionPanelNew {
                 factionPanel.getTabs().add(federationManagementTab);
             }
         }
+        if(selectedTab < factionPanel.getTabs().size()) factionPanel.setSelectedTab(selectedTab);
     }
 }

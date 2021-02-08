@@ -2,9 +2,12 @@ package thederpgamer.betterfactions.utils;
 
 import api.common.GameCommon;
 import api.mod.config.PersistentObjectUtil;
+import api.network.packets.PacketUtil;
+import api.utils.StarRunnable;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.game.faction.Federation;
+import thederpgamer.betterfactions.network.client.CreateNewFederationPacket;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -17,16 +20,35 @@ import java.util.HashMap;
  */
 public class FederationUtils {
 
-    private static final boolean isClient = BetterFactions.getInstance().isClient();
-    private static final boolean isServer = BetterFactions.getInstance().isServer();
     private static HashMap<Integer, Federation> federations = new HashMap<>();
 
-    public static HashMap<Integer, Federation> getAllFederations() {
-        if(isServer) {
-            return federations;
-        } else {
-            return null;
+    public static void createNewFederation(String federationName, FactionData fromFaction, FactionData toFaction) {
+        if(GameCommon.isClientConnectedToServer() || GameCommon.isOnSinglePlayer()) {
+            PacketUtil.sendPacketToServer(new CreateNewFederationPacket(federationName, fromFaction, toFaction));
+            new StarRunnable() {
+                @Override
+                public void run() {
+                    BetterFactions.getInstance().redrawFactionPane();
+                }
+            }.runLater(BetterFactions.getInstance(), 15);
         }
+
+        if(GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer()) {
+            Federation federation = new Federation(federationName, fromFaction, toFaction);
+            federations.put(federation.getId(), federation);
+            BetterFactions.getInstance().updateClientData();
+        }
+    }
+
+    public static boolean federationExists(String name) {
+        for(Federation federation : federations.values()) {
+            if(federation.getName().equals(name)) return true;
+        }
+        return false;
+    }
+
+    public static HashMap<Integer, Federation> getAllFederations() {
+        return federations;
     }
 
     public static Federation getFederation(FactionData factionData) {
@@ -38,7 +60,7 @@ public class FederationUtils {
     }
 
     public static int getNewId(Federation federation) {
-        if(isServer) {
+        if(GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer()) {
             for(int i = 0; i < federations.keySet().size(); i ++) {
                 if(!federations.containsKey(i)) {
                     federations.put(i, federation);
@@ -51,7 +73,7 @@ public class FederationUtils {
     }
 
     public static void loadData() {
-        if(isServer) {
+        if(GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer()) {
             ArrayList<Object> objects = PersistentObjectUtil.getObjects(BetterFactions.getInstance().getSkeleton(), Federation.class);
             for(Object object : objects) {
                 Federation federation = (Federation) object;
@@ -61,7 +83,7 @@ public class FederationUtils {
     }
 
     public static void saveData() {
-        if(isServer) {
+        if(GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer()) {
             for(Federation federation : federations.values()) {
                 PersistentObjectUtil.addObject(BetterFactions.getInstance().getSkeleton(), federation);
             }
@@ -70,7 +92,7 @@ public class FederationUtils {
     }
 
     public static void updateFromServer(ArrayList<Federation> federationsList) {
-        if(isClient) {
+        if(GameCommon.isClientConnectedToServer() || GameCommon.isOnSinglePlayer()) {
             for(Federation fed : federationsList) federations.put(fed.getId(), fed);
         }
     }

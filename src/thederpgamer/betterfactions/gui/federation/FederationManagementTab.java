@@ -18,7 +18,7 @@ public class FederationManagementTab extends GUIContentPane {
     private NewFactionPanel guiPanel;
 
     public FederationManagementTab(InputState state, GUIWindowInterface window, NewFactionPanel guiPanel) {
-        super(state, window, Lng.str("FEDERATION MANAGEMENT"));
+        super(state, window, Lng.str("FEDERATION"));
         this.guiPanel = guiPanel;
     }
 

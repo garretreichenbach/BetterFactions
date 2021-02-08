@@ -10,7 +10,8 @@ import org.schema.schine.graphicsengine.forms.gui.GUICallback;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.GUIOverlay;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.utils.ImageUtils;
+import thederpgamer.betterfactions.utils.FactionUtils;
+
 import java.util.Locale;
 
 /**
@@ -51,6 +52,7 @@ public class FactionLogoOverlay extends GUIOverlay implements GUICallback {
                     public boolean onInput(String s) {
                         if ((s.startsWith("https://") || s.startsWith("http://")) && (s.toLowerCase(Locale.ROOT).endsWith(".png")
                                 || s.toLowerCase(Locale.ROOT).endsWith(".jpg") || s.toLowerCase(Locale.ROOT).endsWith(".jpeg"))) {
+                            FactionUtils.getFactionData(faction).setFactionLogo(s);
                             infoPanel.updateLogo(s);
                             return true;
                         } else {

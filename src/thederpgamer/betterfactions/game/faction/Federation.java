@@ -20,10 +20,11 @@ public class Federation implements Serializable, FactionScore {
     private String name;
     private ArrayList<FactionData> members;
 
-    public Federation(String name, FactionData founder) {
+    public Federation(String name, FactionData fromFaction, FactionData toFaction) {
         this.name = name;
         this.members = new ArrayList<>();
-        this.members.add(founder);
+        this.members.add(fromFaction);
+        this.members.add(toFaction);
         this.id = FederationUtils.getNewId(this);
     }
 

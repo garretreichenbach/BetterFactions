@@ -18,7 +18,7 @@ public class FactionManagementTab extends GUIContentPane {
     private NewFactionPanel guiPanel;
 
     public FactionManagementTab(InputState state, GUIWindowInterface window, NewFactionPanel guiPanel) {
-        super(state, window, Lng.str("FACTION MANAGEMENT"));
+        super(state, window, Lng.str("FACTION"));
         this.guiPanel = guiPanel;
     }
 
