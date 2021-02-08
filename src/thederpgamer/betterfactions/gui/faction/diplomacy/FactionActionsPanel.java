@@ -9,12 +9,9 @@ import org.schema.game.common.data.player.faction.Faction;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.*;
-import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActiveInterface;
-import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea;
-import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalButton;
-import org.schema.schine.graphicsengine.forms.gui.newgui.GUIInnerTextbox;
+import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.gui.elements.buttons.ExpandableButton;
+import thederpgamer.betterfactions.gui.elements.list.GUIButtonListElement;
 import thederpgamer.betterfactions.utils.FactionUtils;
 
 /**
@@ -26,21 +23,53 @@ import thederpgamer.betterfactions.utils.FactionUtils;
  */
 public class FactionActionsPanel extends GUIInnerTextbox {
 
-    private GUIActiveInterface activeInterface;
-    private GUIElementList mainButtonList;
     private Faction faction;
+    private GUIElementList mainButtonList;
+    private GUIDropdownBackground federationActionsBG;
+    private GUIDropdownBackground diplomacyActionsBG;
+    private GUIDropdownBackground tradeActionsBG;
+    private GUIDropdownBackground optionsActionsBG;
 
-    public FactionActionsPanel(InputState inputState, GUIActiveInterface activeInterface) {
+    public FactionActionsPanel(InputState inputState, GUIAncor anchor) {
         super(inputState);
-        this.activeInterface = activeInterface;
+        anchor.attach(this);
     }
 
     @Override
     public void onInit() {
         super.onInit();
-        (mainButtonList = new GUIElementList(getState())).onInit();
+        mainButtonList = new GUIElementList(getState());
         addActions(GameClient.getClientPlayerState());
         getContent().attach(mainButtonList);
+    }
+
+    @Override
+    public void draw() {
+        super.draw();
+
+        if(federationActionsBG.isInvisible()) {
+            federationActionsBG.cleanUp();
+        } else {
+            federationActionsBG.draw();
+        }
+
+        if(diplomacyActionsBG.isInvisible()) {
+            diplomacyActionsBG.cleanUp();
+        } else {
+            diplomacyActionsBG.draw();
+        }
+
+        if(tradeActionsBG.isInvisible()) {
+            tradeActionsBG.cleanUp();
+        } else {
+            tradeActionsBG.draw();
+        }
+
+        if(optionsActionsBG.isInvisible()) {
+            optionsActionsBG.cleanUp();
+        } else {
+            optionsActionsBG.draw();
+        }
     }
 
     public void setFaction(Faction faction) {
@@ -48,45 +77,130 @@ public class FactionActionsPanel extends GUIInnerTextbox {
     }
 
     private void addActions(final PlayerState playerState) {
-        if(faction != null && faction.getIdFaction() != FactionUtils.getFaction(playerState).getIdFaction()) {
-            ExpandableButton diplomacyButton = new ExpandableButton(getState(), this, Lng.str("Diplomacy"), GUIHorizontalArea.HButtonType.BUTTON_BLUE_LIGHT);
-            diplomacyButton.onInit();
-            GUIListElement diplomacyButtonElement = new GUIListElement(diplomacyButton, getState());
-            diplomacyButtonElement.onInit();
-            mainButtonList.add(diplomacyButtonElement);
+        (diplomacyActionsBG = new GUIDropdownBackground(getState(), (int) getWidth(), (int) getHeight())).onInit();
+        diplomacyActionsBG.setVisibility(2);
 
+        (federationActionsBG = new GUIDropdownBackground(getState(), (int) getWidth(), (int) getHeight())).onInit();
+        federationActionsBG.setVisibility(2);
+
+        (tradeActionsBG = new GUIDropdownBackground(getState(), (int) getWidth(), (int) getHeight())).onInit();
+        tradeActionsBG.setVisibility(2);
+
+        (optionsActionsBG = new GUIDropdownBackground(getState(), (int) getWidth(), (int) getHeight())).onInit();
+        optionsActionsBG.setVisibility(2);
+
+        if(faction != null && faction.getIdFaction() != FactionUtils.getFaction(playerState).getIdFaction()) {
+            final GUIElementList diplomacyButtonList = new GUIElementList(getState());
+            diplomacyButtonList.onInit();
+            diplomacyActionsBG.attach(diplomacyButtonList);
+            diplomacyActionsBG.setWidth(diplomacyButtonList.getWidth());
+            diplomacyActionsBG.setHeight((diplomacyButtonList.size() * diplomacyButtonList.get(0).getHeight()) + 2);
+            GUIButtonListElement diplomacyButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, Lng.str("Diplomacy"), new GUICallback() {
+                @Override
+                public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                    if(mouseEvent.pressedLeftMouse()) {
+                        if(diplomacyActionsBG.getVisibility() == 1) {
+                            diplomacyActionsBG.setVisibility(2);
+                        } else {
+                            diplomacyActionsBG.setVisibility(1);
+                        }
+                        diplomacyButtonList.updateDim();
+                        mainButtonList.updateDim();
+                    }
+                }
+
+                @Override
+                public boolean isOccluded() {
+                    return false;
+                }
+            });
+            diplomacyButton.onInit();
+            diplomacyButton.attach(diplomacyActionsBG);
+            diplomacyActionsBG.getPos().x = diplomacyButton.getPos().x + 2;
+            diplomacyActionsBG.getPos().y = diplomacyButton.getPos().y + diplomacyButton.getHeight() + 2;
+            for(GUIListElement element : diplomacyButtonList) {
+                ((GUIButtonListElement) element).setButtonWidth(diplomacyButtonList.width - 4);
+                element.getPos().x += 2;
+                element.getPos().y += 2;
+            }
+            mainButtonList.add(diplomacyButton);
             if(FactionUtils.getFactionData(FactionUtils.getFaction(playerState)).getFederationId() != -1) {
-                ExpandableButton federationButton = new ExpandableButton(getState(), this, Lng.str("Federation"), GUIHorizontalArea.HButtonColor.GREEN);
+                final GUIElementList federationButtonList = new GUIElementList(getState());
+                federationButtonList.onInit();
+                federationActionsBG.attach(federationButtonList);
+                federationActionsBG.setWidth(federationButtonList.getWidth());
+                federationActionsBG.setHeight(((federationButtonList.size() * federationButtonList.get(0).getHeight()) + federationButtonList.size()) + 2);
+                GUIButtonListElement federationButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.GREEN, Lng.str("Federation"), new GUICallback() {
+                    @Override
+                    public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                        if(mouseEvent.pressedLeftMouse()) {
+                            if(federationActionsBG.getVisibility() == 1) {
+                                federationActionsBG.setVisibility(2);
+                            } else {
+                                federationActionsBG.setVisibility(1);
+                            }
+                            federationButtonList.updateDim();
+                            mainButtonList.updateDim();
+                        }
+                    }
+
+                    @Override
+                    public boolean isOccluded() {
+                        return false;
+                    }
+                });
                 federationButton.onInit();
-                GUIListElement federationButtonElement = new GUIListElement(federationButton, getState());
-                federationButtonElement.onInit();
-                mainButtonList.add(federationButtonElement);
+                federationButton.attach(federationActionsBG);
+                federationActionsBG.getPos().x = federationButton.getPos().x + 2;
+                federationActionsBG.getPos().y = federationButton.getPos().y + federationButton.getHeight() + 2;
+                for(GUIListElement element : federationButtonList) {
+                    ((GUIButtonListElement) element).setButtonWidth(federationButtonList.width - 4);
+                    element.getPos().x += 2;
+                    element.getPos().y += 2;
+                }
+                mainButtonList.add(federationButton);
             }
 
-            ExpandableButton tradeButton = new ExpandableButton(getState(), this, Lng.str("Trade"), GUIHorizontalArea.HButtonColor.YELLOW);
+            final GUIElementList tradeButtonList = new GUIElementList(getState());
+            tradeButtonList.onInit();
+            tradeActionsBG.attach(tradeButtonList);
+            tradeActionsBG.setWidth(tradeButtonList.getWidth());
+            tradeActionsBG.setHeight(((tradeButtonList.size() * tradeButtonList.get(0).getHeight()) + tradeButtonList.size()) + 2);
+            GUIButtonListElement tradeButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.YELLOW, Lng.str("Trade"), new GUICallback() {
+                @Override
+                public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                    if(mouseEvent.pressedLeftMouse()) {
+                        if(tradeActionsBG.getVisibility() == 1) {
+                            tradeActionsBG.setVisibility(2);
+                        } else {
+                            tradeActionsBG.setVisibility(1);
+                        }
+                        tradeButtonList.updateDim();
+                        mainButtonList.updateDim();
+                    }
+                }
+
+                @Override
+                public boolean isOccluded() {
+                    return false;
+                }
+            });
             tradeButton.onInit();
-            GUIListElement tradeButtonElement = new GUIListElement(tradeButton, getState());
-            tradeButtonElement.onInit();
-            mainButtonList.add(tradeButtonElement);
+            tradeButton.attach(tradeActionsBG);
+            tradeActionsBG.getPos().x = tradeButton.getPos().x + 2;
+            tradeActionsBG.getPos().y = tradeButton.getPos().y + tradeButton.getHeight() + 2;
+            for(GUIListElement element : tradeButtonList) {
+                ((GUIButtonListElement) element).setButtonWidth(tradeButtonList.width - 4);
+                element.getPos().x += 2;
+                element.getPos().y += 2;
+            }
+            mainButtonList.add(tradeButton);
         }
 
-        ExpandableButton optionsButton = new ExpandableButton(getState(), this, Lng.str("Options"), GUIHorizontalArea.HButtonColor.PINK);
-        optionsButton.onInit();
-        createOptions(optionsButton.getExpandedPanel());
-        GUIListElement optionsButtonElement = new GUIListElement(optionsButton, getState());
-        optionsButtonElement.onInit();
-        mainButtonList.add(optionsButtonElement);
-    }
-
-    private void createOptions(GUIScrollablePanel scrollablePanel) {
-        PlayerState playerState = GameClient.getClientPlayerState();
-        GUIElementList optionsButtonList = new GUIElementList(getState());
+        final GUIElementList optionsButtonList = new GUIElementList(getState());
         optionsButtonList.onInit();
-        optionsButtonList.setScrollPane(scrollablePanel);
-        scrollablePanel.setContent(optionsButtonList);
-        scrollablePanel.onInit();
 
-        GUIHorizontalButton createFactionButton = new GUIHorizontalButton(getState(), GUIHorizontalArea.HButtonColor.GREEN, Lng.str("Create Faction"), new GUICallback() {
+        GUIButtonListElement createFactionButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.GREEN, Lng.str("Create Faction"), new GUICallback() {
             @Override
             public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                 if(mouseEvent.pressedLeftMouse() && getState().getController().getPlayerInputs().isEmpty()) {
@@ -98,14 +212,12 @@ public class FactionActionsPanel extends GUIInnerTextbox {
             public boolean isOccluded() {
                 return false;
             }
-        }, activeInterface, null);
+        });
         createFactionButton.onInit();
-        GUIListElement createFactionButtonElement = new GUIListElement(createFactionButton, getState());
-        createFactionButtonElement.onInit();
-        optionsButtonList.add(createFactionButtonElement);
+        optionsButtonList.add(createFactionButton);
 
         if(FactionUtils.inFaction(playerState)) {
-            GUIHorizontalButton leaveFactionButton = new GUIHorizontalButton(getState(), GUIHorizontalArea.HButtonColor.ORANGE, Lng.str("Leave Faction"), new GUICallback() {
+            GUIButtonListElement leaveFactionButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.ORANGE, Lng.str("Leave Faction"), new GUICallback() {
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                     if(mouseEvent.pressedLeftMouse()) {
@@ -126,14 +238,12 @@ public class FactionActionsPanel extends GUIInnerTextbox {
                 public boolean isOccluded() {
                     return false;
                 }
-            }, activeInterface, null);
+            });
             leaveFactionButton.onInit();
-            GUIListElement leaveFactionButtonElement = new GUIListElement(leaveFactionButton, getState());
-            leaveFactionButtonElement.onInit();
-            optionsButtonList.add(leaveFactionButtonElement);
+            optionsButtonList.add(leaveFactionButton);
         }
 
-        GUIHorizontalButton receivedInvitesButton = new GUIHorizontalButton(getState(), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new Object() {
+        GUIButtonListElement receivedInvitesButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new Object() {
             @Override
             public String toString() {
                 return Lng.str("Received Invites (%s)", GameClient.getClientPlayerState().getFactionController().getInvitesIncoming().size());
@@ -150,10 +260,41 @@ public class FactionActionsPanel extends GUIInnerTextbox {
             public boolean isOccluded() {
                 return false;
             }
-        }, activeInterface, null);
+        });
         receivedInvitesButton.onInit();
-        GUIListElement receivedInvitesButtonElement = new GUIListElement(receivedInvitesButton, getState());
-        receivedInvitesButtonElement.onInit();
-        optionsButtonList.add(receivedInvitesButtonElement);
+        optionsButtonList.add(receivedInvitesButton);
+
+        optionsActionsBG.attach(optionsButtonList);
+        optionsActionsBG.setWidth(optionsButtonList.getWidth());
+        optionsActionsBG.setHeight(((optionsButtonList.size() * optionsButtonList.get(0).getHeight()) + optionsButtonList.size()) + 2);
+        GUIButtonListElement optionsButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.PINK, Lng.str("Options"), new GUICallback() {
+            @Override
+            public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                if(mouseEvent.pressedLeftMouse()) {
+                    if(optionsActionsBG.getVisibility() == 1) {
+                        optionsActionsBG.setVisibility(2);
+                    } else {
+                        optionsActionsBG.setVisibility(1);
+                    }
+                    optionsButtonList.updateDim();
+                    mainButtonList.updateDim();
+                }
+            }
+
+            @Override
+            public boolean isOccluded() {
+                return false;
+            }
+        });
+        optionsButton.onInit();
+        optionsButton.attach(optionsActionsBG);
+        optionsActionsBG.getPos().x = optionsButton.getPos().x + 2;
+        optionsActionsBG.getPos().y = optionsButton.getPos().y + optionsButton.getHeight() + 2;
+        for(GUIListElement element : optionsButtonList) {
+            ((GUIButtonListElement) element).setButtonWidth(optionsButtonList.width - 4);
+            element.getPos().x += 2;
+            element.getPos().y += 2;
+        }
+        mainButtonList.add(optionsButton);
     }
 }

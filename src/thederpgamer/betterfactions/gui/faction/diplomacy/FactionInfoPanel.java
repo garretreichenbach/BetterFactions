@@ -2,6 +2,7 @@ package thederpgamer.betterfactions.gui.faction.diplomacy;
 
 import api.utils.StarRunnable;
 import org.schema.game.common.data.player.faction.Faction;
+import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
 import org.schema.schine.graphicsengine.forms.gui.GUIIconButton;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.utils.ImageUtils;
@@ -24,8 +25,11 @@ public class FactionInfoPanel extends GUIInnerTextbox {
     private GUITextOverlay nameOverlay;
     private GUITextOverlay infoOverlay;
 
-    public FactionInfoPanel(InputState inputState) {
+    public FactionInfoPanel(InputState inputState, GUIAncor anchor) {
         super(inputState);
+        anchor.attach(this);
+        setWidth(anchor.getWidth());
+        setHeight(anchor.getHeight());
     }
 
     @Override

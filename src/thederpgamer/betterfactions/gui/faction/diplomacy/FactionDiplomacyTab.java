@@ -39,14 +39,9 @@ public class FactionDiplomacyTab extends GUIContentPane {
         addNewTextBox(0, 70);
         addDivider(224);
 
-        (infoPanel = new FactionInfoPanel(getState())).onInit();
-        getContent(0, 0).attach(infoPanel);
-
-        (actionsPanel = new FactionActionsPanel(getState(), guiPanel)).onInit();
-        getContent(0, 1).attach(actionsPanel);
-
-        (listPanel = new FactionListPanel(getState())).onInit();
-        getContent(1, 0).attach(listPanel);
+        (infoPanel = new FactionInfoPanel(getState(), getContent(0, 0))).onInit();
+        (actionsPanel = new FactionActionsPanel(getState(), getContent(0, 1))).onInit();
+        (listPanel = new FactionListPanel(getState(), getContent(1, 0))).onInit();
 
         if (selectedFaction != null && FactionUtils.inFaction(GameClient.getClientPlayerState()) && FactionUtils.getFaction(GameClient.getClientPlayerState()).getIdFaction() != selectedFaction.getIdFaction()) {
             infoPanel.setFaction(selectedFaction);
