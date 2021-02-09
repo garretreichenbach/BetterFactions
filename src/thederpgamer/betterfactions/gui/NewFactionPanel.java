@@ -72,8 +72,8 @@ public class NewFactionPanel extends FactionPanelNew {
             (factionManagementTab = new FactionManagementTab(inputState, factionPanel, this)).onInit();
             factionPanel.getTabs().add(factionManagementTab);
 
-            (federationDiplomacyTab = new FederationDiplomacyTab(inputState, factionPanel, this)).onInit();
-            factionPanel.getTabs().add(federationDiplomacyTab);
+            //(federationDiplomacyTab = new FederationDiplomacyTab(inputState, factionPanel, this)).onInit();
+            //factionPanel.getTabs().add(federationDiplomacyTab);
 
             if(isInFederation()) {
                 (federationManagementTab = new FederationManagementTab(inputState, factionPanel, this)).onInit();

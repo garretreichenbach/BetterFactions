@@ -30,6 +30,7 @@ public class FactionInfoPanel extends GUIInnerTextbox {
     public FactionInfoPanel(InputState inputState, GUIAncor anchor) {
         super(inputState);
         anchor.attach(this);
+        setContent(new GUIAncor(inputState, 240, 70));
     }
 
     @Override
@@ -38,9 +39,6 @@ public class FactionInfoPanel extends GUIInnerTextbox {
 
         factionLogo = new FactionLogoOverlay(ImageUtils.getImage(FactionUtils.defaultLogo), this, getState());
         factionLogo.onInit();
-        factionLogo.getPos().x = (factionLogo.getWidth() / 2) + (factionLogo.getWidth() / 18);
-        factionLogo.getPos().y = 135;
-        factionLogo.orientateInsideFrame();
 
         factionLogoButton = new GUIIconButton(getState(), (int) factionLogo.getWidth(), (int) factionLogo.getHeight(), factionLogo, factionLogo);
         factionLogoButton.onInit();
@@ -52,26 +50,26 @@ public class FactionInfoPanel extends GUIInnerTextbox {
 
         nameOverlay = new GUITextOverlay(10, 10, getState());
         nameOverlay.onInit();
-        nameOverlay.limitTextWidth = (int) factionLogo.getWidth();
-        nameOverlay.setLimitTextDraw((int) factionLogo.getWidth());
+        nameOverlay.setTextSimple("");
         nameOverlay.getPos().x = 10;
-        nameOverlay.getPos().y = factionLogo.getPos().y + 50;
+        nameOverlay.getPos().y = (float) (factionLogo.getSprite().getHeight() / 4) + 15;
+        nameOverlay.setWidth(factionLogo.getSprite().getWidth());
         getContent().attach(nameOverlay);
 
         infoOverlay = new GUITextOverlay(10, 10, getState());
         infoOverlay.onInit();
-        infoOverlay.limitTextWidth = (int) factionLogo.getWidth();
-        infoOverlay.setLimitTextDraw((int) factionLogo.getWidth());
+        infoOverlay.setTextSimple("");
         infoOverlay.getPos().x = 10;
-        infoOverlay.getPos().y = nameOverlay.getPos().y + 10;
+        infoOverlay.getPos().y = nameOverlay.getPos().y + 15;
+        infoOverlay.setWidth(factionLogo.getSprite().getWidth());
         getContent().attach(infoOverlay);
     }
 
     @Override
     public void draw() {
         super.draw();
-        factionLogo.getSprite().getPos().x = (float) ((factionLogo.getSprite().getWidth() / 2) + (factionLogo.getSprite().getWidth() / 18));
-        factionLogo.getSprite().getPos().y = 135;
+        factionLogo.getSprite().getPos().x = ((float) (factionLogo.getSprite().getWidth() / 2) + (getContent().getWidth() - factionLogo.getSprite().getWidth()) / 2) * 2;
+        factionLogo.getSprite().getPos().y = (float) factionLogo.getSprite().getHeight() / 2;
     }
 
     public void updateLogo(final String newPath) {
@@ -80,8 +78,6 @@ public class FactionInfoPanel extends GUIInnerTextbox {
             @Override
             public void run() {
                 factionLogo.setSprite(ImageUtils.getImage(newPath));
-                factionLogo.getSprite().getPos().x = (float) ((factionLogo.getSprite().getWidth() / 2) + (factionLogo.getSprite().getWidth() / 18));
-                factionLogo.getSprite().getPos().y = 135;
             }
         }.runLater(BetterFactions.getInstance(), 15);
     }
@@ -89,23 +85,23 @@ public class FactionInfoPanel extends GUIInnerTextbox {
     public void setNameText(String nameText) {
         nameOverlay.setTextSimple(nameText);
         nameOverlay.setFont(FontLibrary.FontSize.MEDIUM.getFont());
-        nameOverlay.limitTextWidth = (int) factionLogo.getWidth();
-        nameOverlay.setLimitTextDraw((int) factionLogo.getWidth());
+        nameOverlay.updateTextSize();
+        nameOverlay.limitTextWidth = 15;
     }
 
     public void setNameText(String nameText, Color color) {
         nameOverlay.setTextSimple(nameText);
         nameOverlay.setFont(FontLibrary.FontSize.MEDIUM.getFont());
         nameOverlay.setColor(color);
-        nameOverlay.limitTextWidth = (int) factionLogo.getWidth();
-        nameOverlay.setLimitTextDraw((int) factionLogo.getWidth());
+        nameOverlay.updateTextSize();
+        nameOverlay.limitTextWidth = 15;
     }
 
     public void setInfoText(String newText) {
         infoOverlay.setTextSimple(newText);
         infoOverlay.setFont(FontLibrary.FontSize.SMALL.getFont());
-        infoOverlay.limitTextWidth = (int) factionLogo.getWidth();
-        infoOverlay.setLimitTextDraw((int) factionLogo.getWidth());
+        infoOverlay.updateTextSize();
+        infoOverlay.limitTextWidth = 15;
     }
 
     public void setFaction(Faction faction) {

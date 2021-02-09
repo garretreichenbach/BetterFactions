@@ -30,13 +30,13 @@ public class ImageUtils {
         try {
             Sprite bufferedImage = imgCache.get(url);
             if (bufferedImage != null) {
-                return scaleSprite(bufferedImage, 256, 256);
+                return scaleSprite(bufferedImage, 200, 200);
             } else {
                 fetchImage(url);
-                return scaleSprite(getDefaultLogo(), 256, 256);
+                return scaleSprite(getDefaultLogo(), 200, 200);
             }
         } catch (Exception ignored) { }
-        return scaleSprite(getDefaultLogo(), 256, 256);
+        return scaleSprite(getDefaultLogo(), 200, 200);
     }
 
     public static Sprite scaleSprite(Sprite sprite, int width, int height) {
@@ -83,7 +83,7 @@ public class ImageUtils {
         try {
             BufferedImage bufferedImage = ImageIO.read(BetterFactions.getInstance().getJarResource("resources/images/temp-logo.png"));
             Sprite sprite = StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), "tempLogo");
-            scaleSprite(sprite, 256, 256);
+            scaleSprite(sprite, 200, 200);
             return sprite;
         } catch (IOException exception) {
             exception.printStackTrace();

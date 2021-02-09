@@ -23,8 +23,8 @@ public class FactionUtils {
     private static final HashMap<Integer, FactionData> factionData = new HashMap<>();
 
     public static final String defaultLogo = "https://i.imgur.com/8wKjlBR.png";
-    private static final String piratesLogo = ""; //Todo
-    private static final String tradingGuildLogo = ""; //Todo
+    private static final String piratesLogo = "https://i.imgur.com/8wKjlBR.png"; //Todo
+    private static final String tradingGuildLogo = "https://i.imgur.com/8wKjlBR.png"; //Todo
 
     private static final String defaultDescription = "A Faction";
     private static final String piratesDescription = "Small clans of ravaging space pirates that attack and loot everything in sight." +
@@ -81,6 +81,7 @@ public class FactionUtils {
 
         if(!factionData.containsKey(FactionManager.PIRATES_ID)) factionData.put(FactionManager.PIRATES_ID, initializeNPCFaction(FactionManager.PIRATES_ID));
         if(!factionData.containsKey(FactionManager.TRAIDING_GUILD_ID)) factionData.put(FactionManager.TRAIDING_GUILD_ID, initializeNPCFaction(FactionManager.TRAIDING_GUILD_ID));
+        saveData();
     }
 
     public static void loadData() {
@@ -90,7 +91,6 @@ public class FactionUtils {
                 FactionData fData = (FactionData) object;
                 factionData.put(fData.getFactionId(), fData);
             }
-            initializeFactions();
             saveData();
         }
     }

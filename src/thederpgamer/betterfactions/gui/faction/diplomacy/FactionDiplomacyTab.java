@@ -28,7 +28,7 @@ public class FactionDiplomacyTab extends GUIContentPane {
     private FactionDiplomacyList factionList;
 
     public FactionDiplomacyTab(InputState state, GUIWindowInterface window, NewFactionPanel guiPanel) {
-        super(state, window, Lng.str("FACTION LIST"));
+        super(state, window, Lng.str("DIPLOMACY"));
         this.guiPanel = guiPanel;
         this.selectedFaction = null;
     }
@@ -37,8 +37,8 @@ public class FactionDiplomacyTab extends GUIContentPane {
     public void onInit() {
         super.onInit();
         setTextBoxHeightLast(270);
-        addNewTextBox(0, 70);
-        addDivider(224);
+        addNewTextBox(0, 80);
+        addDivider(250);
 
         (infoPanel = new FactionInfoPanel(getState(), getContent(0, 0))).onInit();
         (actionsPanel = new FactionActionsPanel(getState(), getContent(0, 1))).onInit();
@@ -87,5 +87,6 @@ public class FactionDiplomacyTab extends GUIContentPane {
             infoPanel.updateLogo(factionData.getFactionLogo());
         }
         actionsPanel.setFaction(selectedFaction);
+        actionsPanel.onInit();
     }
 }

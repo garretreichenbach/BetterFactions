@@ -93,7 +93,7 @@ public class FactionActionsPanel extends GUIInnerTextbox {
         (optionsActionsBG = new GUIDropdownBackground(getState(), (int) getWidth(), (int) getHeight())).onInit();
         optionsActionsBG.setVisibility(2);
 
-        if(faction != null && faction.getIdFaction() != FactionUtils.getFaction(playerState).getIdFaction()) {
+        if(faction != null && playerState.getFactionId() != 0 && faction.getIdFaction() != FactionUtils.getFaction(playerState).getIdFaction()) {
             final GUIElementList diplomacyButtonList = new GUIElementList(getState());
             diplomacyButtonList.onInit();
 

@@ -3,6 +3,8 @@ package thederpgamer.betterfactions;
 import api.common.GameCommon;
 import api.common.GameServer;
 import api.listener.Listener;
+import api.listener.events.controller.ClientInitializeEvent;
+import api.listener.events.controller.ServerInitializeEvent;
 import api.listener.events.faction.FactionCreateEvent;
 import api.listener.events.gui.PlayerGUICreateEvent;
 import api.listener.events.player.PlayerJoinFactionEvent;
@@ -74,6 +76,7 @@ public class BetterFactions extends StarMod {
         StarLoader.registerListener(PlayerGUICreateEvent.class, new Listener<PlayerGUICreateEvent>() {
             @Override
             public void onEvent(PlayerGUICreateEvent event) {
+                FactionUtils.initializeFactions();
                 try {
                     PlayerPanel playerPanel = event.getPlayerPanel();
                     Field factionPanelNewField = playerPanel.getClass().getDeclaredField("factionPanelNew");

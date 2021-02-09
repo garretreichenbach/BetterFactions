@@ -88,9 +88,9 @@ public class FactionData implements FactionScore, Serializable {
         if(FederationUtils.getFederation(this) != null) federation = FederationUtils.getFederation(this).getName();
         builder.append(federation);
         builder.append("\nSize: ").append(getFaction().getMembersUID().keySet().size());
-        builder.append("\nPower: ").append(getFaction().factionPoints);
+        builder.append(" | Power: ").append(getFaction().factionPoints);
         builder.append("\nRelation: ").append(getRelationString());
-        builder.append("\nOpinion: ").append(getOpinionString());
+        builder.append(" | Opinion: ").append(getOpinionString());
         return builder.toString();
     }
 
@@ -141,7 +141,7 @@ public class FactionData implements FactionScore, Serializable {
     }
 
     public String getInfoString() {
-        return getInfo() + "\n\n" + factionDescription;
+        return getInfo() + "\n" + factionDescription;
     }
 
     public String[] getDataArray() {
