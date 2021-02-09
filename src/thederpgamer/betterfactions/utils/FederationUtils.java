@@ -22,6 +22,20 @@ public class FederationUtils {
 
     private static HashMap<Integer, Federation> federations = new HashMap<>();
 
+    public static void joinFederation(FactionData faction, Federation federation) {
+        federations.get(federation.getId()).getMembers().add(faction);
+        faction.setFederationId(federation.getId());
+        saveData();
+        //Todo: Update permissions and relations
+    }
+
+    public static void leaveFederation(FactionData faction) {
+        federations.get(faction.getFederationId()).getMembers().remove(faction);
+        faction.setFederationId(-1);
+        saveData();
+        //Todo: Update permissions and relations
+    }
+
     public static void createNewFederation(String federationName, FactionData fromFaction, FactionData toFaction) {
         if(GameCommon.isClientConnectedToServer() || GameCommon.isOnSinglePlayer()) {
             PacketUtil.sendPacketToServer(new CreateNewFederationPacket(federationName, fromFaction, toFaction));
@@ -36,7 +50,10 @@ public class FederationUtils {
         if(GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer()) {
             Federation federation = new Federation(federationName, fromFaction, toFaction);
             federations.put(federation.getId(), federation);
+            fromFaction.setFederationId(federation.getId());
+            toFaction.setFederationId(federation.getId());
             BetterFactions.getInstance().updateClientData();
+            saveData();
         }
     }
 

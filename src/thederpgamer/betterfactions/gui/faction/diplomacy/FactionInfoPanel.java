@@ -6,11 +6,11 @@ import org.schema.game.common.data.player.faction.Faction;
 import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
 import org.schema.schine.graphicsengine.forms.gui.GUIIconButton;
 import thederpgamer.betterfactions.BetterFactions;
+import thederpgamer.betterfactions.data.other.Vector2i;
 import thederpgamer.betterfactions.utils.FactionUtils;
 import thederpgamer.betterfactions.utils.ImageUtils;
 import org.schema.schine.graphicsengine.forms.font.FontLibrary;
 import org.schema.schine.graphicsengine.forms.gui.GUITextOverlay;
-import org.schema.schine.graphicsengine.forms.gui.newgui.GUIInnerTextbox;
 import org.schema.schine.input.InputState;
 
 /**
@@ -20,17 +20,15 @@ import org.schema.schine.input.InputState;
  * Created 01/30/2021
  * @author TheDerpGamer
  */
-public class FactionInfoPanel extends GUIInnerTextbox {
+public class FactionInfoPanel extends GUIAncor {
 
     private GUIIconButton factionLogoButton;
     private FactionLogoOverlay factionLogo;
     private GUITextOverlay nameOverlay;
     private GUITextOverlay infoOverlay;
 
-    public FactionInfoPanel(InputState inputState, GUIAncor anchor) {
+    public FactionInfoPanel(InputState inputState) {
         super(inputState);
-        anchor.attach(this);
-        setContent(new GUIAncor(inputState, 240, 70));
     }
 
     @Override
@@ -46,30 +44,33 @@ public class FactionInfoPanel extends GUIInnerTextbox {
         factionLogoButton.getSelectedBackgroundColor().set(0, 0, 0, 0);
         factionLogoButton.getPressedColor().set(1.0f, 1.0f, 1.0f, 0.3f);
         factionLogoButton.getSelectColor().set(1.0f, 1.0f, 1.0f, 0.3f);
-        getContent().attach(factionLogoButton);
+        attach(factionLogoButton);
 
         nameOverlay = new GUITextOverlay(10, 10, getState());
+        nameOverlay.autoWrapOn = this;
+        nameOverlay.setFont(FontLibrary.FontSize.MEDIUM.getFont());
+        nameOverlay.setTextSimple("No Faction");
         nameOverlay.onInit();
-        nameOverlay.setTextSimple("");
         nameOverlay.getPos().x = 10;
-        nameOverlay.getPos().y = (float) (factionLogo.getSprite().getHeight() / 4) + 15;
-        nameOverlay.setWidth(factionLogo.getSprite().getWidth());
-        getContent().attach(nameOverlay);
+        nameOverlay.getPos().y = 30;
+        nameOverlay.setWidth((int) (nameOverlay.getWidth() - 4));
+        attach(nameOverlay);
 
         infoOverlay = new GUITextOverlay(10, 10, getState());
-        infoOverlay.onInit();
+        infoOverlay.autoWrapOn = this;
+        infoOverlay.setFont(FontLibrary.FontSize.SMALL.getFont());
         infoOverlay.setTextSimple("");
+        infoOverlay.onInit();
         infoOverlay.getPos().x = 10;
-        infoOverlay.getPos().y = nameOverlay.getPos().y + 15;
-        infoOverlay.setWidth(factionLogo.getSprite().getWidth());
-        getContent().attach(infoOverlay);
+        infoOverlay.getPos().y = nameOverlay.getPos().y + 10;
+        infoOverlay.setWidth((int) (infoOverlay.getWidth() - 4));
+        attach(infoOverlay);
     }
 
     @Override
     public void draw() {
         super.draw();
-        factionLogo.getSprite().getPos().x = ((float) (factionLogo.getSprite().getWidth() / 2) + (getContent().getWidth() - factionLogo.getSprite().getWidth()) / 2) * 2;
-        factionLogo.getSprite().getPos().y = (float) factionLogo.getSprite().getHeight() / 2;
+        factionLogoButton.setImagePos(getLogoPos().x, getLogoPos().y);
     }
 
     public void updateLogo(final String newPath) {
@@ -83,28 +84,28 @@ public class FactionInfoPanel extends GUIInnerTextbox {
     }
 
     public void setNameText(String nameText) {
-        nameOverlay.setTextSimple(nameText);
         nameOverlay.setFont(FontLibrary.FontSize.MEDIUM.getFont());
-        nameOverlay.updateTextSize();
-        nameOverlay.limitTextWidth = 15;
+        nameOverlay.setTextSimple(nameText);
     }
 
     public void setNameText(String nameText, Color color) {
-        nameOverlay.setTextSimple(nameText);
         nameOverlay.setFont(FontLibrary.FontSize.MEDIUM.getFont());
         nameOverlay.setColor(color);
-        nameOverlay.updateTextSize();
-        nameOverlay.limitTextWidth = 15;
+        nameOverlay.setTextSimple(nameText);
     }
 
     public void setInfoText(String newText) {
-        infoOverlay.setTextSimple(newText);
         infoOverlay.setFont(FontLibrary.FontSize.SMALL.getFont());
-        infoOverlay.updateTextSize();
-        infoOverlay.limitTextWidth = 15;
+        infoOverlay.setTextSimple(newText);
     }
 
     public void setFaction(Faction faction) {
         factionLogo.setFaction(faction);
+    }
+
+    private Vector2i getLogoPos() {
+        int logoX = (int) ((factionLogo.getSprite().getWidth() / 2) + (getWidth() - factionLogo.getSprite().getWidth()));
+        int logoY = (factionLogo.getSprite().getHeight() / 2) + 10;
+        return new Vector2i(logoX, logoY);
     }
 }

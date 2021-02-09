@@ -27,10 +27,8 @@ public class FactionUtils {
     private static final String tradingGuildLogo = "https://i.imgur.com/8wKjlBR.png"; //Todo
 
     private static final String defaultDescription = "A Faction";
-    private static final String piratesDescription = "Small clans of ravaging space pirates that attack and loot everything in sight." +
-            "\nDespite their savagery, they are currently quite weak due to their lack of an organized leadership.";
-    private static final String tradingGuildDescription = "A large organization made up of wealthy trading guilds spread across the galaxy." +
-            "\nThey are quite friendly and are always open for business. They also boast a large navy made up of the combined forces of their many guild members and will defend smaller factions from larger invaders.";
+    private static final String piratesDescription = "Small clans of ravaging space pirates that attack and loot everything in sight. Despite their savagery, they are currently quite weak due to their lack of an organized leadership.";
+    private static final String tradingGuildDescription = "A friendly organization made up of wealthy trading guilds spread across the galaxy. They boast a large navy made up of the combined forces of their many guild members and will sometimes defend weaker factions.";
 
     public static boolean inFaction(PlayerState playerState) {
         return playerState.getFactionId() != 0;

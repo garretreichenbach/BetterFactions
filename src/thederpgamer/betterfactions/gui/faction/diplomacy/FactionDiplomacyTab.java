@@ -22,14 +22,12 @@ import thederpgamer.betterfactions.utils.FactionUtils;
 public class FactionDiplomacyTab extends GUIContentPane {
 
     private Faction selectedFaction;
-    private NewFactionPanel guiPanel;
     private FactionInfoPanel infoPanel;
     private FactionActionsPanel actionsPanel;
     private FactionDiplomacyList factionList;
 
-    public FactionDiplomacyTab(InputState state, GUIWindowInterface window, NewFactionPanel guiPanel) {
+    public FactionDiplomacyTab(InputState state, GUIWindowInterface window) {
         super(state, window, Lng.str("DIPLOMACY"));
-        this.guiPanel = guiPanel;
         this.selectedFaction = null;
     }
 
@@ -40,9 +38,13 @@ public class FactionDiplomacyTab extends GUIContentPane {
         addNewTextBox(0, 80);
         addDivider(250);
 
-        (infoPanel = new FactionInfoPanel(getState(), getContent(0, 0))).onInit();
-        (actionsPanel = new FactionActionsPanel(getState(), getContent(0, 1))).onInit();
-        (factionList = new FactionDiplomacyList(getState(), getContent(1, 0), this)).onInit();
+        setContent(0, 0, (infoPanel = new FactionInfoPanel(getState())));
+        setContent(0, 1, (actionsPanel = new FactionActionsPanel(getState())));
+        getContent(1, 0).attach((factionList = new FactionDiplomacyList(getState(), getContent(1, 0), this)));
+
+        infoPanel.onInit();
+        actionsPanel.onInit();
+        factionList.onInit();
 
         if(selectedFaction != null && FactionUtils.inFaction(GameClient.getClientPlayerState()) && FactionUtils.getFaction(GameClient.getClientPlayerState()).getIdFaction() != selectedFaction.getIdFaction()) {
             infoPanel.setFaction(selectedFaction);

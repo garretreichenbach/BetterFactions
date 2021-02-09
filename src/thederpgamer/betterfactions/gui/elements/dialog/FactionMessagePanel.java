@@ -11,6 +11,9 @@ import org.schema.schine.graphicsengine.forms.gui.GUICallback;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActivatableTextBar;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIDialogWindow;
 import org.schema.schine.input.InputState;
+import thederpgamer.betterfactions.data.faction.FactionData;
+import thederpgamer.betterfactions.data.federation.FactionMessage;
+import thederpgamer.betterfactions.utils.FactionUtils;
 
 /**
  * FactionMessagePanel.java
@@ -21,7 +24,7 @@ import org.schema.schine.input.InputState;
  */
 public class FactionMessagePanel extends GUIInputPanel {
 
-    private String title;
+    private final String defaultTitle;
     private Faction from;
     private Faction to;
 
@@ -30,7 +33,7 @@ public class FactionMessagePanel extends GUIInputPanel {
 
     public FactionMessagePanel(InputState inputState, GUICallback callback, String title, Faction from, Faction to) {
         super("FactionMessagePanel", inputState, 750, 450, callback, title, "");
-        this.title = title;
+        this.defaultTitle = title;
         this.from = from;
         this.to = to;
         setOkButtonText(Lng.str("SEND"));
@@ -43,7 +46,7 @@ public class FactionMessagePanel extends GUIInputPanel {
 
         titleTextBar = new GUIActivatableTextBar(getState(), FontLibrary.FontSize.MEDIUM, 80, 1, Lng.str("TITLE"), ((GUIDialogWindow) background).getMainContentPane().getContent(0), new DefaultTextCallback(), new DefaultTextChangedCallback());
         titleTextBar.onInit();
-        titleTextBar.setTextWithoutCallback(Lng.str(title));
+        titleTextBar.setTextWithoutCallback(Lng.str(defaultTitle));
         ((GUIDialogWindow) background).getMainContentPane().getContent(0).attach(titleTextBar);
 
         ((GUIDialogWindow) background).getMainContentPane().setTextBoxHeightLast(30);
@@ -58,8 +61,10 @@ public class FactionMessagePanel extends GUIInputPanel {
         return !titleTextBar.getText().equals("");
     }
 
-    public void sendMessage() {
-        //Todo
+    public void sendMessage(FactionMessage.MessageType messageType) {
+        FactionMessage message = new FactionMessage(from, to, getTitle(), getMessage(), messageType);
+        FactionData toData = FactionUtils.getFactionData(to);
+        toData.addMessage(message);
     }
 
     private class DefaultTextChangedCallback implements OnInputChangedCallback {
@@ -92,5 +97,13 @@ public class FactionMessagePanel extends GUIInputPanel {
         @Override
         public void newLine() {
         }
+    }
+
+    public String getTitle() {
+        return titleTextBar.getText();
+    }
+
+    public String getMessage() {
+        return messageTextBar.getText();
     }
 }

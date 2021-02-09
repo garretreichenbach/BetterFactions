@@ -7,6 +7,7 @@ import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.input.KeyEventInterface;
+import thederpgamer.betterfactions.data.federation.FactionMessage;
 import thederpgamer.betterfactions.game.faction.Federation;
 import thederpgamer.betterfactions.gui.elements.dialog.FactionMessagePanel;
 
@@ -54,7 +55,7 @@ public class RequestJoinFederationDialog extends PlayerInput {
                 if (callingGuiElement.getUserPointer().equals("OK")) {
                     if(messagePanel.isValid()) {
                         //Todo: Request join federation
-                        messagePanel.sendMessage();
+                        messagePanel.sendMessage(FactionMessage.MessageType.FEDERATION_REQUEST);
                         deactivate();
                     }
                 }

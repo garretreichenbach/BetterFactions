@@ -5,10 +5,12 @@ import api.common.GameCommon;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionRelation;
 import org.schema.schine.common.language.Lng;
+import thederpgamer.betterfactions.data.federation.FactionMessage;
 import thederpgamer.betterfactions.game.faction.Federation;
 import thederpgamer.betterfactions.utils.FactionUtils;
 import thederpgamer.betterfactions.utils.FederationUtils;
 import java.io.Serializable;
+import java.util.ArrayList;
 
 /**
  * FactionData.java
@@ -25,6 +27,7 @@ public class FactionData implements FactionScore, Serializable {
     private String factionName;
     private String factionDescription;
     private String factionLogo;
+    private ArrayList<FactionMessage> inbox = new ArrayList<>();
 
     public FactionData(Faction faction) {
         factionId = faction.getIdFaction();
@@ -87,10 +90,12 @@ public class FactionData implements FactionScore, Serializable {
         String federation = "Non-Aligned";
         if(FederationUtils.getFederation(this) != null) federation = FederationUtils.getFederation(this).getName();
         builder.append(federation);
-        builder.append("\nSize: ").append(getFaction().getMembersUID().keySet().size());
-        builder.append(" | Power: ").append(getFaction().factionPoints);
-        builder.append("\nRelation: ").append(getRelationString());
-        builder.append(" | Opinion: ").append(getOpinionString());
+        builder.append(" | ");
+        builder.append(getRelationString());
+        //builder.append("\nSize: ").append(getFaction().getMembersUID().keySet().size());
+        //builder.append(" | Power: ").append(getFaction().factionPoints);
+        //builder.append("\nRelation: ").append(getRelationString());
+        //builder.append(" | Opinion: ").append(getOpinionString());
         return builder.toString();
     }
 
@@ -170,5 +175,13 @@ public class FactionData implements FactionScore, Serializable {
         System.arraycopy(dataArray, 0, infoArray, 0, dataArray.length);
         System.arraycopy(scoreArray, 0, infoArray, dataArray.length, scoreArray.length);
         return infoArray;
+    }
+
+    public void addMessage(FactionMessage message) {
+        inbox.add(message);
+    }
+
+    public ArrayList<FactionMessage> getInbox() {
+        return inbox;
     }
 }
