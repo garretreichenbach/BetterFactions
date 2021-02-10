@@ -8,7 +8,9 @@ import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionManager;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.faction.FactionData;
+import thederpgamer.betterfactions.gui.faction.news.FactionNewsEntry;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 
 /**
@@ -84,9 +86,9 @@ public class FactionUtils {
 
     public static void loadData() {
         if(GameCommon.isDedicatedServer() || GameCommon.isClientConnectedToServer()) {
-            ArrayList<Object> objects = PersistentObjectUtil.getObjects(BetterFactions.getInstance().getSkeleton(), FactionData.class);
-            for(Object object : objects) {
-                FactionData fData = (FactionData) object;
+            ArrayList<Object> fDataObjects = PersistentObjectUtil.getObjects(BetterFactions.getInstance().getSkeleton(), FactionData.class);
+            for(Object fDataObject : fDataObjects) {
+                FactionData fData = (FactionData) fDataObject;
                 factionData.put(fData.getFactionId(), fData);
             }
             saveData();
@@ -95,15 +97,15 @@ public class FactionUtils {
 
     public static void saveData() {
         if(GameCommon.isDedicatedServer() || GameCommon.isClientConnectedToServer()) {
-            ArrayList<FactionData> toDelete = new ArrayList<>();
+            ArrayList<FactionData> fDataToDelete = new ArrayList<>();
             for(FactionData fData : factionData.values()) {
                 if(GameCommon.getGameState().getFactionManager().getFactionMap().containsKey(fData.getFactionId())) {
                     PersistentObjectUtil.addObject(BetterFactions.getInstance().getSkeleton(), fData);
                 } else {
-                    toDelete.add(fData);
+                    fDataToDelete.add(fData);
                 }
             }
-            for(FactionData fData : toDelete) factionData.remove(fData.getFactionId());
+            for(FactionData fData : fDataToDelete) factionData.remove(fData.getFactionId());
             PersistentObjectUtil.save(BetterFactions.getInstance().getSkeleton());
         }
     }

@@ -1,4 +1,4 @@
-package thederpgamer.betterfactions.gui.faction;
+package thederpgamer.betterfactions.gui.faction.management;
 
 import thederpgamer.betterfactions.gui.NewFactionPanel;
 import org.schema.schine.common.language.Lng;

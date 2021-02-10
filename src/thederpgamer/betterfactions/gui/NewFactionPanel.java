@@ -2,8 +2,8 @@ package thederpgamer.betterfactions.gui;
 
 import api.common.GameClient;
 import thederpgamer.betterfactions.game.faction.Federation;
-import thederpgamer.betterfactions.gui.faction.FactionManagementTab;
-import thederpgamer.betterfactions.gui.faction.FactionNewsTab;
+import thederpgamer.betterfactions.gui.faction.management.FactionManagementTab;
+import thederpgamer.betterfactions.gui.faction.news.FactionNewsTab;
 import thederpgamer.betterfactions.gui.faction.diplomacy.FactionDiplomacyTab;
 import thederpgamer.betterfactions.gui.federation.FederationManagementTab;
 import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;

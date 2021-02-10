@@ -19,6 +19,7 @@ import org.schema.game.common.data.player.PlayerState;
 import thederpgamer.betterfactions.gui.NewFactionPanel;
 import thederpgamer.betterfactions.network.client.CreateNewFederationPacket;
 import thederpgamer.betterfactions.network.server.UpdateClientDataPacket;
+import thederpgamer.betterfactions.utils.FactionNewsUtils;
 import thederpgamer.betterfactions.utils.FactionUtils;
 import thederpgamer.betterfactions.utils.FederationUtils;
 import java.lang.reflect.Field;
@@ -42,11 +43,13 @@ public class BetterFactions extends StarMod {
     private final String[] defaultConfig = {
             "debug-mode: false",
             "save-interval: 12000",
-            "client-update-interval: 3500"
+            "client-update-interval: 3500",
+            "max-news-backup: 30"
     };
     public boolean debugMode = false;
     public int saveInterval = 12000;
     public int clientUpdateInterval = 3500;
+    public int maxNewsBackup = 30;
 
     @Override
     public void onEnable() {
@@ -65,11 +68,13 @@ public class BetterFactions extends StarMod {
         debugMode = config.getConfigurableBoolean("debug-mode", false);
         saveInterval = config.getConfigurableInt("save-interval", 12000);
         clientUpdateInterval = config.getConfigurableInt("client-update-interval", 3500);
+        maxNewsBackup = config.getConfigurableInt("max-news-backup", 30);
     }
 
     private void loadData() {
         FactionUtils.loadData();
         FederationUtils.loadData();
+        FactionNewsUtils.loadData();
     }
 
     private void registerListeners() {
@@ -97,6 +102,8 @@ public class BetterFactions extends StarMod {
                 FactionUtils.getFactionData(event.getFaction());
                 FactionUtils.saveData();
                 FederationUtils.saveData();
+                FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionCreateNews(FactionUtils.getFactionData(event.getFaction()), event.getPlayer()));
+                FactionNewsUtils.saveData();
             }
         }, this);
 
@@ -106,6 +113,8 @@ public class BetterFactions extends StarMod {
                 FactionUtils.getFactionData(event.getFaction());
                 FactionUtils.saveData();
                 FederationUtils.saveData();
+                FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionJoinNews(FactionUtils.getFactionData(event.getFaction()), event.getPlayer()));
+                FactionNewsUtils.saveData();
                 if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
                     redrawFactionPane();
                 }
@@ -115,9 +124,17 @@ public class BetterFactions extends StarMod {
         StarLoader.registerListener(PlayerLeaveFactionEvent.class, new Listener<PlayerLeaveFactionEvent>() {
             @Override
             public void onEvent(PlayerLeaveFactionEvent event) {
-                FactionUtils.getFactionData(event.getFaction());
+                if(event.getFaction() != null) {
+                    if (event.getFaction().getMembersUID().keySet().size() <= 1) {
+                        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionDisbandNews(FactionUtils.getFactionData(event.getFaction())));
+                    } else {
+                        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionLeaveNews(FactionUtils.getFactionData(event.getFaction()), event.getPlayer()));
+                    }
+                    FactionUtils.getFactionData(event.getFaction());
+                }
                 FactionUtils.saveData();
                 FederationUtils.saveData();
+                FactionNewsUtils.saveData();
                 if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
                     redrawFactionPane();
                 }

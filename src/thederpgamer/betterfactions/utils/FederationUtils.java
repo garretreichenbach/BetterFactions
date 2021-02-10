@@ -25,11 +25,13 @@ public class FederationUtils {
     public static void joinFederation(FactionData faction, Federation federation) {
         federations.get(federation.getId()).getMembers().add(faction);
         faction.setFederationId(federation.getId());
+        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationJoinNews(federation, faction));
         saveData();
         //Todo: Update permissions and relations
     }
 
     public static void leaveFederation(FactionData faction) {
+        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationLeaveNews(faction.getFederation(), faction));
         federations.get(faction.getFederationId()).getMembers().remove(faction);
         faction.setFederationId(-1);
         saveData();
@@ -52,9 +54,17 @@ public class FederationUtils {
             federations.put(federation.getId(), federation);
             fromFaction.setFederationId(federation.getId());
             toFaction.setFederationId(federation.getId());
+            FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationCreateNews(federation));
             BetterFactions.getInstance().updateClientData();
             saveData();
         }
+    }
+
+    public static void disbandFederation(Federation federation) {
+        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationDisbandNews(federation));
+        for(FactionData factionData : federation.getMembers()) factionData.setFederationId(-1);
+        federations.remove(federation.getId());
+        saveData();
     }
 
     public static boolean federationExists(String name) {

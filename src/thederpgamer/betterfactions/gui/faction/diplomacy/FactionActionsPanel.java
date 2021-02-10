@@ -519,35 +519,40 @@ public class FactionActionsPanel extends GUIAncor {
             });
             leaveFactionButton.onInit();
             factionButtonList.add(leaveFactionButton);
-        }
 
-        if (FactionUtils.getPlayerFactionData().getFederationId() != -1) {
-            GUIButtonListElement leaveFederationButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.ORANGE, Lng.str("Leave Federation"), new GUICallback() {
-                @Override
-                public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                    if (mouseEvent.pressedLeftMouse()) {
-                        (new PlayerGameOkCancelInput("CONFIRM", GameClient.getClientState(), Lng.str("Confirm"), Lng.str("Do you really want to leave this federation?\n" + "You'll be unable to access any ship/structure that belongs to this\n" + "federation except for your ships that use the Personal Permission Rank.\n\n" + "If your faction is the last member, the federation will also automatically disband!")) {
-                            public void onDeactivate() {
+            if (FactionUtils.getPlayerFactionData().getFederationId() != -1) {
+                GUIButtonListElement leaveFederationButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.ORANGE, Lng.str("Leave Federation"), new GUICallback() {
+                    @Override
+                    public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                        if (mouseEvent.pressedLeftMouse()) {
+                            (new PlayerGameOkCancelInput("CONFIRM", GameClient.getClientState(), Lng.str("Confirm"), Lng.str("Do you really want to leave this federation?\n" + "You'll be unable to access any ship/structure that belongs to this\n" + "federation except for your ships that use the Personal Permission Rank.\n\n" + "If your faction is the last member, the federation will also automatically disband!")) {
+                                public void onDeactivate() {
 
-                            }
+                                }
 
-                            public void pressedOK() {
-                                FederationUtils.leaveFederation(FactionUtils.getPlayerFactionData());
-                                this.deactivate();
-                            }
-                        }).activate();
+                                public void pressedOK() {
+                                    FactionData playerFaction = FactionUtils.getPlayerFactionData();
+                                    if(playerFaction.getFederation().getMembers().size() <= 1) {
+                                        FederationUtils.disbandFederation(playerFaction.getFederation());
+                                    } else {
+                                        FederationUtils.leaveFederation(playerFaction);
+                                    }
+                                    this.deactivate();
+                                }
+                            }).activate();
+                        }
                     }
-                }
 
-                @Override
-                public boolean isOccluded() {
-                    return false;
-                }
-            });
-            leaveFederationButton.onInit();
-            factionButtonList.add(leaveFederationButton);
+                    @Override
+                    public boolean isOccluded() {
+                        return false;
+                    }
+                });
+                leaveFederationButton.onInit();
+                factionButtonList.add(leaveFederationButton);
+            }
+
         }
-
         GUIButtonListElement factionInvitesButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new Object() {
             @Override
             public String toString() {
