@@ -1,6 +1,5 @@
 package thederpgamer.betterfactions;
 
-import api.DebugFile;
 import api.common.GameCommon;
 import api.common.GameServer;
 import api.listener.Listener;
@@ -13,7 +12,6 @@ import api.mod.StarMod;
 import api.mod.config.FileConfiguration;
 import api.network.packets.PacketUtil;
 import api.utils.StarRunnable;
-import org.apache.commons.io.IOUtils;
 import org.schema.game.client.view.gui.PlayerPanel;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.schine.resource.ResourceLoader;
@@ -24,12 +22,7 @@ import thederpgamer.betterfactions.network.server.UpdateClientDataPacket;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
 import thederpgamer.betterfactions.utils.FactionUtils;
 import thederpgamer.betterfactions.utils.FederationUtils;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.lang.reflect.Field;
-import java.security.ProtectionDomain;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 public class BetterFactions extends StarMod {
 
@@ -58,11 +51,6 @@ public class BetterFactions extends StarMod {
     public int clientUpdateInterval = 3500;
     public int maxNewsBackup = 30;
 
-    //Other
-    private final String[] overwriteClasses = {
-          "HudIndicatorOverlay"
-    };
-
     @Override
     public void onEnable() {
         inst = this;
@@ -76,15 +64,6 @@ public class BetterFactions extends StarMod {
     @Override
     public void onResourceLoad(ResourceLoader loader) {
         (new SpriteManager()).initialize();
-    }
-
-    @Override
-    public byte[] onClassTransform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] byteCode) {
-        for(String name : overwriteClasses) {
-            if(className.endsWith(name)) return overwriteClass(className, byteCode);
-        }
-
-        return super.onClassTransform(loader, className, classBeingRedefined, protectionDomain, byteCode);
     }
 
     private void initConfig() {
@@ -200,29 +179,6 @@ public class BetterFactions extends StarMod {
                     if(lastClientUpdate >= clientUpdateInterval) updateClientData();
                 }
             }.runTimer(this, clientUpdateInterval);
-        }
-    }
-
-    private byte[] overwriteClass(String className, byte[] byteCode) {
-        byte[] bytes = null;
-        try {
-            ZipInputStream file = new ZipInputStream(new FileInputStream(this.getSkeleton().getJarFile()));
-            while (true) {
-                ZipEntry nextEntry = file.getNextEntry();
-                if (nextEntry == null) break;
-                if (nextEntry.getName().endsWith(className + ".class")) {
-                    bytes = IOUtils.toByteArray(file);
-                }
-            }
-            file.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        if (bytes != null) {
-            DebugFile.log("[ImmersivePlanets]: Overwrote Class " + className, this);
-            return bytes;
-        } else {
-            return byteCode;
         }
     }
 
