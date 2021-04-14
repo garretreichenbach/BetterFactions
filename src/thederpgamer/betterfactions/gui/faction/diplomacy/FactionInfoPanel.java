@@ -52,7 +52,7 @@ public class FactionInfoPanel extends GUIAncor {
         nameOverlay.setTextSimple("No Faction");
         nameOverlay.onInit();
         nameOverlay.getPos().x = 10;
-        nameOverlay.getPos().y = 30;
+        nameOverlay.getPos().y = 160;
         nameOverlay.setWidth((int) (nameOverlay.getWidth() - 4));
         attach(nameOverlay);
 
@@ -62,7 +62,7 @@ public class FactionInfoPanel extends GUIAncor {
         infoOverlay.setTextSimple("");
         infoOverlay.onInit();
         infoOverlay.getPos().x = 10;
-        infoOverlay.getPos().y = nameOverlay.getPos().y + 10;
+        infoOverlay.getPos().y = nameOverlay.getPos().y + 30;
         infoOverlay.setWidth((int) (infoOverlay.getWidth() - 4));
         attach(infoOverlay);
     }

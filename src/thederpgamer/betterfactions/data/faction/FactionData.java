@@ -90,7 +90,7 @@ public class FactionData implements FactionScore, Serializable {
         String federation = "Non-Aligned";
         if(FederationUtils.getFederation(this) != null) federation = FederationUtils.getFederation(this).getName();
         builder.append(federation);
-        builder.append(" | ");
+        builder.append("\n");
         builder.append(getRelationString());
         //builder.append("\nSize: ").append(getFaction().getMembersUID().keySet().size());
         //builder.append(" | Power: ").append(getFaction().factionPoints);
@@ -146,7 +146,7 @@ public class FactionData implements FactionScore, Serializable {
     }
 
     public String getInfoString() {
-        return getInfo() + "\n" + factionDescription;
+        return getInfo();
     }
 
     public String[] getDataArray() {

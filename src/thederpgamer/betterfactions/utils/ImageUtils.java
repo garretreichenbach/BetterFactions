@@ -81,7 +81,7 @@ public class ImageUtils {
 
     public static Sprite getDefaultLogo() {
         try {
-            BufferedImage bufferedImage = ImageIO.read(BetterFactions.getInstance().getJarResource("resources/images/temp-logo.png"));
+            BufferedImage bufferedImage = ImageIO.read(BetterFactions.getInstance().getJarResource("thederpgamer/betterfactions/resources/images/temp-logo.png"));
             Sprite sprite = StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), "tempLogo");
             scaleSprite(sprite, 200, 200);
             return sprite;

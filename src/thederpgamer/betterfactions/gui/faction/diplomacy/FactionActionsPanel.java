@@ -25,17 +25,22 @@ import thederpgamer.betterfactions.utils.FederationUtils;
  * <Description>
  * ==================================================
  * Created 01/30/2021
- *
  * @author TheDerpGamer
  */
 public class FactionActionsPanel extends GUIAncor {
 
     private Faction faction;
     private GUIElementList mainButtonList;
-    private GUIDropdownBackground federationActionsBG;
+
     private GUIDropdownBackground diplomacyActionsBG;
+    private GUIDropdownBackground federationActionsBG;
     private GUIDropdownBackground tradeActionsBG;
     private GUIDropdownBackground factionActionsBG;
+
+    private GUIButtonListElement diplomacyButton;
+    private GUIButtonListElement federationButton;
+    private GUIButtonListElement tradeButton;
+    private GUIButtonListElement factionButton;
 
     public FactionActionsPanel(InputState inputState) {
         super(inputState);
@@ -45,24 +50,26 @@ public class FactionActionsPanel extends GUIAncor {
     public void onInit() {
         super.onInit();
         mainButtonList = new GUIElementList(getState());
+        mainButtonList.onInit();
         addActions(GameClient.getClientPlayerState());
         attach(mainButtonList);
+        resetPositions();
     }
 
     @Override
     public void draw() {
         super.draw();
 
-        if (federationActionsBG.isInvisible()) {
-            federationActionsBG.cleanUp();
-        } else {
-            federationActionsBG.draw();
-        }
-
         if (diplomacyActionsBG.isInvisible()) {
             diplomacyActionsBG.cleanUp();
         } else {
             diplomacyActionsBG.draw();
+        }
+
+        if (federationActionsBG.isInvisible()) {
+            federationActionsBG.cleanUp();
+        } else {
+            federationActionsBG.draw();
         }
 
         if (tradeActionsBG.isInvisible()) {
@@ -75,6 +82,44 @@ public class FactionActionsPanel extends GUIAncor {
             factionActionsBG.cleanUp();
         } else {
             factionActionsBG.draw();
+        }
+    }
+
+    private void resetPositions() {
+        int offset = 2;
+        int buttons = 0;
+
+        if(!diplomacyActionsBG.isInvisible()) offset += diplomacyActionsBG.getHeight();
+        if(!federationActionsBG.isInvisible()) offset += federationActionsBG.getHeight();
+        if(!tradeActionsBG.isInvisible()) offset += tradeActionsBG.getHeight();
+        if(!federationActionsBG.isInvisible()) offset += federationActionsBG.getHeight();
+
+        if(diplomacyButton != null) {
+            diplomacyButton.getPos().y = offset + (24 * buttons);
+            diplomacyActionsBG.getPos().y = diplomacyButton.getPos().y + 26;
+            diplomacyActionsBG.getPos().x = diplomacyButton.getPos().x;
+            buttons ++;
+        }
+
+        if(federationButton != null) {
+            federationButton.getPos().y = offset + (24 * buttons);
+            federationActionsBG.getPos().y = federationButton.getPos().y + 26;
+            federationActionsBG.getPos().x = federationButton.getPos().x;
+            buttons ++;
+        }
+
+        if(tradeButton != null) {
+            tradeButton.getPos().y = offset + (24 * buttons);
+            tradeActionsBG.getPos().y = tradeButton.getPos().y + 26;
+            tradeActionsBG.getPos().x = tradeButton.getPos().x;
+            buttons ++;
+        }
+
+        if(factionButton != null) {
+            factionButton.getPos().y = offset + (24 * buttons);
+            factionActionsBG.getPos().y = factionButton.getPos().y + 26;
+            factionActionsBG.getPos().x = factionButton.getPos().x;
+            buttons ++;
         }
     }
 
@@ -306,8 +351,8 @@ public class FactionActionsPanel extends GUIAncor {
 
             diplomacyActionsBG.attach(diplomacyButtonList);
             diplomacyActionsBG.setWidth(diplomacyButtonList.getWidth());
-            diplomacyActionsBG.setHeight((diplomacyButtonList.size() * diplomacyButtonList.get(0).getHeight()) + 2);
-            GUIButtonListElement diplomacyButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.PINK, Lng.str("Diplomacy"), new GUICallback() {
+            diplomacyActionsBG.setHeight(((diplomacyButtonList.size() * 24) + diplomacyButtonList.size()) + 2);
+            diplomacyButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.PINK, Lng.str("Diplomacy"), new GUICallback() {
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                     if (mouseEvent.pressedLeftMouse()) {
@@ -318,6 +363,7 @@ public class FactionActionsPanel extends GUIAncor {
                         }
                         diplomacyButtonList.updateDim();
                         mainButtonList.updateDim();
+                        resetPositions();
                     }
                 }
 
@@ -327,16 +373,12 @@ public class FactionActionsPanel extends GUIAncor {
                 }
             });
             diplomacyButton.onInit();
+            diplomacyButton.getPos().x += 2;
             diplomacyButton.attach(diplomacyActionsBG);
-            diplomacyButton.setPos(diplomacyButtonList.getPos());
-            diplomacyActionsBG.getPos().x = diplomacyButton.getPos().x + 2;
-            diplomacyActionsBG.getPos().y = diplomacyButton.getPos().y + diplomacyButton.getHeight() + 2;
+            mainButtonList.add(diplomacyButton);
             for (GUIListElement element : diplomacyButtonList) {
                 ((GUIButtonListElement) element).setButtonWidth(diplomacyButtonList.width - 4);
-                element.getPos().x += 2;
-                element.getPos().y += 2;
             }
-            mainButtonList.add(diplomacyButton);
 
             final GUIElementList federationButtonList = new GUIElementList(getState());
             federationButtonList.onInit();
@@ -402,8 +444,8 @@ public class FactionActionsPanel extends GUIAncor {
 
             federationActionsBG.attach(federationButtonList);
             federationActionsBG.setWidth(federationButtonList.getWidth());
-            federationActionsBG.setHeight(((federationButtonList.size() * federationButtonList.get(0).getHeight()) + federationButtonList.size()) + 2);
-            GUIButtonListElement federationButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.PINK, Lng.str("Federation"), new GUICallback() {
+            federationActionsBG.setHeight(((federationButtonList.size() * 24) + federationButtonList.size()) + 2);
+            federationButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.PINK, Lng.str("Federation"), new GUICallback() {
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                     if (mouseEvent.pressedLeftMouse()) {
@@ -414,6 +456,7 @@ public class FactionActionsPanel extends GUIAncor {
                         }
                         federationButtonList.updateDim();
                         mainButtonList.updateDim();
+                        resetPositions();
                     }
                 }
 
@@ -423,16 +466,12 @@ public class FactionActionsPanel extends GUIAncor {
                 }
             });
             federationButton.onInit();
+            federationButton.getPos().x += 2;
             federationButton.attach(federationActionsBG);
-            federationButton.setPos(federationButtonList.getPos());
-            federationActionsBG.getPos().x = federationButton.getPos().x + 2;
-            federationActionsBG.getPos().y = federationButton.getPos().y + federationButton.getHeight() + 2;
+            mainButtonList.add(federationButton);
             for (GUIListElement element : federationButtonList) {
                 ((GUIButtonListElement) element).setButtonWidth(federationButtonList.width - 4);
-                element.getPos().x += 2;
-                element.getPos().y += 2;
             }
-            mainButtonList.add(federationButton);
 
             final GUIElementList tradeButtonList = new GUIElementList(getState());
             tradeButtonList.onInit();
@@ -440,8 +479,8 @@ public class FactionActionsPanel extends GUIAncor {
             tradeButtonList.getPos().y += 2;
             tradeActionsBG.attach(tradeButtonList);
             tradeActionsBG.setWidth(tradeButtonList.getWidth());
-            tradeActionsBG.setHeight(((tradeButtonList.size() * tradeButtonList.get(0).getHeight()) + tradeButtonList.size()) + 2);
-            GUIButtonListElement tradeButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.PINK, Lng.str("Trade"), new GUICallback() {
+            tradeActionsBG.setHeight(((tradeButtonList.size() * 24) + tradeButtonList.size()) + 2);
+            tradeButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.PINK, Lng.str("Trade"), new GUICallback() {
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                     if (mouseEvent.pressedLeftMouse()) {
@@ -452,6 +491,7 @@ public class FactionActionsPanel extends GUIAncor {
                         }
                         tradeButtonList.updateDim();
                         mainButtonList.updateDim();
+                        resetPositions();
                     }
                 }
 
@@ -461,16 +501,12 @@ public class FactionActionsPanel extends GUIAncor {
                 }
             });
             tradeButton.onInit();
+            tradeButton.getPos().x += 2;
             tradeButton.attach(tradeActionsBG);
-            tradeButton.setPos(tradeButtonList.getPos());
-            tradeActionsBG.getPos().x = tradeButton.getPos().x + 2;
-            tradeActionsBG.getPos().y = tradeButton.getPos().y + tradeButton.getHeight() + 2;
+            mainButtonList.add(tradeButton);
             for (GUIListElement element : tradeButtonList) {
                 ((GUIButtonListElement) element).setButtonWidth(tradeButtonList.width - 4);
-                element.getPos().x += 2;
-                element.getPos().y += 2;
             }
-            mainButtonList.add(tradeButton);
         }
 
         final GUIElementList factionButtonList = new GUIElementList(getState());
@@ -599,8 +635,8 @@ public class FactionActionsPanel extends GUIAncor {
 
         factionActionsBG.attach(factionButtonList);
         factionActionsBG.setWidth(factionButtonList.getWidth());
-        factionActionsBG.setHeight(((factionButtonList.size() * factionButtonList.get(0).getHeight()) + factionButtonList.size()) + 2);
-        GUIButtonListElement factionButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.PINK, Lng.str("Faction"), new GUICallback() {
+        factionActionsBG.setHeight(((factionButtonList.size() * 24) + factionButtonList.size()) + 2);
+        factionButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.PINK, Lng.str("Faction"), new GUICallback() {
             @Override
             public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                 if (mouseEvent.pressedLeftMouse()) {
@@ -611,6 +647,7 @@ public class FactionActionsPanel extends GUIAncor {
                     }
                     factionButtonList.updateDim();
                     mainButtonList.updateDim();
+                    resetPositions();
                 }
             }
 
@@ -620,16 +657,12 @@ public class FactionActionsPanel extends GUIAncor {
             }
         });
         factionButton.onInit();
+        factionButton.getPos().x += 2;
         factionButton.attach(factionActionsBG);
-        factionButton.setPos(factionButtonList.getPos());
-        factionActionsBG.getPos().x = factionButton.getPos().x + 2;
-        factionActionsBG.getPos().y = factionButton.getPos().y + factionButton.getHeight() + 2;
+        mainButtonList.add(factionButton);
         for (GUIListElement element : factionButtonList) {
             ((GUIButtonListElement) element).setButtonWidth(factionButtonList.width - 4);
-            element.getPos().x += 2;
-            element.getPos().y += 2;
         }
-        mainButtonList.add(factionButton);
     }
 
     private String getFedDialogString(FactionData fromFaction, FactionData toFaction) {

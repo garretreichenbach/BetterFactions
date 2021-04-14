@@ -9,7 +9,6 @@ import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIWindowInterface;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.gui.NewFactionPanel;
 import thederpgamer.betterfactions.utils.FactionUtils;
 
 /**
@@ -89,6 +88,7 @@ public class FactionDiplomacyTab extends GUIContentPane {
             infoPanel.updateLogo(factionData.getFactionLogo());
         }
         actionsPanel.setFaction(selectedFaction);
+        actionsPanel.cleanUp();
         actionsPanel.onInit();
     }
 }

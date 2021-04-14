@@ -50,7 +50,7 @@ public class GUIButtonListElement extends GUIListElement {
         if(button != null) {
             button.onInit();
             setContent(button);
-            button.setWidth(234);
+            button.setWidth(238);
         }
     }
 
