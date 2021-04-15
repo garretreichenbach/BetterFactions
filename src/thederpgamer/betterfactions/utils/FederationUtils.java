@@ -1,21 +1,19 @@
 package thederpgamer.betterfactions.utils;
 
+import api.common.GameClient;
 import api.common.GameCommon;
 import api.mod.config.PersistentObjectUtil;
-import api.network.packets.PacketUtil;
-import api.utils.StarRunnable;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.game.faction.Federation;
-import thederpgamer.betterfactions.network.client.CreateNewFederationPacket;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 /**
  * FederationUtils.java
  * <Description>
- * ==================================================
- * Created 01/31/2021
+ *
+ * @since 01/31/2021
  * @author TheDerpGamer
  */
 public class FederationUtils {
@@ -27,44 +25,54 @@ public class FederationUtils {
         faction.setFederationId(federation.getId());
         FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationJoinNews(federation, faction));
         saveData();
+        BetterFactions.getInstance().newFactionPanel.factionDiplomacyTab.updateTab();
+        if(FactionUtils.inFaction(GameClient.getClientPlayerState()) && FactionUtils.getPlayerFactionData().getFactionId() == faction.getFactionId()) {
+            BetterFactions.getInstance().newFactionPanel.factionManagementTab.updateTab();
+            BetterFactions.getInstance().newFactionPanel.federationManagementTab.updateTab();
+        }
         //Todo: Update permissions and relations
     }
 
     public static void leaveFederation(FactionData faction) {
         FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationLeaveNews(faction.getFederation(), faction));
+        boolean updateGUI = FactionUtils.inFaction(GameClient.getClientPlayerState()) && FactionUtils.getPlayerFactionData().getFederationId() == faction.getFederationId();
         federations.get(faction.getFederationId()).getMembers().remove(faction);
         faction.setFederationId(-1);
         saveData();
+        BetterFactions.getInstance().newFactionPanel.factionDiplomacyTab.updateTab();
+        if(updateGUI) {
+            BetterFactions.getInstance().newFactionPanel.factionManagementTab.updateTab();
+            BetterFactions.getInstance().newFactionPanel.federationManagementTab.updateTab();
+        }
         //Todo: Update permissions and relations
     }
 
-    public static void createNewFederation(String federationName, FactionData fromFaction, FactionData toFaction) {
-        if(GameCommon.isClientConnectedToServer() || GameCommon.isOnSinglePlayer()) {
-            PacketUtil.sendPacketToServer(new CreateNewFederationPacket(federationName, fromFaction, toFaction));
-            new StarRunnable() {
-                @Override
-                public void run() {
-                    BetterFactions.getInstance().redrawFactionPane();
-                }
-            }.runLater(BetterFactions.getInstance(), 15);
-        }
-
-        if(GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer()) {
-            Federation federation = new Federation(federationName, fromFaction, toFaction);
-            federations.put(federation.getId(), federation);
-            fromFaction.setFederationId(federation.getId());
-            toFaction.setFederationId(federation.getId());
-            FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationCreateNews(federation));
-            BetterFactions.getInstance().updateClientData();
-            saveData();
+    public static void createNewFederation(String federationName, final FactionData fromFaction, final FactionData toFaction) {
+        Federation federation = new Federation(federationName, fromFaction, toFaction);
+        federations.put(federation.getId(), federation);
+        fromFaction.setFederationId(federation.getId());
+        toFaction.setFederationId(federation.getId());
+        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationCreateNews(federation));
+        BetterFactions.getInstance().updateClientData();
+        saveData();
+        BetterFactions.getInstance().newFactionPanel.factionDiplomacyTab.updateTab();
+        if(FactionUtils.inFaction(GameClient.getClientPlayerState()) && (FactionUtils.getPlayerFactionData().getFederationId() == federation.getId())) {
+            BetterFactions.getInstance().newFactionPanel.factionManagementTab.updateTab();
+            BetterFactions.getInstance().newFactionPanel.federationManagementTab.updateTab();
         }
     }
 
     public static void disbandFederation(Federation federation) {
         FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationDisbandNews(federation));
+        boolean updateGUI = FactionUtils.inFaction(GameClient.getClientPlayerState()) && FactionUtils.getPlayerFactionData().getFederationId() == federation.getId();
         for(FactionData factionData : federation.getMembers()) factionData.setFederationId(-1);
         federations.remove(federation.getId());
         saveData();
+        BetterFactions.getInstance().newFactionPanel.factionDiplomacyTab.updateTab();
+        if(updateGUI) {
+            BetterFactions.getInstance().newFactionPanel.factionManagementTab.updateTab();
+            BetterFactions.getInstance().newFactionPanel.federationManagementTab.updateTab();
+        }
     }
 
     public static boolean federationExists(String name) {

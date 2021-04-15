@@ -15,18 +15,18 @@ import java.util.Objects;
 /**
  * NewFactionPanel.java
  * Improved version of FactionPanelNew
- * ==================================================
- * Created 01/30/2021
+ *
+ * @since 01/30/2021
  * @author TheDerpGamer
  */
 public class NewFactionPanel extends FactionPanelNew {
 
     private InputState inputState;
 
-    private FactionNewsTab factionNewsTab;
-    private FactionDiplomacyTab factionDiplomacyTab;
-    private FactionManagementTab factionManagementTab;
-    private FederationManagementTab federationManagementTab;
+    public FactionNewsTab factionNewsTab;
+    public FactionDiplomacyTab factionDiplomacyTab;
+    public FactionManagementTab factionManagementTab;
+    public FederationManagementTab federationManagementTab;
 
     public NewFactionPanel(InputState inputState) {
         super(inputState);

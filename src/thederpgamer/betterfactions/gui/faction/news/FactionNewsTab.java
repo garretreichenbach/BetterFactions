@@ -29,4 +29,9 @@ public class FactionNewsTab extends GUIContentPane {
         (newsList = new FactionNewsScrollableList(getState(), getContent(0), this)).onInit();
         getContent(0).attach(newsList);
     }
+
+    public void updateTab() {
+        newsList.flagDirty();
+        newsList.handleDirty();
+    }
 }

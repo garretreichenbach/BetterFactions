@@ -15,6 +15,8 @@ import api.utils.StarRunnable;
 import org.schema.game.client.view.gui.PlayerPanel;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.schine.resource.ResourceLoader;
+import thederpgamer.betterfactions.data.faction.FactionData;
+import thederpgamer.betterfactions.data.faction.FactionRank;
 import thederpgamer.betterfactions.gui.NewFactionPanel;
 import thederpgamer.betterfactions.manager.SpriteManager;
 import thederpgamer.betterfactions.network.client.CreateNewFederationPacket;
@@ -36,7 +38,7 @@ public class BetterFactions extends StarMod {
 
     //Data
     public int lastClientUpdate = 0;
-    private NewFactionPanel newFactionPanel;
+    public NewFactionPanel newFactionPanel;
 
     //Config
     public FileConfiguration config;
@@ -110,7 +112,13 @@ public class BetterFactions extends StarMod {
                 FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionCreateNews(FactionUtils.getFactionData(event.getFaction()), event.getPlayer()));
                 FactionNewsUtils.saveData();
                 if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
-                    redrawFactionPane();
+                    FactionData factionData = FactionUtils.getFactionData(event.getFaction());
+                    FactionRank founderRank = new FactionRank("Founder", 5, "*");
+                    factionData.addRank(founderRank);
+                    factionData.addMember(event.getPlayer().getName());
+                    factionData.getMember(event.getPlayer().getName()).setRank(founderRank);
+                    newFactionPanel.factionDiplomacyTab.updateTab();
+                    newFactionPanel.factionManagementTab.updateTab();
                 }
             }
         }, this);
@@ -124,7 +132,8 @@ public class BetterFactions extends StarMod {
                 FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionJoinNews(FactionUtils.getFactionData(event.getFaction()), event.getPlayer()));
                 FactionNewsUtils.saveData();
                 if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
-                    redrawFactionPane();
+                    FactionUtils.getFactionData(event.getFaction()).addMember(event.getPlayer().getName());
+                    newFactionPanel.factionManagementTab.updateTab();
                 }
             }
         }, this);
@@ -133,7 +142,7 @@ public class BetterFactions extends StarMod {
             @Override
             public void onEvent(PlayerLeaveFactionEvent event) {
                 if(event.getFaction() != null) {
-                    if (event.getFaction().getMembersUID().keySet().size() <= 1) {
+                    if(event.getFaction().getMembersUID().keySet().size() <= 1) {
                         FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionDisbandNews(FactionUtils.getFactionData(event.getFaction())));
                     } else {
                         FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionLeaveNews(FactionUtils.getFactionData(event.getFaction()), event.getPlayer()));
@@ -144,7 +153,8 @@ public class BetterFactions extends StarMod {
                 FederationUtils.saveData();
                 FactionNewsUtils.saveData();
                 if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
-                    redrawFactionPane();
+                    FactionUtils.getFactionData(event.getFaction()).removeMember(event.getPlayer().getName());
+                    newFactionPanel.factionManagementTab.updateTab();
                 }
             }
         }, this);
@@ -189,12 +199,6 @@ public class BetterFactions extends StarMod {
                 PacketUtil.sendPacket(playerState, packet);
             }
             lastClientUpdate = 0;
-        }
-    }
-
-    public void redrawFactionPane() {
-        if(GameCommon.isClientConnectedToServer() || GameCommon.isOnSinglePlayer()) {
-            newFactionPanel.recreateTabs();
         }
     }
 }

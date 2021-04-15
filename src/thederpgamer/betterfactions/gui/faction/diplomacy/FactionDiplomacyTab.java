@@ -14,8 +14,8 @@ import thederpgamer.betterfactions.utils.FactionUtils;
 /**
  * FactionDiplomacyTab.java
  * <Description>
- * ==================================================
- * Created 01/30/2021
+ *
+ * @since 01/30/2021
  * @author TheDerpGamer
  */
 public class FactionDiplomacyTab extends GUIContentPane {
@@ -54,9 +54,7 @@ public class FactionDiplomacyTab extends GUIContentPane {
                 infoPanel.setNameText(selectedFaction.getName(), Color.blue);
             } else if(relation.equals(Lng.str("At War")) || relation.equals(Lng.str("Personal Enemy"))) {
                 infoPanel.setNameText(selectedFaction.getName(), Color.red);
-            } else {
-                infoPanel.setNameText(selectedFaction.getName());
-            }
+            } else infoPanel.setNameText(selectedFaction.getName());
             FactionData factionData = FactionUtils.getFactionData(selectedFaction);
             if(factionData != null) {
                 infoPanel.setInfoText(factionData.getInfoString());
@@ -73,9 +71,12 @@ public class FactionDiplomacyTab extends GUIContentPane {
                 infoPanel.updateLogo(factionData.getFactionLogo());
             }
             actionsPanel.setFaction(faction);
-        } else {
-            infoPanel.setNameText("No Faction");
-        }
+        } else infoPanel.setNameText("No Faction");
+    }
+
+    public void updateTab() {
+        factionList.flagDirty();
+        factionList.handleDirty();
     }
 
     public void setSelectedFaction(Faction selectedFaction) {

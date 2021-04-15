@@ -5,7 +5,6 @@ import api.common.GameCommon;
 import org.hsqldb.lib.StringComparator;
 import org.schema.common.util.CompareTools;
 import org.schema.game.client.data.GameClientState;
-import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.GUIElementList;
@@ -49,29 +48,29 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
     public void initColumns() {
         new StringComparator();
 
-        this.addColumn(Lng.str("Name"), 15.0F, new Comparator<FactionData>() {
+        this.addColumn("Name", 15.0F, new Comparator<FactionData>() {
             public int compare(FactionData o1, FactionData o2) {
                 return o1.getFactionName().compareTo(o2.getFactionName());
             }
         });
 
-        this.addColumn(Lng.str("Federation"), 15.0F, new Comparator<FactionData>() {
+        this.addColumn("Federation", 15.0F, new Comparator<FactionData>() {
             public int compare(FactionData o1, FactionData o2) {
-                String federationName1 = Lng.str((o1.getFederationId() != -1) ? FederationUtils.getFederation(o1).getName(): "Non-Aligned");
-                String federationName2 = Lng.str((o2.getFederationId() != -1) ? FederationUtils.getFederation(o2).getName(): "Non-Aligned");
+                String federationName1 = (o1.getFederationId() != -1) ? FederationUtils.getFederation(o1).getName() : "Non-Aligned";
+                String federationName2 = (o2.getFederationId() != -1) ? FederationUtils.getFederation(o2).getName() : "Non-Aligned";
                 return federationName1.compareTo(federationName2);
             }
         });
 
-        this.addColumn(Lng.str("Members"), 7.0F, new Comparator<FactionData>() {
+        this.addColumn("Members", 7.0F, new Comparator<FactionData>() {
             public int compare(FactionData o1, FactionData o2) {
                 return CompareTools.compare(GameCommon.getGameState().getFactionManager().getFaction(o1.getFactionId()).getMembersUID().size(), GameCommon.getGameState().getFactionManager().getFaction(o2.getFactionId()).getMembersUID().size());
             }
         });
 
-        this.addColumn(Lng.str("Relation"), 10.0F, new Comparator<FactionData>() {
+        this.addColumn("Relation", 10.0F, new Comparator<FactionData>() {
             public int compare(FactionData o1, FactionData o2) {
-                return Lng.str(o1.getRelationString()).compareTo(Lng.str(o2.getRelationString()));
+                return o1.getRelationString().compareTo(o2.getRelationString());
             }
         });
 
@@ -83,11 +82,11 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
 
         this.addDropdownFilter(new GUIListFilterDropdown<FactionData, String>(relationValues) {
             public boolean isOk(String s, FactionData faction) {
-                if(s.equals("All")) {
+                if(s.equalsIgnoreCase("ALL")) {
                     return true;
                 } else if(GameClient.getClientPlayerState().getFactionId() != 0 && faction.getFactionId() == GameClient.getClientPlayerState().getFactionId()) {
-                    return Lng.str(s).equals(Lng.str("Allied")) || Lng.str(s).equals(Lng.str("In Federation")) || Lng.str(s).equals(Lng.str("Own Faction"));
-                } else return Lng.str(s).equals(Lng.str(faction.getRelationString()));
+                    return s.equalsIgnoreCase("ALLIED") || s.equalsIgnoreCase("IN FEDERATION") || s.equalsIgnoreCase("OWN FACTION");
+                } else return s.equalsIgnoreCase(faction.getRelationString());
             }
 
         }, new CreateGUIElementInterface<String>() {
@@ -95,9 +94,9 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
             public GUIElement create(String s) {
                 GUIAncor anchor = new GUIAncor(getState(), 10.0F, 24.0F);
                 GUITextOverlayTableDropDown dropDown;
-                (dropDown = new GUITextOverlayTableDropDown(10, 10, getState())).setTextSimple(Lng.str(s));
+                (dropDown = new GUITextOverlayTableDropDown(10, 10, getState())).setTextSimple(s);
                 dropDown.setPos(4.0F, 4.0F, 0.0F);
-                anchor.setUserPointer(Lng.str(s));
+                anchor.setUserPointer(s);
                 anchor.attach(dropDown);
                 return anchor;
             }

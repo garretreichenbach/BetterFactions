@@ -119,9 +119,7 @@ public class FactionNewsScrollableList extends ScrollableTableList<FactionNewsEn
 
     @Override
     protected Collection<FactionNewsEntry> getElementList() {
-        ArrayList<FactionNewsEntry> newsEntries = new ArrayList<>();
-        newsEntries.addAll(FactionNewsUtils.factionNews);
-        return newsEntries;
+        return new ArrayList<>(FactionNewsUtils.factionNews);
     }
 
     @Override

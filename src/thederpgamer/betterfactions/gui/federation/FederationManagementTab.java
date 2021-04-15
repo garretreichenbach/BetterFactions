@@ -1,16 +1,15 @@
 package thederpgamer.betterfactions.gui.federation;
 
-import thederpgamer.betterfactions.gui.NewFactionPanel;
-import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIWindowInterface;
 import org.schema.schine.input.InputState;
+import thederpgamer.betterfactions.gui.NewFactionPanel;
 
 /**
  * FederationManagementTab.java
  * <Description>
- * ==================================================
- * Created 01/30/2021
+ *
+ * @since 01/30/2021
  * @author TheDerpGamer
  */
 public class FederationManagementTab extends GUIContentPane {
@@ -18,7 +17,7 @@ public class FederationManagementTab extends GUIContentPane {
     private NewFactionPanel guiPanel;
 
     public FederationManagementTab(InputState state, GUIWindowInterface window, NewFactionPanel guiPanel) {
-        super(state, window, Lng.str("FEDERATION"));
+        super(state, window, "FEDERATION");
         this.guiPanel = guiPanel;
     }
 
@@ -27,13 +26,8 @@ public class FederationManagementTab extends GUIContentPane {
         super.onInit();
     }
 
-    @Override
-    public void draw() {
-        super.draw();
-        if(guiPanel.isInFaction() && guiPanel.isInFederation()) {
+    public void updateTab() {
 
-        } else {
-            cleanUp();
-        }
     }
+
 }

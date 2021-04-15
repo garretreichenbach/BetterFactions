@@ -2,8 +2,10 @@ package thederpgamer.betterfactions.data.faction;
 
 import api.common.GameClient;
 import api.common.GameCommon;
+import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionRelation;
+import org.schema.game.common.data.player.faction.FactionRoles;
 import org.schema.schine.common.language.Lng;
 import thederpgamer.betterfactions.data.federation.FactionMessage;
 import thederpgamer.betterfactions.game.faction.Federation;
@@ -15,8 +17,8 @@ import java.util.ArrayList;
 /**
  * FactionData.java
  * <Description>
- * ==================================================
- * Created 01/30/2021
+ *
+ * @since 01/30/2021
  * @author TheDerpGamer
  */
 public class FactionData implements FactionScore, Serializable {
@@ -27,6 +29,8 @@ public class FactionData implements FactionScore, Serializable {
     private String factionName;
     private String factionDescription;
     private String factionLogo;
+    private ArrayList<FactionMember> members = new ArrayList<>();
+    private ArrayList<FactionRank> ranks = new ArrayList<>();
     private ArrayList<FactionMessage> inbox = new ArrayList<>();
 
     public FactionData(Faction faction) {
@@ -62,11 +66,8 @@ public class FactionData implements FactionScore, Serializable {
     }
 
     public Federation getFederation() {
-        if(federationId != -1) {
-            return FederationUtils.getFederation(this);
-        } else {
-            return null;
-        }
+        if(federationId != -1) return FederationUtils.getFederation(this);
+        else return null;
     }
 
     public int getFederationId() {
@@ -102,43 +103,29 @@ public class FactionData implements FactionScore, Serializable {
     public String getRelationString() {
         int playerFactionId = GameClient.getClientPlayerState().getFactionId();
         if(playerFactionId != 0) {
-            if(playerFactionId == factionId) {
-                return Lng.str("Own Faction");
-            } else {
+            if(playerFactionId == factionId) return "Own Faction";
+            else {
                 Faction playerFaction = GameCommon.getGameState().getFactionManager().getFaction(playerFactionId);
                 FactionData playerFactionData = FactionUtils.getFactionData(playerFaction);
                 if(playerFactionData.getFederationId() != -1) {
                     if(federationId != -1) {
-                        if(playerFactionData.getFederationId() == federationId) {
-                            return Lng.str("In Federation");
-                        } else {
-                            return Lng.str("Neutral");
-                        }
-                    } else {
-                        return getRTypeString(factionId, playerFactionId);
-                    }
-                } else {
-                    return getRTypeString(factionId, playerFactionId);
-                }
+                        if(playerFactionData.getFederationId() == federationId) return Lng.str("In Federation");
+                        else return Lng.str("Neutral");
+                    } else return getRTypeString(factionId, playerFactionId);
+                } else return getRTypeString(factionId, playerFactionId);
             }
         } else {
             if(getFaction().getPersonalEnemies().contains(GameClient.getClientPlayerState().getName())) {
                 return Lng.str("Personal Enemy");
-            } else {
-                return getRTypeString(factionId, playerFactionId);
-            }
+            } else return getRTypeString(factionId, playerFactionId);
         }
     }
 
     private String getRTypeString(int from, int to) {
         FactionRelation.RType relation = GameCommon.getGameState().getFactionManager().getRelation(from, to);
-        if(relation.equals(FactionRelation.RType.ENEMY)) {
-            return Lng.str("At War");
-        } else if(relation.equals(FactionRelation.RType.FRIEND)) {
-            return Lng.str("Allied");
-        } else {
-            return Lng.str("Neutral");
-        }
+        if(relation.equals(FactionRelation.RType.ENEMY)) return Lng.str("At War");
+        else if(relation.equals(FactionRelation.RType.FRIEND)) return Lng.str("Allied");
+        else return Lng.str("Neutral");
     }
 
     private String getOpinionString() { //Todo
@@ -183,5 +170,71 @@ public class FactionData implements FactionScore, Serializable {
 
     public ArrayList<FactionMessage> getInbox() {
         return inbox;
+    }
+
+    public ArrayList<FactionMember> getMembers() {
+        return members;
+    }
+
+    public FactionMember getMember(String playerName) {
+        for(FactionMember member : members) {
+            if(member.getName().equalsIgnoreCase(playerName)) return member;
+        }
+        return null;
+    }
+
+    public boolean hasMember(String playerName) {
+        return getMember(playerName) != null;
+    }
+
+    public void addMember(String playerName) {
+        getFaction().addOrModifyMember(playerName, playerName, FactionRoles.INDEX_DEFAULT_ROLE, System.currentTimeMillis(), GameCommon.getGameState(), true);
+        members.add(new FactionMember(playerName, this, getLowestRank()));
+    }
+
+    public void removeMember(String playerName) {
+        for(FactionMember member : getMembers()) {
+            if(member.getName().equalsIgnoreCase(playerName)) {
+                getFaction().removeMember(playerName, GameCommon.getGameState());
+                members.remove(member);
+            }
+        }
+    }
+
+    public Vector3i getHomebaseSector() {
+        return getFaction().getHomeSector();
+    }
+
+    public ArrayList<FactionRank> getRanks() {
+        getLowestRank();
+        return ranks;
+    }
+
+    public boolean addRank(FactionRank rank) {
+        for(FactionRank factionRank : ranks) if(factionRank.getRankName().equalsIgnoreCase(rank.getRankName())) return false;
+        ranks.add(rank);
+        return true;
+    }
+
+    public boolean removeRank(FactionRank rank) {
+        if(ranks.size() > 0 || getLowestRank().equals(rank)) return false;
+        else {
+            for(FactionMember member : members) {
+                if(member.getRank().equals(rank)) member.setRank(getLowestRank());
+            }
+            ranks.remove(rank);
+            return true;
+        }
+    }
+
+    public FactionRank getLowestRank() {
+        if(ranks.size() > 0) {
+            FactionRank lowest = ranks.get(0);
+            for(FactionRank rank : ranks) if(rank.getRankLevel() < lowest.getRankLevel()) lowest = rank;
+            return lowest;
+        } else {
+            ranks.add(FactionRank.getDefaultRank());
+            return ranks.get(0);
+        }
     }
 }

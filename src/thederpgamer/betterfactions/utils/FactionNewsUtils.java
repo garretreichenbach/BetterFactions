@@ -24,6 +24,7 @@ public class FactionNewsUtils {
     public static void addNewsEntry(FactionNewsEntry newsEntry) {
         factionNews.add(newsEntry);
         saveData();
+        BetterFactions.getInstance().newFactionPanel.factionNewsTab.updateTab();
     }
 
     public static void saveData() {

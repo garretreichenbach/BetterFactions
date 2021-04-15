@@ -8,16 +8,16 @@ import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionManager;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.gui.faction.news.FactionNewsEntry;
+import thederpgamer.betterfactions.data.faction.FactionMember;
+
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 
 /**
  * FactionUtils.java
  * <Description>
- * ==================================================
- * Created 01/30/2021
+ *
+ * @since 01/30/2021
  * @author TheDerpGamer
  */
 public class FactionUtils {
@@ -37,11 +37,8 @@ public class FactionUtils {
     }
 
     public static Faction getFaction(PlayerState playerState) {
-        if(playerState.getFactionId() == 0) {
-            return null;
-        } else {
-            return GameCommon.getGameState().getFactionManager().getFaction(playerState.getFactionId());
-        }
+        if(playerState.getFactionId() == 0) return null;
+        else return GameCommon.getGameState().getFactionManager().getFaction(playerState.getFactionId());
     }
 
     public static HashMap<Integer, FactionData> getAllFactions() {
@@ -51,9 +48,13 @@ public class FactionUtils {
     public static FactionData getPlayerFactionData() {
         if(GameClient.getClientPlayerState().getFactionId() != 0) {
             return getFactionData(getFaction(GameClient.getClientPlayerState()));
-        } else {
-            return null;
-        }
+        } else return null;
+    }
+
+    public static FactionMember getPlayerFactionMember() {
+        if(GameClient.getClientPlayerState().getFactionId() != 0) {
+            return getFactionData(getFaction(GameClient.getClientPlayerState())).getMember(GameClient.getClientPlayerState().getName());
+        } else return null;
     }
 
     public static FactionData getFactionData(int factionId) {
@@ -61,9 +62,8 @@ public class FactionUtils {
     }
 
     public static FactionData getFactionData(Faction faction) {
-        if(factionData.containsKey(faction.getIdFaction())) {
-            return factionData.get(faction.getIdFaction());
-        } else {
+        if(factionData.containsKey(faction.getIdFaction())) return factionData.get(faction.getIdFaction());
+        else {
             if(GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer()) {
                 FactionData fData = new FactionData(faction);
                 factionData.put(fData.getFactionId(), fData);
@@ -101,9 +101,7 @@ public class FactionUtils {
             for(FactionData fData : factionData.values()) {
                 if(GameCommon.getGameState().getFactionManager().getFactionMap().containsKey(fData.getFactionId())) {
                     PersistentObjectUtil.addObject(BetterFactions.getInstance().getSkeleton(), fData);
-                } else {
-                    fDataToDelete.add(fData);
-                }
+                } else fDataToDelete.add(fData);
             }
             for(FactionData fData : fDataToDelete) factionData.remove(fData.getFactionId());
             PersistentObjectUtil.save(BetterFactions.getInstance().getSkeleton());
