@@ -113,7 +113,7 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
     @Override
     public Collection<FactionData> getElementList() {
         ArrayList<FactionData> factionList = new ArrayList<>();
-        factionList.addAll(FactionUtils.getAllFactions().values());
+        factionList.addAll(FactionUtils.getFactionDataMap().values());
         return factionList;
     }
 

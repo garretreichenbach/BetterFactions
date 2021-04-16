@@ -1,7 +1,11 @@
 package thederpgamer.betterfactions.data.federation;
 
+import api.common.GameClient;
+import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionScore;
+import thederpgamer.betterfactions.utils.FactionNewsUtils;
+import thederpgamer.betterfactions.utils.FactionUtils;
 import thederpgamer.betterfactions.utils.FederationUtils;
 
 import java.io.Serializable;
@@ -25,7 +29,7 @@ public class Federation implements Serializable, FactionScore {
         this.members = new ArrayList<>();
         this.members.add(fromFaction);
         this.members.add(toFaction);
-        this.id = FederationUtils.getNewId(this);
+        this.id = FederationUtils.getNewId();
     }
 
     public int getId() {
@@ -42,6 +46,36 @@ public class Federation implements Serializable, FactionScore {
 
     public ArrayList<FactionData> getMembers() {
         return members;
+    }
+
+    public void addMember(FactionData factionData) {
+        members.add(factionData);
+        factionData.setFederationId(id);
+        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationJoinNews(this, factionData));
+        BetterFactions.getInstance().newFactionPanel.factionDiplomacyTab.updateTab();
+        if(FactionUtils.inFaction(GameClient.getClientPlayerState()) && FactionUtils.getPlayerFactionData().getFederationId() == id) {
+            BetterFactions.getInstance().newFactionPanel.factionManagementTab.updateTab();
+            BetterFactions.getInstance().newFactionPanel.federationManagementTab.updateTab();
+        }
+    }
+
+    public void removeMember(FactionData factionData) {
+        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationLeaveNews(this, factionData));
+        boolean updateGUI = FactionUtils.inFaction(GameClient.getClientPlayerState()) && FactionUtils.getPlayerFactionData().getFederationId() == id;
+        members.remove(factionData);
+        factionData.setFederationId(-1);
+        if(members.isEmpty()) disband();
+        BetterFactions.getInstance().newFactionPanel.factionDiplomacyTab.updateTab();
+        if(updateGUI) {
+            BetterFactions.getInstance().newFactionPanel.factionManagementTab.updateTab();
+            BetterFactions.getInstance().newFactionPanel.federationManagementTab.updateTab();
+        }
+    }
+
+    public void disband() {
+        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationDisbandNews(this));
+        for(FactionData factionData : members) factionData.setFederationId(-1);
+        FederationUtils.removeFederation(this);
     }
 
     public String[] getDataArray() {

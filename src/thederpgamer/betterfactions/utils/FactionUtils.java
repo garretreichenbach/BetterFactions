@@ -2,6 +2,7 @@ package thederpgamer.betterfactions.utils;
 
 import api.common.GameClient;
 import api.common.GameCommon;
+import api.mod.ModSkeleton;
 import api.mod.config.PersistentObjectUtil;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
@@ -21,7 +22,7 @@ import java.util.HashMap;
  */
 public class FactionUtils {
 
-    private static final HashMap<Integer, FactionData> factionData = new HashMap<>();
+    private static final ModSkeleton instance = BetterFactions.getInstance().getSkeleton();
 
     public static final String defaultLogo = "https://i.imgur.com/8wKjlBR.png";
     private static final String piratesLogo = "https://i.imgur.com/8wKjlBR.png"; //Todo
@@ -40,8 +41,13 @@ public class FactionUtils {
         else return GameCommon.getGameState().getFactionManager().getFaction(playerState.getFactionId());
     }
 
-    public static HashMap<Integer, FactionData> getAllFactions() {
-        return factionData;
+    public static HashMap<Integer, FactionData> getFactionDataMap() {
+        HashMap<Integer, FactionData> factionDataMap = new HashMap<>();
+        for(Object factionDataObject : PersistentObjectUtil.getObjects(instance, FactionData.class)) {
+            FactionData factionData = (FactionData) factionDataObject;
+            factionDataMap.put(factionData.factionId, factionData);
+        }
+        return factionDataMap;
     }
 
     public static FactionData getPlayerFactionData() {
@@ -61,56 +67,31 @@ public class FactionUtils {
     }
 
     public static FactionData getFactionData(Faction faction) {
-        if(factionData.containsKey(faction.getIdFaction())) return factionData.get(faction.getIdFaction());
-        else {
-            if(GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer()) {
-                FactionData fData = new FactionData(faction);
-                factionData.put(fData.getFactionId(), fData);
-                saveData();
-                return fData;
-            }
-            return null;
-        }
+        return getFactionDataMap().get(faction.getIdFaction());
     }
 
     public static void initializeFactions() {
         for(Faction faction : GameCommon.getGameState().getFactionManager().getFactionCollection()) {
             if(!FactionManager.isNPCFactionOrPirateOrTrader(faction.getIdFaction())) getFactionData(faction);
         }
-
-        if(!factionData.containsKey(FactionManager.PIRATES_ID)) factionData.put(FactionManager.PIRATES_ID, initializeNPCFaction(FactionManager.PIRATES_ID));
-        if(!factionData.containsKey(FactionManager.TRAIDING_GUILD_ID)) factionData.put(FactionManager.TRAIDING_GUILD_ID, initializeNPCFaction(FactionManager.TRAIDING_GUILD_ID));
+        HashMap<Integer, FactionData> factionDataMap = getFactionDataMap();
+        if(!factionDataMap.containsKey(FactionManager.PIRATES_ID)) PersistentObjectUtil.addObject(instance, initializeNPCFaction(FactionManager.PIRATES_ID));
+        if(!factionDataMap.containsKey(FactionManager.TRAIDING_GUILD_ID)) PersistentObjectUtil.addObject(instance, initializeNPCFaction(FactionManager.TRAIDING_GUILD_ID));
         saveData();
     }
 
-    public static void loadData() {
-        if(GameCommon.isDedicatedServer() || GameCommon.isClientConnectedToServer()) {
-            ArrayList<Object> fDataObjects = PersistentObjectUtil.getObjects(BetterFactions.getInstance().getSkeleton(), FactionData.class);
-            for(Object fDataObject : fDataObjects) {
-                FactionData fData = (FactionData) fDataObject;
-                factionData.put(fData.getFactionId(), fData);
-            }
-            saveData();
-        }
-    }
-
     public static void saveData() {
-        if(GameCommon.isDedicatedServer() || GameCommon.isClientConnectedToServer()) {
-            ArrayList<FactionData> fDataToDelete = new ArrayList<>();
-            for(FactionData fData : factionData.values()) {
-                if(GameCommon.getGameState().getFactionManager().getFactionMap().containsKey(fData.getFactionId())) {
-                    PersistentObjectUtil.addObject(BetterFactions.getInstance().getSkeleton(), fData);
-                } else fDataToDelete.add(fData);
+        ArrayList<FactionData> fDataToDelete = new ArrayList<>();
+        for(FactionData factionData :  getFactionDataMap().values()) {
+            if(!GameCommon.getGameState().getFactionManager().getFactionMap().containsKey(factionData.getFactionId())) {
+                fDataToDelete.add(factionData);
             }
-            for(FactionData fData : fDataToDelete) factionData.remove(fData.getFactionId());
-            PersistentObjectUtil.save(BetterFactions.getInstance().getSkeleton());
         }
-    }
-
-    public static void updateFromServer(ArrayList<FactionData> factionDataList) {
-        if(GameCommon.isClientConnectedToServer() || GameCommon.isOnSinglePlayer()) {
-            for(FactionData fData : factionDataList) factionData.put(fData.getFactionId(), fData);
+        for(FactionData fData : fDataToDelete) {
+            for(FactionMember factionMember : fData.getMembers()) factionMember.setFactionId(-1);
+            PersistentObjectUtil.removeObject(instance, fData);
         }
+        PersistentObjectUtil.save(instance);
     }
 
     private static FactionData initializeNPCFaction(int factionId) {

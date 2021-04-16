@@ -1,7 +1,6 @@
 package thederpgamer.betterfactions;
 
 import api.common.GameCommon;
-import api.common.GameServer;
 import api.listener.Listener;
 import api.listener.events.faction.FactionCreateEvent;
 import api.listener.events.gui.PlayerGUICreateEvent;
@@ -10,20 +9,15 @@ import api.listener.events.player.PlayerLeaveFactionEvent;
 import api.mod.StarLoader;
 import api.mod.StarMod;
 import api.mod.config.FileConfiguration;
-import api.network.packets.PacketUtil;
 import api.utils.StarRunnable;
 import org.schema.game.client.view.gui.PlayerPanel;
-import org.schema.game.common.data.player.PlayerState;
 import org.schema.schine.resource.ResourceLoader;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionRank;
 import thederpgamer.betterfactions.gui.NewFactionPanel;
-import thederpgamer.betterfactions.network.client.CreateNewFederationPacket;
-import thederpgamer.betterfactions.network.server.UpdateClientDataPacket;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
 import thederpgamer.betterfactions.utils.FactionUtils;
 import thederpgamer.betterfactions.utils.FederationUtils;
-
 import java.lang.reflect.Field;
 
 public class BetterFactions extends StarMod {
@@ -45,21 +39,17 @@ public class BetterFactions extends StarMod {
     private final String[] defaultConfig = {
             "debug-mode: false",
             "save-interval: 12000",
-            "client-update-interval: 3500",
             "max-news-backup: 30"
     };
     public boolean debugMode = false;
     public int saveInterval = 12000;
-    public int clientUpdateInterval = 3500;
     public int maxNewsBackup = 30;
 
     @Override
     public void onEnable() {
         inst = this;
         initConfig();
-        loadData();
         registerListeners();
-        registerPackets();
         startTimers();
     }
 
@@ -74,14 +64,7 @@ public class BetterFactions extends StarMod {
 
         debugMode = config.getConfigurableBoolean("debug-mode", false);
         saveInterval = config.getConfigurableInt("save-interval", 12000);
-        clientUpdateInterval = config.getConfigurableInt("client-update-interval", 3500);
         maxNewsBackup = config.getConfigurableInt("max-news-backup", 30);
-    }
-
-    private void loadData() {
-        FactionUtils.loadData();
-        FederationUtils.loadData();
-        FactionNewsUtils.loadData();
     }
 
     private void registerListeners() {
@@ -160,11 +143,6 @@ public class BetterFactions extends StarMod {
         }, this);
     }
 
-    private void registerPackets() {
-        PacketUtil.registerPacket(UpdateClientDataPacket.class);
-        PacketUtil.registerPacket(CreateNewFederationPacket.class);
-    }
-
     private void startTimers() {
         if(GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer()) {
             new StarRunnable() {
@@ -180,25 +158,9 @@ public class BetterFactions extends StarMod {
                 public void run() {
                     FactionUtils.saveData();
                     FederationUtils.saveData();
+                    FactionNewsUtils.saveData();
                 }
             }.runTimer(this, saveInterval);
-
-            new StarRunnable() {
-                @Override
-                public void run() {
-                    if(lastClientUpdate >= clientUpdateInterval) updateClientData();
-                }
-            }.runTimer(this, clientUpdateInterval);
-        }
-    }
-
-    public void updateClientData() {
-        if(GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer()) {
-            UpdateClientDataPacket packet = new UpdateClientDataPacket();
-            for(PlayerState playerState : GameServer.getServerState().getPlayerStatesByName().values()) {
-                PacketUtil.sendPacket(playerState, packet);
-            }
-            lastClientUpdate = 0;
         }
     }
 }

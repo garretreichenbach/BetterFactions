@@ -19,8 +19,8 @@ import javax.vecmath.Vector4f;
 /**
  * FederationInvitesDialog.java
  * <Description>
- * ==================================================
- * Created 02/09/2021
+ *
+ * @since 02/09/2021
  * @author TheDerpGamer
  */
 public class FederationInvitesDialog extends PlayerGameOkCancelInput {
@@ -112,7 +112,7 @@ public class FederationInvitesDialog extends PlayerGameOkCancelInput {
                         if(FactionUtils.getFactionData(invite.getRecipient()).getFederationId() != -1) {
                             new SimplePopup(getState(), Lng.str("Cannot accept invitation"), Lng.str("Your faction is already part of a federation and cannot join another one."));
                         } else {
-                            FederationUtils.joinFederation(FactionUtils.getFactionData(invite.getRecipient()), FederationUtils.getFederation(FactionUtils.getFactionData(invite.getSender())));
+                            FederationUtils.getFederation(FactionUtils.getFactionData(invite.getRecipient())).addMember(FactionUtils.getFactionData(invite.getRecipient()));
                         }
                         return;
                     }

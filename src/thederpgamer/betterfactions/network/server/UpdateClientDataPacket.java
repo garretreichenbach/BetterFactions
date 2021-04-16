@@ -102,27 +102,27 @@ public class UpdateClientDataPacket extends Packet {
         for(Object faction : dataMap.get(DataType.FACTION_DATA)) {
             factionData.add((FactionData) faction);
         }
-        FactionUtils.updateFromServer(factionData);
+        //FactionUtils.updateFromServer(factionData);
 
         ArrayList<Federation> federations = new ArrayList<>();
         for(Object federation : dataMap.get(DataType.FEDERATION_DATA)) {
             federations.add((Federation) federation);
         }
-        FederationUtils.updateFromServer(federations);
+        //FederationUtils.updateFromServer(federations);
     }
 
     @Override
     public void processPacketOnServer(PlayerState playerState) {
         dataMap = new HashList<>();
 
-        HashMap<Integer, FactionData> factionDataMap = FactionUtils.getAllFactions();
+        HashMap<Integer, FactionData> factionDataMap = FactionUtils.getFactionDataMap();
         if(factionDataMap != null) {
             ArrayList<Object> factionDataList = new ArrayList<>();
             factionDataList.addAll(factionDataMap.values());
             dataMap.put(DataType.FACTION_DATA, factionDataList);
         }
 
-        HashMap<Integer, Federation> federationMap = FederationUtils.getAllFederations();
+        HashMap<Integer, Federation> federationMap = FederationUtils.getFederationMap();
         if(federationMap != null) {
             ArrayList<Object> federationList = new ArrayList<>();
             federationList.addAll(federationMap.values());

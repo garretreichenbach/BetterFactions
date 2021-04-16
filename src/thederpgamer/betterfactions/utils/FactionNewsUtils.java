@@ -1,5 +1,6 @@
 package thederpgamer.betterfactions.utils;
 
+import api.mod.ModSkeleton;
 import api.mod.config.PersistentObjectUtil;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.schine.common.language.Lng;
@@ -9,43 +10,44 @@ import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.gui.faction.news.FactionNewsEntry;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 
 /**
  * FactionNewsUtils.java
  * <Description>
- * ==================================================
- * Created 02/10/2021
+ *
+ * @since 02/10/2021
  * @author TheDerpGamer
  */
 public class FactionNewsUtils {
 
-    public static final ArrayList<FactionNewsEntry> factionNews = new ArrayList<>();
+    private static final ModSkeleton instance = BetterFactions.getInstance().getSkeleton();
 
     public static void addNewsEntry(FactionNewsEntry newsEntry) {
-        factionNews.add(newsEntry);
+        PersistentObjectUtil.addObject(instance, newsEntry);
         saveData();
         BetterFactions.getInstance().newFactionPanel.factionNewsTab.updateTab();
     }
 
-    public static void saveData() {
-        ArrayList<FactionNewsEntry> newsEntriesToDelete = new ArrayList<>();
-        for(FactionNewsEntry newsEntry : factionNews) {
-            int daysBetween = GeneralUtils.getDaysBetween(GeneralUtils.getCurrentDate(), new Date(newsEntry.date));
-            if(daysBetween > BetterFactions.getInstance().maxNewsBackup) {
-                newsEntriesToDelete.add(newsEntry);
-            } else {
-                PersistentObjectUtil.addObject(BetterFactions.getInstance().getSkeleton(), newsEntry);
-            }
+    public static HashMap<String, FactionNewsEntry> getNewsMap() {
+        saveData();
+        HashMap<String, FactionNewsEntry> newsMap = new HashMap<>();
+        for(Object newsObject : PersistentObjectUtil.getObjects(instance, FactionNewsEntry.class)) {
+            FactionNewsEntry newsEntry = (FactionNewsEntry) newsObject;
+            newsMap.put(newsEntry.date, newsEntry);
         }
-        for(FactionNewsEntry newsEntry : newsEntriesToDelete) factionNews.remove(newsEntry);
+        return newsMap;
     }
 
-    public static void loadData() {
-        ArrayList<Object> fNewsObjects = PersistentObjectUtil.getObjects(BetterFactions.getInstance().getSkeleton(), FactionNewsEntry.class);
-        for(Object newsObject : fNewsObjects) {
-            factionNews.add((FactionNewsEntry) newsObject);
+    public static void saveData() {
+        ArrayList<FactionNewsEntry> toRemove = new ArrayList<>();
+        for(Object newsObject : PersistentObjectUtil.getObjects(instance, FactionNewsEntry.class)) {
+            FactionNewsEntry newsEntry = (FactionNewsEntry) newsObject;
+            int daysBetween = GeneralUtils.getDaysBetween(GeneralUtils.getCurrentDate(), new Date(newsEntry.date));
+            if(daysBetween > BetterFactions.getInstance().maxNewsBackup) toRemove.add(newsEntry);
         }
-        saveData();
+        for(FactionNewsEntry newsEntry : toRemove) PersistentObjectUtil.removeObject(instance, newsEntry);
+        PersistentObjectUtil.save(instance);
     }
 
     public static FactionNewsEntry getFactionCreateNews(FactionData faction, PlayerState player) {

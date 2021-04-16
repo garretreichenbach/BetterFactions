@@ -25,12 +25,12 @@ public class FactionNewsEntry implements Serializable {
         }
     }
 
-    private Object subject;
-    public final String date;
-    public final FactionNewsType type;
-    public final String title;
-    public final String text;
-    private boolean read;
+    public Object subject;
+    public String date;
+    public FactionNewsType type;
+    public String title;
+    public String text;
+    public boolean read;
 
     public FactionNewsEntry(FactionNewsType type, String title, String text) {
         this.date = new Date().toString();

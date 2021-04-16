@@ -6,8 +6,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * GeneralUtils.java
  * <Description>
- * ==================================================
- * Created 02/10/2021
+ *
+ * @since 02/10/2021
  * @author TheDerpGamer
  */
 public class GeneralUtils {

@@ -1,8 +1,8 @@
 package thederpgamer.betterfactions.utils;
 
 import api.utils.textures.StarLoaderTexture;
-import thederpgamer.betterfactions.BetterFactions;
 import org.schema.schine.graphicsengine.forms.Sprite;
+import thederpgamer.betterfactions.BetterFactions;
 import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -16,8 +16,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 /**
  * ImageUtils.java
  * <Description>
- * ==================================================
- * Created 01/30/2021
+ *
+ * @since 01/30/2021
  * @author TheDerpGamer
  */
 public class ImageUtils {
@@ -80,14 +80,20 @@ public class ImageUtils {
     }
 
     public static Sprite getDefaultLogo() {
-        try {
-            BufferedImage bufferedImage = ImageIO.read(BetterFactions.getInstance().getJarResource("thederpgamer/betterfactions/resources/images/temp-logo.png"));
-            Sprite sprite = StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), "tempLogo");
-            scaleSprite(sprite, 200, 200);
-            return sprite;
-        } catch (IOException exception) {
-            exception.printStackTrace();
-            return null;
-        }
+        final Sprite[] sprite = new Sprite[1];
+        StarLoaderTexture.runOnGraphicsThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    BufferedImage bufferedImage = ImageIO.read(BetterFactions.getInstance().getJarResource("thederpgamer/betterfactions/resources/images/temp-logo.png"));
+                    sprite[0] = StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), "tempLogo");
+                    scaleSprite(sprite[0], 200, 200);
+                } catch(IOException exception) {
+                    exception.printStackTrace();
+                    sprite[0] = null;
+                }
+            }
+        });
+        return sprite[0];
     }
 }

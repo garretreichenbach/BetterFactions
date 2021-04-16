@@ -18,8 +18,8 @@ import java.util.*;
 /**
  * FactionNewsScrollableList.java
  * <Description>
- * ==================================================
- * Created 02/10/2021
+ *
+ * @since 02/10/2021
  * @author TheDerpGamer
  */
 public class FactionNewsScrollableList extends ScrollableTableList<FactionNewsEntry> {
@@ -118,8 +118,8 @@ public class FactionNewsScrollableList extends ScrollableTableList<FactionNewsEn
     }
 
     @Override
-    protected Collection<FactionNewsEntry> getElementList() {
-        return new ArrayList<>(FactionNewsUtils.factionNews);
+    public ArrayList<FactionNewsEntry> getElementList() {
+        return new ArrayList<>(FactionNewsUtils.getNewsMap().values());
     }
 
     @Override

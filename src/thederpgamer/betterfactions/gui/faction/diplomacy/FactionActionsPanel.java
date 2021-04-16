@@ -57,20 +57,20 @@ public class FactionActionsPanel extends GUIAncor {
         int categoryIndex = 0;
 
         (factionButtonPane = new GUIDropdownButtonPane(getState(), (int) getWidth(), (int) getHeight())).onInit();
-        factionButtonPane.setVisibility(2);
         attach(factionButtonPane);
+        factionButtonPane.setVisibility(2);
 
         (diplomacyButtonPane = new GUIDropdownButtonPane(getState(), (int) getWidth(), (int) getHeight())).onInit();
-        diplomacyButtonPane.setVisibility(2);
         attach(diplomacyButtonPane);
+        diplomacyButtonPane.setVisibility(2);
 
         (federationButtonPane = new GUIDropdownButtonPane(getState(), (int) getWidth(), (int) getHeight())).onInit();
-        federationButtonPane.setVisibility(2);
         attach(federationButtonPane);
+        federationButtonPane.setVisibility(2);
 
         (tradeButtonPane = new GUIDropdownButtonPane(getState(), (int) getWidth(), (int) getHeight())).onInit();
-        tradeButtonPane.setVisibility(2);
         attach(tradeButtonPane);
+        tradeButtonPane.setVisibility(2);
 
         final int playerFactionId = GameClient.getClientPlayerState().getFactionId();
 
