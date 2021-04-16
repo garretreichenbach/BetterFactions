@@ -1,7 +1,7 @@
 package thederpgamer.betterfactions.gui;
 
 import api.common.GameClient;
-import thederpgamer.betterfactions.game.faction.Federation;
+import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.gui.faction.management.FactionManagementTab;
 import thederpgamer.betterfactions.gui.faction.news.FactionNewsTab;
 import thederpgamer.betterfactions.gui.faction.diplomacy.FactionDiplomacyTab;

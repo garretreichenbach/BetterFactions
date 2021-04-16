@@ -8,7 +8,7 @@ import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.input.KeyEventInterface;
 import thederpgamer.betterfactions.data.federation.FactionMessage;
-import thederpgamer.betterfactions.game.faction.Federation;
+import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.gui.elements.dialog.FactionMessagePanel;
 
 /**

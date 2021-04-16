@@ -5,7 +5,7 @@ import org.schema.game.common.data.player.PlayerState;
 import org.schema.schine.common.language.Lng;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.game.faction.Federation;
+import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.gui.faction.news.FactionNewsEntry;
 import java.util.ArrayList;
 import java.util.Date;

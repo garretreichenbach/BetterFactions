@@ -9,7 +9,6 @@ import org.schema.game.common.data.player.faction.FactionManager;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionMember;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 

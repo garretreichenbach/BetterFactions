@@ -7,7 +7,7 @@ import api.utils.other.HashList;
 import org.schema.game.common.data.player.PlayerState;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.game.faction.Federation;
+import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.utils.FactionUtils;
 import thederpgamer.betterfactions.utils.FederationUtils;
 import java.io.IOException;

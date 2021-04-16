@@ -10,7 +10,7 @@ import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.game.faction.Federation;
+import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
 import thederpgamer.betterfactions.utils.FactionUtils;
 import java.util.*;

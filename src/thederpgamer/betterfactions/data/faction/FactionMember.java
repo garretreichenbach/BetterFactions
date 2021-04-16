@@ -15,9 +15,9 @@ import java.io.Serializable;
  */
 public class FactionMember implements Serializable {
 
-    private String name;
-    private int factionId;
-    private FactionRank rank;
+    public String name;
+    public int factionId;
+    public FactionRank rank;
 
     public FactionMember(String name, FactionData factionData, FactionRank rank) {
         this.name = name;
@@ -56,6 +56,7 @@ public class FactionMember implements Serializable {
     public boolean hasPermission(String... permissions) {
         if(permissions != null) {
             for(String permission : permissions) {
+                if(permission.contains("[ANY]")) permission = permission.replace("[ANY]", "");
                 if(rank.getPermissions().contains(permission)) return true;
             }
         }

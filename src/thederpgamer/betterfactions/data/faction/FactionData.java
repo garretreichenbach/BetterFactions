@@ -8,7 +8,7 @@ import org.schema.game.common.data.player.faction.FactionRelation;
 import org.schema.game.common.data.player.faction.FactionRoles;
 import org.schema.schine.common.language.Lng;
 import thederpgamer.betterfactions.data.federation.FactionMessage;
-import thederpgamer.betterfactions.game.faction.Federation;
+import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.utils.FactionUtils;
 import thederpgamer.betterfactions.utils.FederationUtils;
 import java.io.Serializable;
@@ -24,14 +24,14 @@ import java.util.ArrayList;
 public class FactionData implements FactionScore, Serializable {
 
     //Info
-    private int factionId;
-    private int federationId;
-    private String factionName;
-    private String factionDescription;
-    private String factionLogo;
-    private ArrayList<FactionMember> members = new ArrayList<>();
-    private ArrayList<FactionRank> ranks = new ArrayList<>();
-    private ArrayList<FactionMessage> inbox = new ArrayList<>();
+    public int factionId;
+    public int federationId;
+    public String factionName;
+    public String factionDescription;
+    public String factionLogo;
+    public ArrayList<FactionMember> members = new ArrayList<>();
+    public ArrayList<FactionRank> ranks = new ArrayList<>();
+    public ArrayList<FactionMessage> inbox = new ArrayList<>();
 
     public FactionData(Faction faction) {
         factionId = faction.getIdFaction();

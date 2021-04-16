@@ -18,8 +18,8 @@ import thederpgamer.betterfactions.utils.FactionUtils;
 /**
  * FactionMessagePanel.java
  * <Description>
- * ==================================================
- * Created 02/08/2021
+ *
+ * @since 02/08/2021
  * @author TheDerpGamer
  */
 public class FactionMessagePanel extends GUIInputPanel {

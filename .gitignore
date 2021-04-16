@@ -1,12 +1,8 @@
 
 .idea/misc.xml
 .idea/artifacts/BetterFactions_jar.xml
-.idea/artifacts/BetterFactions_jar.xml
-.idea/misc.xml
 out/artifacts/BetterFactions_jar/BetterFactions.jar
 *.jar
-.idea/artifacts/BetterFactions_jar.xml
-.idea/misc.xml
 src/net/dovtech/betterfactions/BetterFactions.java
 src/META-INF/MANIFEST.MF
 out

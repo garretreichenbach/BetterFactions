@@ -14,9 +14,9 @@ import java.util.Arrays;
  */
 public class FactionRank implements Serializable {
 
-    private String rankName;
-    private int rankLevel;
-    private ArrayList<String> permissions;
+    public String rankName;
+    public int rankLevel;
+    public ArrayList<String> permissions;
 
     public FactionRank(String rankName, int rankLevel, String... permissions) {
         this.rankName = rankName;

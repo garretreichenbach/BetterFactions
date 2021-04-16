@@ -5,7 +5,7 @@ import api.common.GameCommon;
 import api.mod.config.PersistentObjectUtil;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.game.faction.Federation;
+import thederpgamer.betterfactions.data.federation.Federation;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -26,7 +26,7 @@ public class FederationUtils {
         FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationJoinNews(federation, faction));
         saveData();
         BetterFactions.getInstance().newFactionPanel.factionDiplomacyTab.updateTab();
-        if(FactionUtils.inFaction(GameClient.getClientPlayerState()) && FactionUtils.getPlayerFactionData().getFactionId() == faction.getFactionId()) {
+        if(FactionUtils.inFaction(GameClient.getClientPlayerState()) && FactionUtils.getPlayerFactionData().getFederationId() == faction.getFederationId()) {
             BetterFactions.getInstance().newFactionPanel.factionManagementTab.updateTab();
             BetterFactions.getInstance().newFactionPanel.federationManagementTab.updateTab();
         }

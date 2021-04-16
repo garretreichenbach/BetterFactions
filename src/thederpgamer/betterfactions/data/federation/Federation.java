@@ -1,4 +1,4 @@
-package thederpgamer.betterfactions.game.faction;
+package thederpgamer.betterfactions.data.federation;
 
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionScore;
@@ -10,15 +10,15 @@ import java.util.ArrayList;
 /**
  * Federation.java
  * <Description>
- * ==================================================
- * Created 01/30/2021
+ *
+ * @since 01/30/2021
  * @author TheDerpGamer
  */
 public class Federation implements Serializable, FactionScore {
 
-    private int id;
-    private String name;
-    private ArrayList<FactionData> members;
+    public int id;
+    public String name;
+    public ArrayList<FactionData> members;
 
     public Federation(String name, FactionData fromFaction, FactionData toFaction) {
         this.name = name;
