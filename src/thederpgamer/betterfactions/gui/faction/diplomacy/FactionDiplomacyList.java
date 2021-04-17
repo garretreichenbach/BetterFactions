@@ -168,8 +168,8 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
 
         @Override
         public void clickedOnRow() {
-            diplomacyTab.setSelectedFaction(GameCommon.getGameState().getFactionManager().getFaction(f.getFactionId()));
             super.clickedOnRow();
+            diplomacyTab.setSelectedFaction(GameCommon.getGameState().getFactionManager().getFaction(f.getFactionId()));
         }
     }
 }

@@ -8,14 +8,13 @@ import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
 import org.schema.schine.graphicsengine.forms.gui.GUIIconButton;
 import org.schema.schine.graphicsengine.forms.gui.GUITextOverlay;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.other.Vector2i;
 import thederpgamer.betterfactions.manager.SpriteManager;
 
 /**
  * FactionInfoPanel.java
  * <Description>
- * ==================================================
- * Created 01/30/2021
+ *
+ * @since 01/30/2021
  * @author TheDerpGamer
  */
 public class FactionInfoPanel extends GUIAncor {
@@ -68,7 +67,7 @@ public class FactionInfoPanel extends GUIAncor {
     @Override
     public void draw() {
         super.draw();
-        factionLogoButton.setImagePos(getLogoPos().x, getLogoPos().y);
+        factionLogoButton.setImagePos((int) factionLogoButton.getPos().x + 100, (int) factionLogoButton.getPos().y + 100);
     }
 
     public void updateLogo(Sprite logo) {
@@ -93,11 +92,5 @@ public class FactionInfoPanel extends GUIAncor {
 
     public void setFaction(Faction faction) {
         factionLogo.setFaction(faction);
-    }
-
-    private Vector2i getLogoPos() {
-        int logoX = (int) ((factionLogo.getSprite().getWidth() / 2) + (getWidth() - factionLogo.getSprite().getWidth()));
-        int logoY = (factionLogo.getSprite().getHeight() / 2) + 10;
-        return new Vector2i(logoX, logoY);
     }
 }

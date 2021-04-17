@@ -35,6 +35,8 @@ public class SpriteManager implements ResourceManager {
             try {
                 Sprite sprite = StarLoaderTexture.newSprite(ImageIO.read(BetterFactions.getInstance().getJarResource( spritesPath + spriteName + ".png")), BetterFactions.getInstance(), spriteName);
                 sprite.setName(spriteName);
+                sprite.setWidth(200);
+                sprite.setHeight(200);
                 spriteMap.put(spriteName, sprite);
             } catch(IOException exception) {
                 exception.printStackTrace();
@@ -49,6 +51,8 @@ public class SpriteManager implements ResourceManager {
 
     @Override
     public void addResource(Object resource, String name) {
+        ((Sprite) resource).setWidth(200);
+        ((Sprite) resource).setHeight(200);
         spriteMap.put(name, (Sprite) resource);
     }
 

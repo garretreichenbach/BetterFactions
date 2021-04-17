@@ -86,7 +86,7 @@ public class FactionUtils {
             }
         }
         for(FactionData fData : fDataToDelete) {
-            for(FactionMember factionMember : fData.getMembers()) factionMember.setFactionId(-1);
+            for(FactionMember factionMember : fData.getMembers()) factionMember.setFactionId(0);
             PersistentObjectUtil.removeObject(instance, fData);
         }
         PersistentObjectUtil.save(instance);

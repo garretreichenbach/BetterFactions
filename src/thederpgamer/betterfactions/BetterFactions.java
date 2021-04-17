@@ -19,7 +19,6 @@ import thederpgamer.betterfactions.manager.SpriteManager;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
 import thederpgamer.betterfactions.utils.FactionUtils;
 import thederpgamer.betterfactions.utils.FederationUtils;
-
 import java.lang.reflect.Field;
 
 public class BetterFactions extends StarMod {
