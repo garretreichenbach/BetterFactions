@@ -10,6 +10,8 @@ import org.schema.game.common.data.player.faction.FactionManager;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionMember;
+import thederpgamer.betterfactions.manager.SpriteManager;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -23,10 +25,6 @@ import java.util.HashMap;
 public class FactionUtils {
 
     private static final ModSkeleton instance = BetterFactions.getInstance().getSkeleton();
-
-    public static final String defaultLogo = "https://i.imgur.com/8wKjlBR.png";
-    private static final String piratesLogo = "https://i.imgur.com/8wKjlBR.png"; //Todo
-    private static final String tradingGuildLogo = "https://i.imgur.com/8wKjlBR.png"; //Todo
 
     private static final String defaultDescription = "A Faction";
     private static final String piratesDescription = "Small clans of ravaging space pirates that attack and loot everything in sight. Despite their savagery, they are currently quite weak due to their lack of an organized leadership.";
@@ -99,13 +97,13 @@ public class FactionUtils {
         FactionData fData = new FactionData(faction);
 
         if(factionId == FactionManager.PIRATES_ID) {
-            fData.setFactionLogo(piratesLogo);
+            fData.setFactionLogo(SpriteManager.getSprite("pirates-logo"));
             fData.setFactionDescription(piratesDescription);
         } else if(factionId == FactionManager.TRAIDING_GUILD_ID) {
-            fData.setFactionLogo(tradingGuildLogo);
+            fData.setFactionLogo(SpriteManager.getSprite("traders-logo"));
             fData.setFactionDescription(tradingGuildDescription);
         } else {
-            fData.setFactionLogo(defaultLogo);
+            fData.setFactionLogo(SpriteManager.getSprite("default-logo"));
             fData.setFactionDescription(defaultDescription);
         }
         return fData;

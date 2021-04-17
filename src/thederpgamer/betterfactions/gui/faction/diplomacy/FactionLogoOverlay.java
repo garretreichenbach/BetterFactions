@@ -10,15 +10,16 @@ import org.schema.schine.graphicsengine.forms.gui.GUICallback;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.GUIOverlay;
 import org.schema.schine.input.InputState;
+import thederpgamer.betterfactions.manager.SpriteManager;
 import thederpgamer.betterfactions.utils.FactionUtils;
-
+import thederpgamer.betterfactions.utils.ImageUtils;
 import java.util.Locale;
 
 /**
  * FactionLogoOverlay.java
  * <Description>
- * ==================================================
- * Created 02/03/2021
+ *
+ * @since 02/03/2021
  * @author TheDerpGamer
  */
 public class FactionLogoOverlay extends GUIOverlay implements GUICallback {
@@ -50,14 +51,14 @@ public class FactionLogoOverlay extends GUIOverlay implements GUICallback {
                 new SimplePlayerTextInput("Change Faction Logo", "Link to image (No inappropriate images!)") {
                     @Override
                     public boolean onInput(String s) {
-                        if ((s.startsWith("https://") || s.startsWith("http://")) && (s.toLowerCase(Locale.ROOT).endsWith(".png")
+                        if((s.startsWith("https://") || s.startsWith("http://")) && (s.toLowerCase(Locale.ROOT).endsWith(".png")
                                 || s.toLowerCase(Locale.ROOT).endsWith(".jpg") || s.toLowerCase(Locale.ROOT).endsWith(".jpeg"))) {
-                            FactionUtils.getFactionData(faction).setFactionLogo(s);
-                            infoPanel.updateLogo(s);
+                            Sprite sprite = ImageUtils.getImage(s, faction.getName().replace(" ", "-") + "-logo");
+                            SpriteManager.addSprite(sprite);
+                            FactionUtils.getFactionData(faction).setFactionLogo(sprite);
+                            infoPanel.updateLogo(sprite);
                             return true;
-                        } else {
-                            return false;
-                        }
+                        } else return false;
                     }
                 }.setText("");
             }

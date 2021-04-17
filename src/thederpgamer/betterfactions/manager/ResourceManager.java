@@ -9,6 +9,6 @@ package thederpgamer.betterfactions.manager;
  */
 public interface ResourceManager {
     void initialize();
-    String[] getResourceList();
     Object getResource(String name);
+    void addResource(Object resource, String name);
 }

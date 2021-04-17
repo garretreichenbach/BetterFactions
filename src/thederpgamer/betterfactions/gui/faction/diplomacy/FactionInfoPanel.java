@@ -1,17 +1,15 @@
 package thederpgamer.betterfactions.gui.faction.diplomacy;
 
-import api.utils.StarRunnable;
 import org.newdawn.slick.Color;
 import org.schema.game.common.data.player.faction.Faction;
+import org.schema.schine.graphicsengine.forms.Sprite;
+import org.schema.schine.graphicsengine.forms.font.FontLibrary;
 import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
 import org.schema.schine.graphicsengine.forms.gui.GUIIconButton;
-import thederpgamer.betterfactions.BetterFactions;
-import thederpgamer.betterfactions.data.other.Vector2i;
-import thederpgamer.betterfactions.utils.FactionUtils;
-import thederpgamer.betterfactions.utils.ImageUtils;
-import org.schema.schine.graphicsengine.forms.font.FontLibrary;
 import org.schema.schine.graphicsengine.forms.gui.GUITextOverlay;
 import org.schema.schine.input.InputState;
+import thederpgamer.betterfactions.data.other.Vector2i;
+import thederpgamer.betterfactions.manager.SpriteManager;
 
 /**
  * FactionInfoPanel.java
@@ -35,7 +33,7 @@ public class FactionInfoPanel extends GUIAncor {
     public void onInit() {
         super.onInit();
 
-        factionLogo = new FactionLogoOverlay(ImageUtils.getImage(FactionUtils.defaultLogo), this, getState());
+        factionLogo = new FactionLogoOverlay(SpriteManager.getSprite("default-logo"), this, getState());
         factionLogo.onInit();
 
         factionLogoButton = new GUIIconButton(getState(), (int) factionLogo.getWidth(), (int) factionLogo.getHeight(), factionLogo, factionLogo);
@@ -73,14 +71,8 @@ public class FactionInfoPanel extends GUIAncor {
         factionLogoButton.setImagePos(getLogoPos().x, getLogoPos().y);
     }
 
-    public void updateLogo(final String newPath) {
-        ImageUtils.getImage(newPath);
-        new StarRunnable() {
-            @Override
-            public void run() {
-                factionLogo.setSprite(ImageUtils.getImage(newPath));
-            }
-        }.runLater(BetterFactions.getInstance(), 15);
+    public void updateLogo(Sprite logo) {
+        factionLogo.setSprite(logo);
     }
 
     public void setNameText(String nameText) {

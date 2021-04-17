@@ -15,9 +15,11 @@ import org.schema.schine.resource.ResourceLoader;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionRank;
 import thederpgamer.betterfactions.gui.NewFactionPanel;
+import thederpgamer.betterfactions.manager.SpriteManager;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
 import thederpgamer.betterfactions.utils.FactionUtils;
 import thederpgamer.betterfactions.utils.FederationUtils;
+
 import java.lang.reflect.Field;
 
 public class BetterFactions extends StarMod {
@@ -55,7 +57,7 @@ public class BetterFactions extends StarMod {
 
     @Override
     public void onResourceLoad(ResourceLoader loader) {
-        //(new SpriteManager()).initialize();
+        (new SpriteManager()).initialize();
     }
 
     private void initConfig() {

@@ -7,10 +7,13 @@ import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionRelation;
 import org.schema.game.common.data.player.faction.FactionRoles;
 import org.schema.schine.common.language.Lng;
+import org.schema.schine.graphicsengine.forms.Sprite;
 import thederpgamer.betterfactions.data.federation.FactionMessage;
 import thederpgamer.betterfactions.data.federation.Federation;
+import thederpgamer.betterfactions.manager.SpriteManager;
 import thederpgamer.betterfactions.utils.FactionUtils;
 import thederpgamer.betterfactions.utils.FederationUtils;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 
@@ -38,7 +41,7 @@ public class FactionData implements FactionScore, Serializable {
         federationId = -1;
         factionName = faction.getName();
         factionDescription = faction.getDescription();
-        factionLogo = "https://i.imgur.com/8wKjlBR.png";
+        factionLogo = SpriteManager.getSprite("default-logo").getName();
     }
 
     public Faction getFaction() {
@@ -78,12 +81,12 @@ public class FactionData implements FactionScore, Serializable {
         this.federationId = federationId;
     }
 
-    public String getFactionLogo() {
-        return factionLogo;
+    public Sprite getFactionLogo() {
+        return SpriteManager.getSprite(factionLogo);
     }
 
-    public void setFactionLogo(String factionLogo) {
-        this.factionLogo = factionLogo;
+    public void setFactionLogo(Sprite factionLogo) {
+        this.factionLogo = factionLogo.getName();
     }
 
     public String getInfo() {

@@ -3,6 +3,7 @@ package thederpgamer.betterfactions.utils;
 import api.utils.textures.StarLoaderTexture;
 import org.schema.schine.graphicsengine.forms.Sprite;
 import thederpgamer.betterfactions.BetterFactions;
+import thederpgamer.betterfactions.manager.SpriteManager;
 import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -10,7 +11,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -22,20 +22,18 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class ImageUtils {
 
-    private final static ConcurrentHashMap<String, Sprite> imgCache = new ConcurrentHashMap<>();
     private final static ConcurrentLinkedQueue<String> downloadingImages = new ConcurrentLinkedQueue<>();
 
     @Nullable
-    public static Sprite getImage(String url) {
+    public static Sprite getImage(String url, String name) {
         try {
-            Sprite bufferedImage = imgCache.get(url);
-            if (bufferedImage != null) {
-                return scaleSprite(bufferedImage, 200, 200);
-            } else {
-                fetchImage(url);
+            Sprite sprite = SpriteManager.getSprite(name);
+            if(sprite != null) return scaleSprite(sprite, 200, 200);
+            else {
+                fetchImage(url, name);
                 return scaleSprite(getDefaultLogo(), 200, 200);
             }
-        } catch (Exception ignored) { }
+        } catch(Exception ignored) { }
         return scaleSprite(getDefaultLogo(), 200, 200);
     }
 
@@ -45,7 +43,7 @@ public class ImageUtils {
         return sprite;
     }
 
-    private static void fetchImage(final String url) {
+    private static void fetchImage(final String url, final String name) {
         if (!downloadingImages.contains(url)) {
             new Thread() {
                 @Override
@@ -55,8 +53,7 @@ public class ImageUtils {
                     StarLoaderTexture.runOnGraphicsThread(new Runnable() {
                         @Override
                         public void run() {
-                            Sprite sprite = StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), url + System.currentTimeMillis());
-                            imgCache.put(url, sprite);
+                            SpriteManager.addSprite(StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), name));
                         }
                     });
                     downloadingImages.remove(url);
@@ -80,20 +77,6 @@ public class ImageUtils {
     }
 
     public static Sprite getDefaultLogo() {
-        final Sprite[] sprite = new Sprite[1];
-        StarLoaderTexture.runOnGraphicsThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    BufferedImage bufferedImage = ImageIO.read(BetterFactions.getInstance().getJarResource("thederpgamer/betterfactions/resources/images/temp-logo.png"));
-                    sprite[0] = StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), "tempLogo");
-                    scaleSprite(sprite[0], 200, 200);
-                } catch(IOException exception) {
-                    exception.printStackTrace();
-                    sprite[0] = null;
-                }
-            }
-        });
-        return sprite[0];
+        return SpriteManager.getInstance().getResource("default-logo");
     }
 }
