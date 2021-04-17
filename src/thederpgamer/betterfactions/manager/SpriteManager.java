@@ -17,6 +17,8 @@ import java.util.HashMap;
 public class SpriteManager implements ResourceManager {
 
     private static SpriteManager instance;
+
+    private final String spritesPath = "thederpgamer/betterfactions/resources/sprites/";
     private HashMap<String, Sprite> spriteMap;
 
     public static SpriteManager getInstance() {
@@ -28,9 +30,9 @@ public class SpriteManager implements ResourceManager {
         instance = this;
         spriteMap = new HashMap<>();
         try {
-            spriteMap.put("default-logo", StarLoaderTexture.newSprite(ImageIO.read(BetterFactions.getInstance().getJarResource("thederpgamer/betterfactions/resources/sprites/default-logo.png")), BetterFactions.getInstance(), "default-logo"));
-            spriteMap.put("pirates-logo", StarLoaderTexture.newSprite(ImageIO.read(BetterFactions.getInstance().getJarResource("thederpgamer/betterfactions/resources/sprites/pirates-logo.png")), BetterFactions.getInstance(), "pirates-logo"));
-            spriteMap.put("traders-logo", StarLoaderTexture.newSprite(ImageIO.read(BetterFactions.getInstance().getJarResource("thederpgamer/betterfactions/resources/sprites/traders-logo.png")), BetterFactions.getInstance(), "traders-logo"));
+            spriteMap.put("default-logo", StarLoaderTexture.newSprite(ImageIO.read(BetterFactions.getInstance().getJarResource( spritesPath + "default-logo.png")), BetterFactions.getInstance(), "default-logo"));
+            spriteMap.put("pirates-logo", StarLoaderTexture.newSprite(ImageIO.read(BetterFactions.getInstance().getJarResource(spritesPath + "pirates-logo.png")), BetterFactions.getInstance(), "pirates-logo"));
+            spriteMap.put("traders-logo", StarLoaderTexture.newSprite(ImageIO.read(BetterFactions.getInstance().getJarResource(spritesPath + "traders-logo.png")), BetterFactions.getInstance(), "traders-logo"));
         } catch(IOException exception) {
             exception.printStackTrace();
         }
