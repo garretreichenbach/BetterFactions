@@ -13,7 +13,6 @@ import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.manager.SpriteManager;
 import thederpgamer.betterfactions.utils.FactionUtils;
 import thederpgamer.betterfactions.utils.FederationUtils;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 
@@ -41,7 +40,7 @@ public class FactionData implements FactionScore, Serializable {
         federationId = -1;
         factionName = faction.getName();
         factionDescription = faction.getDescription();
-        factionLogo = SpriteManager.getSprite("default-logo").getName();
+        factionLogo = SpriteManager.getFactionLogo(this).getName();
     }
 
     public Faction getFaction() {

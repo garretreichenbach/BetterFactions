@@ -3,6 +3,7 @@ package thederpgamer.betterfactions.manager;
 import api.utils.textures.StarLoaderTexture;
 import org.schema.schine.graphicsengine.forms.Sprite;
 import thederpgamer.betterfactions.BetterFactions;
+import thederpgamer.betterfactions.data.faction.FactionData;
 import javax.imageio.ImageIO;
 import java.io.IOException;
 import java.util.HashMap;
@@ -19,6 +20,7 @@ public class SpriteManager implements ResourceManager {
     private static SpriteManager instance;
 
     private final String spritesPath = "thederpgamer/betterfactions/resources/sprites/";
+    private final String[] spriteNames = {"default-logo", "pirates-logo", "traders-logo"};
     private HashMap<String, Sprite> spriteMap;
 
     public static SpriteManager getInstance() {
@@ -29,12 +31,14 @@ public class SpriteManager implements ResourceManager {
     public void initialize() {
         instance = this;
         spriteMap = new HashMap<>();
-        try {
-            spriteMap.put("default-logo", StarLoaderTexture.newSprite(ImageIO.read(BetterFactions.getInstance().getJarResource( spritesPath + "default-logo.png")), BetterFactions.getInstance(), "default-logo"));
-            spriteMap.put("pirates-logo", StarLoaderTexture.newSprite(ImageIO.read(BetterFactions.getInstance().getJarResource(spritesPath + "pirates-logo.png")), BetterFactions.getInstance(), "pirates-logo"));
-            spriteMap.put("traders-logo", StarLoaderTexture.newSprite(ImageIO.read(BetterFactions.getInstance().getJarResource(spritesPath + "traders-logo.png")), BetterFactions.getInstance(), "traders-logo"));
-        } catch(IOException exception) {
-            exception.printStackTrace();
+        for(String spriteName : spriteNames) {
+            try {
+                Sprite sprite = StarLoaderTexture.newSprite(ImageIO.read(BetterFactions.getInstance().getJarResource( spritesPath + spriteName + ".png")), BetterFactions.getInstance(), spriteName);
+                sprite.setName(spriteName);
+                spriteMap.put(spriteName, sprite);
+            } catch(IOException exception) {
+                exception.printStackTrace();
+            }
         }
     }
 
@@ -54,5 +58,11 @@ public class SpriteManager implements ResourceManager {
 
     public static Sprite getSprite(String name) {
         return getInstance().getResource(name);
+    }
+
+    public static Sprite getFactionLogo(FactionData factionData) {
+        String spriteName = factionData.factionName.replace(" ", "-") + "-logo";
+        if(getInstance().spriteMap.containsKey(spriteName)) return getSprite(spriteName);
+        else return getSprite("default-logo");
     }
 }

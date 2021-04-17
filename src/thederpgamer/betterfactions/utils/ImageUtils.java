@@ -28,8 +28,10 @@ public class ImageUtils {
     public static Sprite getImage(String url, String name) {
         try {
             Sprite sprite = SpriteManager.getSprite(name);
-            if(sprite != null) return scaleSprite(sprite, 200, 200);
-            else {
+            if(sprite != null) {
+                if(!sprite.getName().equals(name)) sprite.setName(name);
+                return scaleSprite(sprite, 200, 200);
+            } else {
                 fetchImage(url, name);
                 return scaleSprite(getDefaultLogo(), 200, 200);
             }
@@ -53,7 +55,9 @@ public class ImageUtils {
                     StarLoaderTexture.runOnGraphicsThread(new Runnable() {
                         @Override
                         public void run() {
-                            SpriteManager.addSprite(StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), name));
+                            Sprite sprite = StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), name);
+                            sprite.setName(name);
+                            SpriteManager.addSprite(sprite);
                         }
                     });
                     downloadingImages.remove(url);

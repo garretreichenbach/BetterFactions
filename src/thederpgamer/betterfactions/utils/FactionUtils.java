@@ -28,7 +28,7 @@ public class FactionUtils {
 
     private static final String defaultDescription = "A Faction";
     private static final String piratesDescription = "Small clans of ravaging space pirates that attack and loot everything in sight. Despite their savagery, they are currently quite weak due to their lack of an organized leadership.";
-    private static final String tradingGuildDescription = "A friendly organization made up of wealthy trading guilds spread across the galaxy. They boast a large navy made up of the combined forces of their many guild members and will sometimes defend weaker factions.";
+    private static final String tradingGuildDescription = "A friendly organization made up of wealthy trading guilds spread across the galaxy. They boast a large navy made up of the combined forces of their many guild members and may sometimes defend weaker factions from larger aggressors.";
 
     public static boolean inFaction(PlayerState playerState) {
         return playerState.getFactionId() != 0;

@@ -83,14 +83,4 @@ public class GUIDropdownButtonPane extends GUIDropdownBackground {
         buttonPane.onInit();
         attach(buttonPane);
     }
-
-    @Override
-    public float getWidth() {
-        return buttonPane.getWidth() + 2;
-    }
-
-    @Override
-    public float getHeight() {
-        return buttonPane.getHeight() + 2;
-    }
 }
