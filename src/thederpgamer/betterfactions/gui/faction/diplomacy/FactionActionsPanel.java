@@ -1,27 +1,21 @@
 package thederpgamer.betterfactions.gui.faction.diplomacy;
 
 import api.common.GameClient;
-import api.common.GameCommon;
 import org.schema.game.client.controller.PlayerGameOkCancelInput;
 import org.schema.game.client.controller.manager.ingame.faction.FactionDialogNew;
 import org.schema.game.client.view.gui.faction.newfaction.FactionIncomingInvitesPlayerInputNew;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
-import org.schema.game.common.data.player.faction.FactionRelation;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
-import org.schema.schine.graphicsengine.forms.gui.GUIActivationCallback;
-import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
-import org.schema.schine.graphicsengine.forms.gui.GUICallback;
-import org.schema.schine.graphicsengine.forms.gui.GUIElement;
-import org.schema.schine.graphicsengine.forms.gui.newgui.GUIAbstractHorizontalArea;
+import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea;
-import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalButtonTablePane;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionMember;
+import thederpgamer.betterfactions.gui.elements.overlay.GUIListElementOverlayButton;
 import thederpgamer.betterfactions.utils.FactionUtils;
+import java.util.ArrayList;
 
 /**
  * FactionActionsPanel.java
@@ -33,11 +27,7 @@ import thederpgamer.betterfactions.utils.FactionUtils;
 public class FactionActionsPanel extends GUIAncor {
 
     private Faction faction;
-    private GUIHorizontalButtonTablePane categoryButtonPane;
-    private GUIHorizontalButtonTablePane factionButtonPane;
-    private GUIHorizontalButtonTablePane diplomacyButtonPane;
-    private GUIHorizontalButtonTablePane federationButtonPane;
-    private GUIHorizontalButtonTablePane tradeButtonPane;
+    private GUIElementList categories;
 
     public FactionActionsPanel(InputState inputState) {
         super(inputState);
@@ -46,10 +36,19 @@ public class FactionActionsPanel extends GUIAncor {
     @Override
     public void onInit() {
         recreateButtonPane();
-        updatePanes();
     }
 
     public void recreateButtonPane() {
+        (categories = new GUIElementList(getState())).onInit();
+        categories.add(new GUIListElement(createFactionDropDown(GameClient.getClientPlayerState()), getState()));
+        if(GameClient.getClientPlayerState().getFactionId() != 0) {
+            FactionMember player = FactionUtils.getPlayerFactionMember();
+            if(player.hasPermission("diplomacy.[ANY]")) categories.add(new GUIListElement(createDiplomacyDropDown(player, player.getFactionData()), getState()));
+            if(player.hasPermission("federation.[ANY]") && player.getFactionData().getFederationId() != -1) categories.add(new GUIListElement(createFederationDropDown(player, player.getFactionData()), getState()));
+            if(player.hasPermission("trade.[ANY]")) categories.add(new GUIListElement(createTradeDropDown(player, player.getFactionData()), getState()));
+        }
+        attach(categories);
+        /*
         (categoryButtonPane = new GUIHorizontalButtonTablePane(getState(), 1, 1, this)).onInit();
         int categoryIndex = 0;
         int factionButtonIndex = 0;
@@ -414,49 +413,103 @@ public class FactionActionsPanel extends GUIAncor {
         toggleButtonPane(tradeButtonPane);
 
         attach(categoryButtonPane);
+
+         */
     }
 
-    private void updatePanes() {
-        int y = 0;
-        int categoryButtonOffset = 0;
-        for(GUIAbstractHorizontalArea button : categoryButtonPane.getButtons()[0]) {
-            GUIHorizontalButtonTablePane buttonPane = getButtonPane(y);
-            if(buttonPane != null && !buttonPane.isInvisible()) {
-                buttonPane.getPos().x = button.getPos().x;
-                button.getPos().y += categoryButtonOffset;
-                buttonPane.getPos().y = button.getPos().y + button.getHeight();
-                int buttonOffset = (int) (button.getHeight() + button.getPos().y);
-                for(GUIAbstractHorizontalArea subButton : buttonPane.getButtons()[0]) {
-                    subButton.setWidth(subButton.getWidth() - 4);
-                    subButton.getPos().x += 2;
-                    subButton.getPos().y += buttonOffset;
-                    buttonOffset += subButton.getHeight();
-                    subButton.transform();
+    private GUIDropDownList createFactionDropDown(final PlayerState playerState) {
+        GUICallback factionDropDownCallback = new GUICallback() {
+            @Override
+            public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                if(mouseEvent.pressedLeftMouse() && guiElement instanceof GUIListElementOverlayButton) {
+                    getState().getController().queueUIAudio("0022_menu_ui - select 2");
+                    String label = ((GUIListElementOverlayButton) guiElement).getText().toUpperCase().trim();
+                    String invitesText = Lng.str("Faction Invites (%s)", GameClient.getClientPlayerState().getFactionController().getInvitesIncoming().size()).toUpperCase().trim();
+                    if(label.equals(invitesText)) (new FactionIncomingInvitesPlayerInputNew(GameClient.getClientState())).activate();
+                    else {
+                        switch(label) {
+                            case "CREATE FACTION":
+                                if(playerState.getFactionId() == 0) (new FactionDialogNew(GameClient.getClientState(),"Create Faction")).activate();
+                                break;
+                            case "LEAVE FACTION":
+                                if(playerState.getFactionId() != 0) {
+                                    (new PlayerGameOkCancelInput("CONFIRM", GameClient.getClientState(), "Confirm", "Do you really want to leave this faction?\n" + "You'll be unable to access any ship/structure that belongs to this\n" + "faction except for your ships that use the Personal Permission Rank.\n\n" + "If you are the last member, the faction will also automatically disband!") {
+                                        public void onDeactivate() {
+
+                                        }
+
+                                        public void pressedOK() {
+                                            getState().getController().queueUIAudio("0022_menu_ui - cancel");
+                                            System.err.println("[CLIENT][FactionControlManager] leaving Faction");
+                                            getState().getPlayer().getFactionController().leaveFaction();
+                                            deactivate();
+                                            onInit();
+                                        }
+                                    }).activate();
+                                }
+                                break;
+                        }
+                    }
                 }
-                categoryButtonOffset += buttonPane.getHeight();
-                button.transform();
             }
-            y ++;
-        }
+
+            @Override
+            public boolean isOccluded() {
+                return false;
+            }
+        };
+
+        ArrayList<GUIListElement> elements = new ArrayList<>();
+        elements.add(new GUIListElement(new GUIListElementOverlayButton(getState(), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new Object() {
+            @Override
+            public String toString() {
+                return Lng.str("Faction Invites (%s)", GameClient.getClientPlayerState().getFactionController().getInvitesIncoming().size()).toUpperCase();
+            }
+        }.toString(), factionDropDownCallback), getState()));
+
+        GUIDropDownList factionDropDown = new GUIDropDownList(getState(), (int) getWidth(), 24, elements.size() * 24, new DropDownCallback() {
+            @Override
+            public void onSelectionChanged(GUIListElement guiListElement) {
+
+            }
+        }, elements);
+        return factionDropDown;
     }
 
-    private GUIHorizontalButtonTablePane getButtonPane(int index) {
-        switch(index) {
-            case 0: return factionButtonPane;
-            case 1: return diplomacyButtonPane;
-            case 2: return federationButtonPane;
-            case 3: return tradeButtonPane;
-            default: return null;
-        }
+    private GUIDropDownList createDiplomacyDropDown(FactionMember player, FactionData factionData) {
+        ArrayList<GUIListElement> elements = new ArrayList<>();
+
+        GUIDropDownList diplomacyDropDown = new GUIDropDownList(getState(), (int) getWidth(), 24, elements.size() * 24, new DropDownCallback() {
+            @Override
+            public void onSelectionChanged(GUIListElement guiListElement) {
+
+            }
+        }, elements);
+        return diplomacyDropDown;
     }
 
-    private void toggleButtonPane(GUIHorizontalButtonTablePane buttonPane) {
-        if(buttonPane.isInvisible()) buttonPane.setVisibility(1);
-        else {
-            buttonPane.setVisibility(2);
-            buttonPane.cleanUp();
-        }
-        updatePanes();
+    private GUIDropDownList createFederationDropDown(FactionMember player, FactionData factionData) {
+        ArrayList<GUIListElement> elements = new ArrayList<>();
+
+        GUIDropDownList federationDropDown = new GUIDropDownList(getState(), (int) getWidth(), 24, elements.size() * 24, new DropDownCallback() {
+            @Override
+            public void onSelectionChanged(GUIListElement guiListElement) {
+
+            }
+        }, elements);
+        return federationDropDown;
+    }
+
+    private GUIDropDownList createTradeDropDown(FactionMember player, FactionData factionData) {
+        ArrayList<GUIListElement> elements = new ArrayList<>();
+
+        GUIDropDownList tradeDropDown = new GUIDropDownList(getState(), (int) getWidth(), 24, elements.size() * 24, new DropDownCallback() {
+            @Override
+            public void onSelectionChanged(GUIListElement guiListElement) {
+
+            }
+        }, elements);
+        return tradeDropDown;
     }
 
     public void setFaction(Faction faction) {

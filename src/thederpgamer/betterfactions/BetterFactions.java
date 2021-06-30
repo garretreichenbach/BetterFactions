@@ -21,11 +21,21 @@ import thederpgamer.betterfactions.utils.FactionUtils;
 import thederpgamer.betterfactions.utils.FederationUtils;
 import java.lang.reflect.Field;
 
+/**
+ * BetterFactions mod main class.
+ *
+ * @author TheDerpGamer
+ * @since 01/30/2021
+ */
 public class BetterFactions extends StarMod {
 
     //Instance
-    public BetterFactions() { }
-    public static void main(String[] args) { }
+    public BetterFactions() {
+
+    }
+    public static void main(String[] args) {
+
+    }
     private static BetterFactions inst;
     public static BetterFactions getInstance() {
         return inst;

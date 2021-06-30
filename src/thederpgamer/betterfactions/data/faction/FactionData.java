@@ -17,11 +17,10 @@ import java.io.Serializable;
 import java.util.ArrayList;
 
 /**
- * FactionData.java
  * <Description>
  *
- * @since 01/30/2021
  * @author TheDerpGamer
+ * @since 01/30/2021
  */
 public class FactionData implements FactionScore, Serializable {
 

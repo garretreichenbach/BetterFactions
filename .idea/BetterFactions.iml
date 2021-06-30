@@ -31,14 +31,5 @@
         <jarDirectory url="file://$MODULE_DIR$/../../Game Files/StarMade Modded/StarMade/lib" recursive="false" type="SOURCES" />
       </library>
     </orderEntry>
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/../starloader/build/libs/starloader.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
   </component>
 </module>
