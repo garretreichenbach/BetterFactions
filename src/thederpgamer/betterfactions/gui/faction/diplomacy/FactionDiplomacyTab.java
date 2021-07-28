@@ -38,7 +38,7 @@ public class FactionDiplomacyTab extends GUIContentPane {
         addDivider(250);
 
         setContent(0, 0, (infoPanel = new FactionInfoPanel(getState())));
-        setContent(0, 1, (actionsPanel = new FactionActionsPanel(getState())));
+        setContent(0, 1, (actionsPanel = new FactionActionsPanel(getState(), 245, 300)));
         getContent(1, 0).attach((factionList = new FactionDiplomacyList(getState(), getContent(1, 0), this)));
 
         infoPanel.onInit();

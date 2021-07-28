@@ -10,6 +10,7 @@ import api.mod.StarLoader;
 import api.mod.StarMod;
 import api.mod.config.FileConfiguration;
 import api.utils.StarRunnable;
+import org.apache.commons.io.IOUtils;
 import org.schema.game.client.view.gui.PlayerPanel;
 import org.schema.schine.resource.ResourceLoader;
 import thederpgamer.betterfactions.data.faction.FactionData;
@@ -19,7 +20,12 @@ import thederpgamer.betterfactions.manager.SpriteManager;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
 import thederpgamer.betterfactions.utils.FactionUtils;
 import thederpgamer.betterfactions.utils.FederationUtils;
+
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * BetterFactions mod main class.
@@ -56,6 +62,11 @@ public class BetterFactions extends StarMod {
     public int saveInterval = 12000;
     public int maxNewsBackup = 30;
 
+    //Overwrites
+    private final String[] overwriteClasses = {
+            "GUIHorizontalButtonTablePane"
+    };
+
     @Override
     public void onEnable() {
         inst = this;
@@ -67,6 +78,12 @@ public class BetterFactions extends StarMod {
     @Override
     public void onResourceLoad(ResourceLoader loader) {
         (new SpriteManager()).initialize();
+    }
+
+    @Override
+    public byte[] onClassTransform(String className, byte[] byteCode) {
+        for(String name : overwriteClasses) if(className.endsWith(name)) return overwriteClass(className, byteCode);
+        return super.onClassTransform(className, byteCode);
     }
 
     private void initConfig() {
@@ -173,5 +190,22 @@ public class BetterFactions extends StarMod {
                 }
             }.runTimer(this, saveInterval);
         }
+    }
+
+    private byte[] overwriteClass(String className, byte[] byteCode) {
+        byte[] bytes = null;
+        try {
+            ZipInputStream file = new ZipInputStream(new FileInputStream(this.getSkeleton().getJarFile()));
+            while(true) {
+                ZipEntry nextEntry = file.getNextEntry();
+                if(nextEntry == null) break;
+                if(nextEntry.getName().endsWith(className + ".class")) bytes = IOUtils.toByteArray(file);
+            }
+            file.close();
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+        if(bytes != null) return bytes;
+        else return byteCode;
     }
 }

@@ -16,8 +16,8 @@ public class GUIListElementOverlayButton extends GUIHorizontalArea {
 
     private GUITextOverlay textOverlay;
 
-    public GUIListElementOverlayButton(InputState inputState, HButtonColor buttonColor, String text, GUICallback callback) {
-        super(inputState, buttonColor, 10);
+    public GUIListElementOverlayButton(InputState inputState, HButtonColor buttonColor, String text, int width, GUICallback callback) {
+        super(inputState, buttonColor, width);
         text = text.toUpperCase().trim();
         actCallback = new GUIActivationCallback() {
             @Override
@@ -43,8 +43,8 @@ public class GUIListElementOverlayButton extends GUIHorizontalArea {
         setUserPointer(text);
     }
 
-    public GUIListElementOverlayButton(InputState inputState, HButtonType buttonType, String text, GUICallback callback) {
-        super(inputState, buttonType, 10);
+    public GUIListElementOverlayButton(InputState inputState, HButtonType buttonType, String text, int width, GUICallback callback) {
+        super(inputState, buttonType, width);
         text = text.toUpperCase().trim();
         actCallback = new GUIActivationCallback() {
             @Override

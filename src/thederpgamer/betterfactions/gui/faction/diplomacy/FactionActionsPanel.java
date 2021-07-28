@@ -10,12 +10,9 @@ import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea;
+import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalButtonTablePane;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.data.faction.FactionMember;
-import thederpgamer.betterfactions.gui.elements.overlay.GUIListElementOverlayButton;
-import thederpgamer.betterfactions.utils.FactionUtils;
-import java.util.ArrayList;
 
 /**
  * FactionActionsPanel.java
@@ -26,11 +23,13 @@ import java.util.ArrayList;
  */
 public class FactionActionsPanel extends GUIAncor {
 
-    private Faction faction;
-    private GUIElementList categories;
+    private GUIScrollablePanel scrollPanel;
+    private GUIHorizontalButtonTablePane categories;
 
-    public FactionActionsPanel(InputState inputState) {
-        super(inputState);
+    private Faction faction;
+
+    public FactionActionsPanel(InputState inputState, float width, float height) {
+        super(inputState, width, height);
     }
 
     @Override
@@ -39,6 +38,112 @@ public class FactionActionsPanel extends GUIAncor {
     }
 
     public void recreateButtonPane() {
+        scrollPanel = new GUIScrollablePanel(getWidth(), getHeight(), this, getState());
+        categories = new GUIHorizontalButtonTablePane(getState(), 1, 1, scrollPanel);
+        categories.onInit();
+
+        final GUIHorizontalButtonTablePane factionPane = categories.addSubButtonPane(0, 0, GUIHorizontalArea.HButtonColor.BLUE, "FACTION");
+        factionPane.onInit();
+        int fPos = 0;
+        factionPane.addButton(0, fPos, new Object() {
+            @Override
+            public String toString() {
+                return Lng.str("Faction Invites (%s)", GameClient.getClientPlayerState().getFactionController().getInvitesIncoming().size()).toUpperCase();
+            }
+        }, GUIHorizontalArea.HButtonColor.BLUE, new GUICallback() {
+            @Override
+            public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                if(mouseEvent.pressedLeftMouse()) {
+                    (new FactionIncomingInvitesPlayerInputNew(GameClient.getClientState())).activate();
+                }
+            }
+
+            @Override
+            public boolean isOccluded() {
+                return factionPane.hide;
+            }
+        }, new GUIActivationCallback() {
+            @Override
+            public boolean isVisible(InputState inputState) {
+                return true;
+            }
+
+            @Override
+            public boolean isActive(InputState inputState) {
+                return true;
+            }
+        });
+        fPos ++;
+
+        if(GameClient.getClientPlayerState().getFactionId() == 0) {
+            factionPane.addButton(0, fPos, "CREATE FACTION", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
+                @Override
+                public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                    if(mouseEvent.pressedLeftMouse()) {
+                        (new FactionDialogNew(GameClient.getClientState(),"Create Faction")).activate();
+                    }
+                }
+
+                @Override
+                public boolean isOccluded() {
+                    return factionPane.hide;
+                }
+            }, new GUIActivationCallback() {
+                @Override
+                public boolean isVisible(InputState inputState) {
+                    return true;
+                }
+
+                @Override
+                public boolean isActive(InputState inputState) {
+                    return true;
+                }
+            });
+            fPos ++;
+        } else {
+            factionPane.addButton(0, fPos, "LEAVE FACTION", GUIHorizontalArea.HButtonColor.RED, new GUICallback() {
+                @Override
+                public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                    if(mouseEvent.pressedLeftMouse()) {
+                        (new PlayerGameOkCancelInput("CONFIRM", GameClient.getClientState(), "Confirm", "Do you really want to leave this faction?\n" + "You'll be unable to access any ship/structure that belongs to this\n" + "faction except for your ships that use the Personal Permission Rank.\n\n" + "If you are the last member, the faction will also automatically disband!") {
+                            public void onDeactivate() {
+
+                            }
+
+                            public void pressedOK() {
+                                getState().getController().queueUIAudio("0022_menu_ui - cancel");
+                                System.err.println("[CLIENT][FactionControlManager] leaving Faction");
+                                getState().getPlayer().getFactionController().leaveFaction();
+                                deactivate();
+                                onInit();
+                                }
+                        }).activate();
+                    }
+                }
+
+                @Override
+                public boolean isOccluded() {
+                    return factionPane.hide;
+                }
+            }, new GUIActivationCallback() {
+                @Override
+                public boolean isVisible(InputState inputState) {
+                    return true;
+                }
+
+                @Override
+                public boolean isActive(InputState inputState) {
+                    return true;
+                }
+            });
+            fPos ++;
+        }
+
+
+        scrollPanel.setContent(categories);
+        scrollPanel.onInit();
+        attach(scrollPanel);
+        /*
         (categories = new GUIElementList(getState())).onInit();
         categories.add(new GUIListElement(createFactionDropDown(GameClient.getClientPlayerState()), getState()));
         if(GameClient.getClientPlayerState().getFactionId() != 0) {
@@ -47,7 +152,10 @@ public class FactionActionsPanel extends GUIAncor {
             if(player.hasPermission("federation.[ANY]") && player.getFactionData().getFederationId() != -1) categories.add(new GUIListElement(createFederationDropDown(player, player.getFactionData()), getState()));
             if(player.hasPermission("trade.[ANY]")) categories.add(new GUIListElement(createTradeDropDown(player, player.getFactionData()), getState()));
         }
-        attach(categories);
+
+
+
+         */
         /*
         (categoryButtonPane = new GUIHorizontalButtonTablePane(getState(), 1, 1, this)).onInit();
         int categoryIndex = 0;
@@ -417,99 +525,8 @@ public class FactionActionsPanel extends GUIAncor {
          */
     }
 
-    private GUIDropDownList createFactionDropDown(final PlayerState playerState) {
-        GUICallback factionDropDownCallback = new GUICallback() {
-            @Override
-            public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                if(mouseEvent.pressedLeftMouse() && guiElement instanceof GUIListElementOverlayButton) {
-                    getState().getController().queueUIAudio("0022_menu_ui - select 2");
-                    String label = ((GUIListElementOverlayButton) guiElement).getText().toUpperCase().trim();
-                    String invitesText = Lng.str("Faction Invites (%s)", GameClient.getClientPlayerState().getFactionController().getInvitesIncoming().size()).toUpperCase().trim();
-                    if(label.equals(invitesText)) (new FactionIncomingInvitesPlayerInputNew(GameClient.getClientState())).activate();
-                    else {
-                        switch(label) {
-                            case "CREATE FACTION":
-                                if(playerState.getFactionId() == 0) (new FactionDialogNew(GameClient.getClientState(),"Create Faction")).activate();
-                                break;
-                            case "LEAVE FACTION":
-                                if(playerState.getFactionId() != 0) {
-                                    (new PlayerGameOkCancelInput("CONFIRM", GameClient.getClientState(), "Confirm", "Do you really want to leave this faction?\n" + "You'll be unable to access any ship/structure that belongs to this\n" + "faction except for your ships that use the Personal Permission Rank.\n\n" + "If you are the last member, the faction will also automatically disband!") {
-                                        public void onDeactivate() {
-
-                                        }
-
-                                        public void pressedOK() {
-                                            getState().getController().queueUIAudio("0022_menu_ui - cancel");
-                                            System.err.println("[CLIENT][FactionControlManager] leaving Faction");
-                                            getState().getPlayer().getFactionController().leaveFaction();
-                                            deactivate();
-                                            onInit();
-                                        }
-                                    }).activate();
-                                }
-                                break;
-                        }
-                    }
-                }
-            }
-
-            @Override
-            public boolean isOccluded() {
-                return false;
-            }
-        };
-
-        ArrayList<GUIListElement> elements = new ArrayList<>();
-        elements.add(new GUIListElement(new GUIListElementOverlayButton(getState(), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new Object() {
-            @Override
-            public String toString() {
-                return Lng.str("Faction Invites (%s)", GameClient.getClientPlayerState().getFactionController().getInvitesIncoming().size()).toUpperCase();
-            }
-        }.toString(), factionDropDownCallback), getState()));
-
-        GUIDropDownList factionDropDown = new GUIDropDownList(getState(), (int) getWidth(), 24, elements.size() * 24, new DropDownCallback() {
-            @Override
-            public void onSelectionChanged(GUIListElement guiListElement) {
-
-            }
-        }, elements);
-        return factionDropDown;
-    }
-
-    private GUIDropDownList createDiplomacyDropDown(FactionMember player, FactionData factionData) {
-        ArrayList<GUIListElement> elements = new ArrayList<>();
-
-        GUIDropDownList diplomacyDropDown = new GUIDropDownList(getState(), (int) getWidth(), 24, elements.size() * 24, new DropDownCallback() {
-            @Override
-            public void onSelectionChanged(GUIListElement guiListElement) {
-
-            }
-        }, elements);
-        return diplomacyDropDown;
-    }
-
-    private GUIDropDownList createFederationDropDown(FactionMember player, FactionData factionData) {
-        ArrayList<GUIListElement> elements = new ArrayList<>();
-
-        GUIDropDownList federationDropDown = new GUIDropDownList(getState(), (int) getWidth(), 24, elements.size() * 24, new DropDownCallback() {
-            @Override
-            public void onSelectionChanged(GUIListElement guiListElement) {
-
-            }
-        }, elements);
-        return federationDropDown;
-    }
-
-    private GUIDropDownList createTradeDropDown(FactionMember player, FactionData factionData) {
-        ArrayList<GUIListElement> elements = new ArrayList<>();
-
-        GUIDropDownList tradeDropDown = new GUIDropDownList(getState(), (int) getWidth(), 24, elements.size() * 24, new DropDownCallback() {
-            @Override
-            public void onSelectionChanged(GUIListElement guiListElement) {
-
-            }
-        }, elements);
-        return tradeDropDown;
+    public Faction getFaction() {
+        return faction;
     }
 
     public void setFaction(Faction faction) {
