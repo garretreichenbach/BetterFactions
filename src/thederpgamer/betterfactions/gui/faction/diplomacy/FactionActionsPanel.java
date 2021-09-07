@@ -10,9 +10,9 @@ import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea;
-import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalButtonTablePane;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.faction.FactionData;
+import thederpgamer.betterfactions.gui.elements.pane.GUIEnterableHorizontalButtonPane;
 
 /**
  * FactionActionsPanel.java
@@ -24,7 +24,7 @@ import thederpgamer.betterfactions.data.faction.FactionData;
 public class FactionActionsPanel extends GUIAncor {
 
     private GUIScrollablePanel scrollPanel;
-    private GUIHorizontalButtonTablePane categories;
+    private GUIEnterableHorizontalButtonPane categories;
 
     private Faction faction;
 
@@ -38,11 +38,11 @@ public class FactionActionsPanel extends GUIAncor {
     }
 
     public void recreateButtonPane() {
-        scrollPanel = new GUIScrollablePanel(getWidth(), getHeight(), this, getState());
-        categories = new GUIHorizontalButtonTablePane(getState(), 1, 1, scrollPanel);
+        scrollPanel = new GUIScrollablePanel(245, 300, this, getState());
+        categories = new GUIEnterableHorizontalButtonPane(getState(), 1, 1, scrollPanel);
         categories.onInit();
 
-        final GUIHorizontalButtonTablePane factionPane = categories.addSubButtonPane(0, 0, GUIHorizontalArea.HButtonColor.BLUE, "FACTION");
+        final GUIEnterableHorizontalButtonPane factionPane = categories.addSubButtonPane(0, 0, GUIHorizontalArea.HButtonColor.BLUE, "FACTION");
         factionPane.onInit();
         int fPos = 0;
         factionPane.addButton(0, fPos, new Object() {
@@ -143,6 +143,7 @@ public class FactionActionsPanel extends GUIAncor {
         scrollPanel.setContent(categories);
         scrollPanel.onInit();
         attach(scrollPanel);
+        scrollPanel.setPos(getPos());
         /*
         (categories = new GUIElementList(getState())).onInit();
         categories.add(new GUIListElement(createFactionDropDown(GameClient.getClientPlayerState()), getState()));
@@ -152,9 +153,6 @@ public class FactionActionsPanel extends GUIAncor {
             if(player.hasPermission("federation.[ANY]") && player.getFactionData().getFederationId() != -1) categories.add(new GUIListElement(createFederationDropDown(player, player.getFactionData()), getState()));
             if(player.hasPermission("trade.[ANY]")) categories.add(new GUIListElement(createTradeDropDown(player, player.getFactionData()), getState()));
         }
-
-
-
          */
         /*
         (categoryButtonPane = new GUIHorizontalButtonTablePane(getState(), 1, 1, this)).onInit();
@@ -1043,7 +1041,6 @@ public class FactionActionsPanel extends GUIAncor {
         for (GUIListElement element : factionButtonList) {
             ((GUIButtonListElement) element).setButtonWidth(factionButtonList.width - 4);
         }
-
          */
     }
 

@@ -3,7 +3,9 @@ package thederpgamer.betterfactions.utils;
 import api.utils.textures.StarLoaderTexture;
 import org.schema.schine.graphicsengine.forms.Sprite;
 import thederpgamer.betterfactions.BetterFactions;
-import thederpgamer.betterfactions.manager.SpriteManager;
+import thederpgamer.betterfactions.manager.LogManager;
+import thederpgamer.betterfactions.manager.ResourceManager;
+
 import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -27,7 +29,7 @@ public class ImageUtils {
     @Nullable
     public static Sprite getImage(String url, String name) {
         try {
-            Sprite sprite = SpriteManager.getSprite(name);
+            Sprite sprite = ResourceManager.getSprite(name);
             if(sprite != null) {
                 if(!sprite.getName().equals(name)) sprite.setName(name);
                 return scaleSprite(sprite, 200, 200);
@@ -57,7 +59,7 @@ public class ImageUtils {
                         public void run() {
                             Sprite sprite = StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), name);
                             sprite.setName(name);
-                            SpriteManager.addSprite(sprite);
+                            ResourceManager.addSprite(sprite);
                         }
                     });
                     downloadingImages.remove(url);
@@ -66,21 +68,21 @@ public class ImageUtils {
         }
     }
 
-    private static BufferedImage fromURL(String u) {
+    private static BufferedImage fromURL(String s) {
         BufferedImage image = null;
         try {
-            URL url = new URL(u);
+            URL url = new URL(s);
             URLConnection urlConnection = url.openConnection();
             urlConnection.setRequestProperty("User-Agent", "NING/1.0");
             InputStream stream = urlConnection.getInputStream();
             image = ImageIO.read(stream);
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch(IOException exception) {
+            LogManager.logException("Something went wrong while trying to fetch an image from url \"" + s + "\"", exception);
         }
         return image;
     }
 
     public static Sprite getDefaultLogo() {
-        return SpriteManager.getInstance().getResource("default-logo");
+        return ResourceManager.getSprite("default-logo");
     }
 }

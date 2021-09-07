@@ -7,10 +7,11 @@ import api.mod.config.PersistentObjectUtil;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionManager;
+import org.schema.schine.graphicsengine.forms.Sprite;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionMember;
-import thederpgamer.betterfactions.manager.SpriteManager;
+import thederpgamer.betterfactions.manager.ResourceManager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -97,15 +98,21 @@ public class FactionUtils {
         FactionData fData = new FactionData(faction);
 
         if(factionId == FactionManager.PIRATES_ID) {
-            fData.setFactionLogo(SpriteManager.getSprite("pirates-logo"));
+            fData.setFactionLogo(ResourceManager.getSprite("pirates-logo"));
             fData.setFactionDescription(piratesDescription);
         } else if(factionId == FactionManager.TRAIDING_GUILD_ID) {
-            fData.setFactionLogo(SpriteManager.getSprite("traders-logo"));
+            fData.setFactionLogo(ResourceManager.getSprite("traders-logo"));
             fData.setFactionDescription(tradingGuildDescription);
         } else {
-            fData.setFactionLogo(SpriteManager.getSprite("default-logo"));
+            fData.setFactionLogo(ResourceManager.getSprite("default-logo"));
             fData.setFactionDescription(defaultDescription);
         }
         return fData;
+    }
+
+    public static Sprite getFactionLogo(FactionData factionData) {
+        String spriteName = factionData.factionName.replace(" ", "-") + "-logo";
+        if(ResourceManager.getSprite(spriteName) != null) return ResourceManager.getSprite(spriteName);
+        else return ResourceManager.getSprite("default-logo");
     }
 }

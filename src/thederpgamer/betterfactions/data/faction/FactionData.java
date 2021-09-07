@@ -10,7 +10,7 @@ import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.forms.Sprite;
 import thederpgamer.betterfactions.data.federation.FactionMessage;
 import thederpgamer.betterfactions.data.federation.Federation;
-import thederpgamer.betterfactions.manager.SpriteManager;
+import thederpgamer.betterfactions.manager.ResourceManager;
 import thederpgamer.betterfactions.utils.FactionUtils;
 import thederpgamer.betterfactions.utils.FederationUtils;
 import java.io.Serializable;
@@ -39,7 +39,7 @@ public class FactionData implements FactionScore, Serializable {
         federationId = -1;
         factionName = faction.getName();
         factionDescription = faction.getDescription();
-        factionLogo = SpriteManager.getFactionLogo(this).getName();
+        factionLogo = FactionUtils.getFactionLogo(this).getName();
     }
 
     public Faction getFaction() {
@@ -80,7 +80,7 @@ public class FactionData implements FactionScore, Serializable {
     }
 
     public Sprite getFactionLogo() {
-        return SpriteManager.getSprite(factionLogo);
+        return ResourceManager.getSprite(factionLogo);
     }
 
     public void setFactionLogo(Sprite factionLogo) {

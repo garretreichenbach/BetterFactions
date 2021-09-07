@@ -8,6 +8,8 @@ import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.gui.faction.news.FactionNewsEntry;
+import thederpgamer.betterfactions.manager.ConfigManager;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -44,7 +46,7 @@ public class FactionNewsUtils {
         for(Object newsObject : PersistentObjectUtil.getObjects(instance, FactionNewsEntry.class)) {
             FactionNewsEntry newsEntry = (FactionNewsEntry) newsObject;
             int daysBetween = GeneralUtils.getDaysBetween(GeneralUtils.getCurrentDate(), new Date(newsEntry.date));
-            if(daysBetween > BetterFactions.getInstance().maxNewsBackup) toRemove.add(newsEntry);
+            if(daysBetween > ConfigManager.getMainConfig().getInt("max-news-backup")) toRemove.add(newsEntry);
         }
         for(FactionNewsEntry newsEntry : toRemove) PersistentObjectUtil.removeObject(instance, newsEntry);
         PersistentObjectUtil.save(instance);

@@ -8,7 +8,7 @@ import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
 import org.schema.schine.graphicsengine.forms.gui.GUIIconButton;
 import org.schema.schine.graphicsengine.forms.gui.GUITextOverlay;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.manager.SpriteManager;
+import thederpgamer.betterfactions.manager.ResourceManager;
 
 /**
  * FactionInfoPanel.java
@@ -32,7 +32,7 @@ public class FactionInfoPanel extends GUIAncor {
     public void onInit() {
         super.onInit();
 
-        factionLogo = new FactionLogoOverlay(SpriteManager.getSprite("default-logo"), this, getState());
+        factionLogo = new FactionLogoOverlay(ResourceManager.getSprite("default-logo"), this, getState());
         factionLogo.onInit();
 
         factionLogoButton = new GUIIconButton(getState(), (int) factionLogo.getWidth(), (int) factionLogo.getHeight(), factionLogo, factionLogo);

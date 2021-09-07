@@ -11,9 +11,10 @@ import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.GUIOverlay;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.manager.SpriteManager;
+import thederpgamer.betterfactions.manager.ResourceManager;
 import thederpgamer.betterfactions.utils.FactionUtils;
 import thederpgamer.betterfactions.utils.ImageUtils;
+
 import java.util.Locale;
 
 /**
@@ -55,9 +56,9 @@ public class FactionLogoOverlay extends GUIOverlay implements GUICallback {
                         if((s.startsWith("https://") || s.startsWith("http://")) && (s.toLowerCase(Locale.ROOT).endsWith(".png")
                                 || s.toLowerCase(Locale.ROOT).endsWith(".jpg") || s.toLowerCase(Locale.ROOT).endsWith(".jpeg"))) {
                             Sprite sprite = ImageUtils.getImage(s, faction.getName().replace(" ", "-") + "-logo");
-                            SpriteManager.addSprite(sprite);
+                            ResourceManager.addSprite(sprite);
                             FactionData factionData = FactionUtils.getFactionData(faction);
-                            factionData.setFactionLogo(SpriteManager.getFactionLogo(factionData));
+                            factionData.setFactionLogo(FactionUtils.getFactionLogo(factionData));
                             infoPanel.updateLogo(sprite);
                             return true;
                         } else return false;
