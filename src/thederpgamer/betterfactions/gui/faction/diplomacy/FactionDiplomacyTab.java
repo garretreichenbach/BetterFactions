@@ -9,6 +9,7 @@ import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIWindowInterface;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.faction.FactionData;
+import thederpgamer.betterfactions.manager.ResourceManager;
 import thederpgamer.betterfactions.utils.FactionUtils;
 
 /**
@@ -34,11 +35,12 @@ public class FactionDiplomacyTab extends GUIContentPane {
     public void onInit() {
         super.onInit();
         setTextBoxHeightLast(270);
-        addNewTextBox(0, 80);
-        addDivider(250);
+        setContent(0, 0, infoPanel = new FactionInfoPanel(getState()));
 
-        setContent(0, 0, (infoPanel = new FactionInfoPanel(getState())));
-        setContent(0, 1, (actionsPanel = new FactionActionsPanel(getState(), 245, 300)));
+        addNewTextBox(0, 80);
+        setContent(0, 1, actionsPanel = new FactionActionsPanel(getState(), 245, 300));
+
+        addDivider(250);
         getContent(1, 0).attach((factionList = new FactionDiplomacyList(getState(), getContent(1, 0), this)));
 
         infoPanel.onInit();
@@ -61,6 +63,7 @@ public class FactionDiplomacyTab extends GUIContentPane {
                 infoPanel.updateLogo(factionData.getFactionLogo());
             }
             actionsPanel.setFaction(selectedFaction);
+            actionsPanel.recreateButtonPane();
         } else if(GameClient.getClientPlayerState().getFactionId() != 0) {
             Faction faction = GameCommon.getGameState().getFactionManager().getFaction(GameClient.getClientPlayerState().getFactionId());
             infoPanel.setFaction(faction);
@@ -71,7 +74,18 @@ public class FactionDiplomacyTab extends GUIContentPane {
                 infoPanel.updateLogo(factionData.getFactionLogo());
             }
             actionsPanel.setFaction(faction);
-        } else infoPanel.setNameText("No Faction");
+            actionsPanel.recreateButtonPane();
+        } else {
+            infoPanel.setNameText("No Faction");
+            infoPanel.updateLogo(ResourceManager.getSprite("default-logo"));
+            actionsPanel.setFaction(null);
+            actionsPanel.recreateButtonPane();
+        }
+    }
+
+    @Override
+    public void draw() {
+        super.draw();
     }
 
     public void updateTab() {
@@ -89,7 +103,6 @@ public class FactionDiplomacyTab extends GUIContentPane {
             infoPanel.updateLogo(factionData.getFactionLogo());
         }
         actionsPanel.setFaction(selectedFaction);
-        actionsPanel.cleanUp();
-        actionsPanel.onInit();
+        actionsPanel.recreateButtonPane();
     }
 }

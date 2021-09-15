@@ -15,6 +15,7 @@ import thederpgamer.betterfactions.manager.ResourceManager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Objects;
 
 /**
  * FactionUtils.java
@@ -51,13 +52,13 @@ public class FactionUtils {
 
     public static FactionData getPlayerFactionData() {
         if(GameClient.getClientPlayerState().getFactionId() != 0) {
-            return getFactionData(getFaction(GameClient.getClientPlayerState()));
+            return getFactionData(Objects.requireNonNull(getFaction(GameClient.getClientPlayerState())));
         } else return null;
     }
 
     public static FactionMember getPlayerFactionMember() {
         if(GameClient.getClientPlayerState().getFactionId() != 0) {
-            return getFactionData(getFaction(GameClient.getClientPlayerState())).getMember(GameClient.getClientPlayerState().getName());
+            return getFactionData(Objects.requireNonNull(getFaction(GameClient.getClientPlayerState()))).getMember(GameClient.getClientPlayerState().getName());
         } else return null;
     }
 

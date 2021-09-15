@@ -14,6 +14,8 @@ import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.gui.elements.pane.GUIEnterableHorizontalButtonPane;
 
+import javax.annotation.Nullable;
+
 /**
  * FactionActionsPanel.java
  * <Description>
@@ -25,8 +27,11 @@ public class FactionActionsPanel extends GUIAncor {
 
     private GUIScrollablePanel scrollPanel;
     private GUIEnterableHorizontalButtonPane categories;
+    private GUIEnterableHorizontalButtonPane factionPane;
 
     private Faction faction;
+
+    private boolean initialized = false;
 
     public FactionActionsPanel(InputState inputState, float width, float height) {
         super(inputState, width, height);
@@ -34,16 +39,20 @@ public class FactionActionsPanel extends GUIAncor {
 
     @Override
     public void onInit() {
-        recreateButtonPane();
+        scrollPanel = new GUIScrollablePanel(24, 30, this, getState());
+        (categories = new GUIEnterableHorizontalButtonPane(getState(), 1, 1, scrollPanel)).onInit();
+        factionPane = categories.addSubButtonPane(0, 0, GUIHorizontalArea.HButtonColor.BLUE, "FACTION");
+        scrollPanel.setContent(categories);
+        scrollPanel.setScrollable(GUIScrollablePanel.SCROLLABLE_VERTICAL);
+        scrollPanel.onInit();
+        attach(scrollPanel);
+        initialized = true;
     }
 
     public void recreateButtonPane() {
-        scrollPanel = new GUIScrollablePanel(245, 300, this, getState());
-        categories = new GUIEnterableHorizontalButtonPane(getState(), 1, 1, scrollPanel);
-        categories.onInit();
-
-        final GUIEnterableHorizontalButtonPane factionPane = categories.addSubButtonPane(0, 0, GUIHorizontalArea.HButtonColor.BLUE, "FACTION");
+        if(!initialized) onInit();
         factionPane.onInit();
+
         int fPos = 0;
         factionPane.addButton(0, fPos, new Object() {
             @Override
@@ -76,6 +85,7 @@ public class FactionActionsPanel extends GUIAncor {
         fPos ++;
 
         if(GameClient.getClientPlayerState().getFactionId() == 0) {
+            factionPane.addRow();
             factionPane.addButton(0, fPos, "CREATE FACTION", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
@@ -101,6 +111,7 @@ public class FactionActionsPanel extends GUIAncor {
             });
             fPos ++;
         } else {
+            factionPane.addRow();
             factionPane.addButton(0, fPos, "LEAVE FACTION", GUIHorizontalArea.HButtonColor.RED, new GUICallback() {
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
@@ -140,10 +151,7 @@ public class FactionActionsPanel extends GUIAncor {
         }
 
 
-        scrollPanel.setContent(categories);
-        scrollPanel.onInit();
-        attach(scrollPanel);
-        scrollPanel.setPos(getPos());
+        //scrollPanel.setPos(getPos());
         /*
         (categories = new GUIElementList(getState())).onInit();
         categories.add(new GUIListElement(createFactionDropDown(GameClient.getClientPlayerState()), getState()));
@@ -527,7 +535,7 @@ public class FactionActionsPanel extends GUIAncor {
         return faction;
     }
 
-    public void setFaction(Faction faction) {
+    public void setFaction(@Nullable Faction faction) {
         this.faction = faction;
     }
 

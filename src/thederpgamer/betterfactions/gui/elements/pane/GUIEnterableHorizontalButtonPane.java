@@ -52,6 +52,7 @@ public class GUIEnterableHorizontalButtonPane extends GUIHorizontalButtonTablePa
         });
         subPane.dependend = button;
         subPane.onInit();
+        button.attach(subPane);
         subPane.totalButtonWidthOffset -= button.getWidth() / 20.0f;
         subPane.setPos(button.getPos());
         subPane.getPos().x += button.getWidth() / 10.0f;
@@ -88,6 +89,7 @@ public class GUIEnterableHorizontalButtonPane extends GUIHorizontalButtonTablePa
         });
         subPane.dependend = button;
         subPane.onInit();
+        button.attach(subPane);
         subPane.totalButtonWidthOffset -= button.getWidth() / 20.0f;
         subPane.setPos(button.getPos());
         subPane.getPos().x += button.getWidth() / 10.0f;
@@ -114,7 +116,7 @@ public class GUIEnterableHorizontalButtonPane extends GUIHorizontalButtonTablePa
     }
 
     private void checkSize(int x, int y) {
-        if(getButtons() != null) {
+        if(getButtons() != null && getButtons().length > 0 && getButtons()[0].length > 0) {
             if(getButtons().length <= y) {
                 int additionalColumns = (y + 1) - getButtons().length;
                 for(int i = 0; i < additionalColumns; i ++) addColumn();

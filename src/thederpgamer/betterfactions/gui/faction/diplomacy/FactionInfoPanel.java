@@ -8,13 +8,13 @@ import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
 import org.schema.schine.graphicsengine.forms.gui.GUIIconButton;
 import org.schema.schine.graphicsengine.forms.gui.GUITextOverlay;
 import org.schema.schine.input.InputState;
+import thederpgamer.betterfactions.manager.ConfigManager;
 import thederpgamer.betterfactions.manager.ResourceManager;
 
 /**
- * FactionInfoPanel.java
- * <Description>
+ * Faction info GUI panel.
  *
- * @since 01/30/2021
+ * @version 1.0 - [01/30/20201]
  * @author TheDerpGamer
  */
 public class FactionInfoPanel extends GUIAncor {
@@ -23,6 +23,8 @@ public class FactionInfoPanel extends GUIAncor {
     private FactionLogoOverlay factionLogo;
     private GUITextOverlay nameOverlay;
     private GUITextOverlay infoOverlay;
+
+    private GUITextOverlay debugText;
 
     public FactionInfoPanel(InputState inputState) {
         super(inputState);
@@ -67,7 +69,33 @@ public class FactionInfoPanel extends GUIAncor {
     @Override
     public void draw() {
         super.draw();
-        factionLogoButton.setImagePos((int) factionLogoButton.getPos().x + 100, (int) factionLogoButton.getPos().y + 100);
+        factionLogoButton.setPos(20.0f, 20.0f, 0.0f);
+        if(ConfigManager.getMainConfig().getBoolean("debug-mode")) handleDebug();
+    }
+
+    private void handleDebug() {
+        /*
+        if(Keyboard.isKeyDown(Keyboard.KEY_LMENU)) {
+            float amount = Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) ? 1.0f : 0.1f;
+            if(Keyboard.isKeyDown(Keyboard.KEY_LEFT)) factionLogoButton.getPos().x -= amount;
+            if(Keyboard.isKeyDown(Keyboard.KEY_RIGHT)) factionLogoButton.getPos().x += amount;
+            if(Keyboard.isKeyDown(Keyboard.KEY_UP)) factionLogoButton.getPos().y -= amount;
+            if(Keyboard.isKeyDown(Keyboard.KEY_DOWN)) factionLogoButton.getPos().y += amount;
+
+            DecimalFormat format = new DecimalFormat("#.#");
+            factionLogoButton.getPos().x = Float.parseFloat(format.format(factionLogoButton.getPos().x));
+            factionLogoButton.getPos().y = Float.parseFloat(format.format(factionLogoButton.getPos().y));
+            factionLogoButton.getPos().z = Float.parseFloat(format.format(factionLogoButton.getPos().z));
+            String pos = factionLogoButton.getPos().toString();
+
+            enableOrthogonal();
+            if(debugText == null) (debugText = new GUITextOverlay(300, 300, getState())).onInit();
+            debugText.getPos().set((float) (Mouse.getX() + 10), (float) (GLFrame.getHeight() - Mouse.getY()), 0.0F);
+            debugText.setTextSimple(pos);
+            debugText.draw();
+            disableOrthogonal();
+        }
+         */
     }
 
     public void updateLogo(Sprite logo) {

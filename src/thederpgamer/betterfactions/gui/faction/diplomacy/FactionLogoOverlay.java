@@ -27,7 +27,7 @@ import java.util.Locale;
 public class FactionLogoOverlay extends GUIOverlay implements GUICallback {
 
     private Faction faction;
-    private FactionInfoPanel infoPanel;
+    private final FactionInfoPanel infoPanel;
 
     public FactionLogoOverlay(Sprite sprite, FactionInfoPanel infoPanel, InputState inputState) {
         super(sprite, inputState);
@@ -56,6 +56,9 @@ public class FactionLogoOverlay extends GUIOverlay implements GUICallback {
                         if((s.startsWith("https://") || s.startsWith("http://")) && (s.toLowerCase(Locale.ROOT).endsWith(".png")
                                 || s.toLowerCase(Locale.ROOT).endsWith(".jpg") || s.toLowerCase(Locale.ROOT).endsWith(".jpeg"))) {
                             Sprite sprite = ImageUtils.getImage(s, faction.getName().replace(" ", "-") + "-logo");
+                            assert sprite != null;
+                            sprite.setWidth(ResourceManager.SPRITE_WIDTH);
+                            sprite.setHeight(ResourceManager.SPRITE_HEIGHT);
                             ResourceManager.addSprite(sprite);
                             FactionData factionData = FactionUtils.getFactionData(faction);
                             factionData.setFactionLogo(FactionUtils.getFactionLogo(factionData));

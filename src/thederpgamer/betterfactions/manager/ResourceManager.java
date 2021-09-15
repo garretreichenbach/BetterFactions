@@ -19,8 +19,8 @@ import java.util.HashMap;
  */
 public class ResourceManager {
 
-    public static final int SPRITE_WIDTH = 256;
-    public static final int SPRITE_HEIGHT = 256;
+    public static final int SPRITE_WIDTH = 200;
+    public static final int SPRITE_HEIGHT = 200;
 
     private static final BetterFactions instance = BetterFactions.getInstance();
 
@@ -69,7 +69,10 @@ public class ResourceManager {
     }
 
     public static Sprite getSprite(String name) {
-        return spriteMap.get(name);
+        Sprite sprite = spriteMap.get(name);
+        sprite.setWidth(SPRITE_WIDTH);
+        sprite.setHeight(SPRITE_HEIGHT);
+        return sprite;
     }
 
     public static void addSprite(Sprite sprite) {
