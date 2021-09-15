@@ -13,10 +13,9 @@ import thederpgamer.betterfactions.manager.ResourceManager;
 import thederpgamer.betterfactions.utils.FactionUtils;
 
 /**
- * FactionDiplomacyTab.java
  * <Description>
  *
- * @since 01/30/2021
+ * @version 1.0 - [01/30/2021]
  * @author TheDerpGamer
  */
 public class FactionDiplomacyTab extends GUIContentPane {
@@ -35,13 +34,12 @@ public class FactionDiplomacyTab extends GUIContentPane {
     public void onInit() {
         super.onInit();
         setTextBoxHeightLast(270);
-        setContent(0, 0, infoPanel = new FactionInfoPanel(getState()));
-
         addNewTextBox(0, 80);
-        setContent(0, 1, actionsPanel = new FactionActionsPanel(getState(), 245, 300));
-
         addDivider(250);
-        getContent(1, 0).attach((factionList = new FactionDiplomacyList(getState(), getContent(1, 0), this)));
+
+        setContent(0, 0, infoPanel = new FactionInfoPanel(getState()));
+        setContent(0, 1, actionsPanel = new FactionActionsPanel(getState(), 245, 300));
+        getContent(1, 0).attach(factionList = new FactionDiplomacyList(getState(), getContent(1, 0), this));
 
         infoPanel.onInit();
         actionsPanel.onInit();
