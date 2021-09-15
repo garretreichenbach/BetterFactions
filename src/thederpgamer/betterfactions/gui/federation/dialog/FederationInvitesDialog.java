@@ -12,8 +12,9 @@ import org.schema.schine.input.InputState;
 import org.schema.schine.network.client.ClientState;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.federation.FactionMessage;
-import thederpgamer.betterfactions.utils.FactionUtils;
-import thederpgamer.betterfactions.utils.FederationUtils;
+import thederpgamer.betterfactions.manager.FactionManager;
+import thederpgamer.betterfactions.manager.FederationManager;
+
 import javax.vecmath.Vector4f;
 
 /**
@@ -53,7 +54,7 @@ public class FederationInvitesDialog extends PlayerGameOkCancelInput {
         protected void updateInvitationList(GUIElementList elementList) {
             elementList.clear();
             int i = 0;
-            FactionData factionData = FactionUtils.getPlayerFactionData();
+            FactionData factionData = FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName());
             for(FactionMessage message : factionData.getInbox()) {
                 if(message.messageType.equals(FactionMessage.MessageType.FEDERATION_INVITE)) {
                     elementList.add(new IncomingInvitationListElement(getState(), message, i));
@@ -109,16 +110,16 @@ public class FederationInvitesDialog extends PlayerGameOkCancelInput {
             public void callback(GUIElement element, MouseEvent mouseEvent) {
                 if(mouseEvent.pressedLeftMouse()) {
                     if("ACCEPT".equals(element.getUserPointer())) {
-                        if(FactionUtils.getFactionData(invite.getRecipient()).getFederationId() != -1) {
+                        if(FactionManager.getFactionData(invite.getRecipient()).getFederationId() != -1) {
                             new SimplePopup(getState(), Lng.str("Cannot accept invitation"), Lng.str("Your faction is already part of a federation and cannot join another one."));
                         } else {
-                            FederationUtils.getFederation(FactionUtils.getFactionData(invite.getRecipient())).addMember(FactionUtils.getFactionData(invite.getRecipient()));
+                            FederationManager.getFederation(FactionManager.getFactionData(invite.getRecipient())).addMember(FactionManager.getFactionData(invite.getRecipient()));
                         }
                         return;
                     }
 
                     if("DECLINE".equals(element.getUserPointer())) {
-                        FactionUtils.getFactionData(invite.getSender()).getInbox().remove(invite);
+                        FactionManager.getFactionData(invite.getSender()).getInbox().remove(invite);
                     }
                 }
             }

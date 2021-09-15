@@ -11,8 +11,8 @@ import org.schema.schine.graphicsengine.forms.gui.GUIElementList;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.utils.FactionUtils;
-import thederpgamer.betterfactions.utils.FederationUtils;
+import thederpgamer.betterfactions.manager.FactionManager;
+import thederpgamer.betterfactions.manager.FederationManager;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -56,8 +56,8 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
 
         this.addColumn("Federation", 15.0F, new Comparator<FactionData>() {
             public int compare(FactionData o1, FactionData o2) {
-                String federationName1 = (o1.getFederationId() != -1) ? FederationUtils.getFederation(o1).getName() : "Non-Aligned";
-                String federationName2 = (o2.getFederationId() != -1) ? FederationUtils.getFederation(o2).getName() : "Non-Aligned";
+                String federationName1 = (o1.getFederationId() != -1) ? FederationManager.getFederation(o1).getName() : "Non-Aligned";
+                String federationName2 = (o2.getFederationId() != -1) ? FederationManager.getFederation(o2).getName() : "Non-Aligned";
                 return federationName1.compareTo(federationName2);
             }
         });
@@ -113,7 +113,7 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
     @Override
     public Collection<FactionData> getElementList() {
         ArrayList<FactionData> factionList = new ArrayList<>();
-        factionList.addAll(FactionUtils.getFactionDataMap().values());
+        factionList.addAll(FactionManager.getFactionDataMap().values());
         return factionList;
     }
 
@@ -128,7 +128,7 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
             GUIClippedRow nameRowElement;
             (nameRowElement = new GUIClippedRow(this.getState())).attach(nameTextElement);
 
-            String federationName = (FederationUtils.getFederation(factionData) != null) ? FederationUtils.getFederation(factionData).getName() : "Non-Aligned";
+            String federationName = (FederationManager.getFederation(factionData) != null) ? FederationManager.getFederation(factionData).getName() : "Non-Aligned";
             GUITextOverlayTable federationTextElement;
             (federationTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(federationName);
             GUIClippedRow federationRowElement;

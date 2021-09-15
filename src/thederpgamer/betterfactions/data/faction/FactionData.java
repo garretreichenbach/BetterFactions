@@ -11,8 +11,9 @@ import org.schema.schine.graphicsengine.forms.Sprite;
 import thederpgamer.betterfactions.data.federation.FactionMessage;
 import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.manager.ResourceManager;
-import thederpgamer.betterfactions.utils.FactionUtils;
-import thederpgamer.betterfactions.utils.FederationUtils;
+import thederpgamer.betterfactions.manager.FactionManager;
+import thederpgamer.betterfactions.manager.FederationManager;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 
@@ -39,7 +40,7 @@ public class FactionData implements FactionScore, Serializable {
         federationId = -1;
         factionName = faction.getName();
         factionDescription = faction.getDescription();
-        factionLogo = FactionUtils.getFactionLogo(this).getName();
+        factionLogo = FactionManager.getFactionLogo(this).getName();
     }
 
     public Faction getFaction() {
@@ -67,7 +68,7 @@ public class FactionData implements FactionScore, Serializable {
     }
 
     public Federation getFederation() {
-        if(federationId != -1) return FederationUtils.getFederation(this);
+        if(federationId != -1) return FederationManager.getFederation(this);
         else return null;
     }
 
@@ -90,7 +91,7 @@ public class FactionData implements FactionScore, Serializable {
     public String getInfo() {
         StringBuilder builder = new StringBuilder();
         String federation = "Non-Aligned";
-        if(FederationUtils.getFederation(this) != null) federation = FederationUtils.getFederation(this).getName();
+        if(FederationManager.getFederation(this) != null) federation = FederationManager.getFederation(this).getName();
         builder.append(federation);
         builder.append("\n");
         builder.append(getRelationString());
@@ -107,7 +108,7 @@ public class FactionData implements FactionScore, Serializable {
             if(playerFactionId == factionId) return "Own Faction";
             else {
                 Faction playerFaction = GameCommon.getGameState().getFactionManager().getFaction(playerFactionId);
-                FactionData playerFactionData = FactionUtils.getFactionData(playerFaction);
+                FactionData playerFactionData = FactionManager.getFactionData(playerFaction);
                 if(playerFactionData.getFederationId() != -1) {
                     if(federationId != -1) {
                         if(playerFactionData.getFederationId() == federationId) return Lng.str("In Federation");

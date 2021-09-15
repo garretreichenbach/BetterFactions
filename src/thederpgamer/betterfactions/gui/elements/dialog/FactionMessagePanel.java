@@ -13,7 +13,7 @@ import org.schema.schine.graphicsengine.forms.gui.newgui.GUIDialogWindow;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.federation.FactionMessage;
-import thederpgamer.betterfactions.utils.FactionUtils;
+import thederpgamer.betterfactions.manager.FactionManager;
 
 /**
  * FactionMessagePanel.java
@@ -63,7 +63,7 @@ public class FactionMessagePanel extends GUIInputPanel {
 
     public void sendMessage(FactionMessage.MessageType messageType) {
         FactionMessage message = new FactionMessage(from, to, getTitle(), getMessage(), messageType);
-        FactionData toData = FactionUtils.getFactionData(to);
+        FactionData toData = FactionManager.getFactionData(to);
         toData.addMessage(message);
     }
 

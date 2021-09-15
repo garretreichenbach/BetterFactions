@@ -70,6 +70,7 @@ public class ResourceManager {
 
     public static Sprite getSprite(String name) {
         Sprite sprite = spriteMap.get(name);
+        if(sprite == null) sprite = getSprite("default-logo");
         sprite.setWidth(SPRITE_WIDTH);
         sprite.setHeight(SPRITE_HEIGHT);
         return sprite;

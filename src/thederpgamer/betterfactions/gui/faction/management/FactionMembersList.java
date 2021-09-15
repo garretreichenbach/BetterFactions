@@ -1,5 +1,6 @@
 package thederpgamer.betterfactions.gui.faction.management;
 
+import api.common.GameClient;
 import org.hsqldb.lib.StringComparator;
 import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.client.data.GameClientState;
@@ -10,9 +11,11 @@ import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionMember;
 import thederpgamer.betterfactions.data.faction.FactionRank;
-import thederpgamer.betterfactions.utils.FactionUtils;
+import thederpgamer.betterfactions.manager.FactionManager;
+
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -35,7 +38,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
 
     @Override
     public ArrayList<FactionMember> getElementList() {
-        return FactionUtils.getPlayerFactionData().getMembers();
+        return Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getMembers();
     }
 
     @Override
@@ -116,7 +119,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
     private String[] getFactionRanksString() {
         ArrayList<String> ranksStringList = new ArrayList<>();
         ranksStringList.add("ALL");
-        for(FactionRank rank : FactionUtils.getPlayerFactionData().getRanks()) {
+        for(FactionRank rank : Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getRanks()) {
             ranksStringList.add(rank.getRankName());
         }
         return ranksStringList.toArray(new String[0]);
@@ -126,22 +129,22 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
     public void updateListEntries(GUIElementList guiElementList, Set<FactionMember> set) {
         guiElementList.deleteObservers();
         guiElementList.addObserver(this);
-        FactionMember playerFactionMember = FactionUtils.getPlayerFactionMember();
+        FactionMember playerFactionMember = FactionManager.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
         for(FactionMember factionMember : set) {
-            GUITextOverlayTable nameTextElement;
-            (nameTextElement = new GUITextOverlayTable(10, 10, getState())).setTextSimple(factionMember.getName());
-            GUIClippedRow nameRowElement;
-            (nameRowElement = new GUIClippedRow(getState())).attach(nameTextElement);
+            if(factionMember != null) {
+                GUITextOverlayTable nameTextElement;
+                (nameTextElement = new GUITextOverlayTable(10, 10, getState())).setTextSimple(factionMember.getName());
+                GUIClippedRow nameRowElement;
+                (nameRowElement = new GUIClippedRow(getState())).attach(nameTextElement);
 
-            FactionMembersListRow factionMembersListRow = new FactionMembersListRow(getState(), factionMember, nameRowElement);
-            if(playerFactionMember != null && playerFactionMember.hasPermission("manage.members.[ANY]")) {
-                GUIAncor anchor = new GUIAncor(getState(), getWidth() - 4, 28.0f);
-                anchor.attach(redrawButtonPane(factionMember, playerFactionMember, anchor));
+                FactionMembersListRow factionMembersListRow = new FactionMembersListRow(getState(), factionMember, nameRowElement);
                 factionMembersListRow.expanded = new GUIElementList(getState());
+                GUIAncor anchor = new GUIAncor(getState(), getWidth() - 4, 28.0f);
+                if(playerFactionMember != null && playerFactionMember.hasPermission("manage.members.[ANY]")) anchor.attach(redrawButtonPane(factionMember, playerFactionMember, anchor));
                 factionMembersListRow.expanded.add(new GUIListElement(anchor, getState()));
+                factionMembersListRow.onInit();
+                guiElementList.add(factionMembersListRow);
             }
-            factionMembersListRow.onInit();
-            guiElementList.add(factionMembersListRow);
         }
         guiElementList.updateDim();
     }

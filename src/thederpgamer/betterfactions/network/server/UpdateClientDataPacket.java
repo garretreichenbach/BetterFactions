@@ -5,21 +5,19 @@ import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
 import api.utils.other.HashList;
 import org.schema.game.common.data.player.PlayerState;
-import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.federation.Federation;
-import thederpgamer.betterfactions.utils.FactionUtils;
-import thederpgamer.betterfactions.utils.FederationUtils;
+import thederpgamer.betterfactions.manager.FactionManager;
+import thederpgamer.betterfactions.manager.FederationManager;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 /**
- * UpdateClientDataPacket.java
  * Updates client data periodically
- * [Server -> Client]
- * ==================================================
- * Created 01/31/2021
+ *
+ * version 1.0 - [01/31/2021]
  * @author TheDerpGamer
  */
 public class UpdateClientDataPacket extends Packet {
@@ -42,11 +40,7 @@ public class UpdateClientDataPacket extends Packet {
         }
     }
 
-    private HashList<DataType, Object> dataMap;
-
-    public UpdateClientDataPacket() {
-
-    }
+    private final HashList<DataType, Object> dataMap = new HashList<>();
 
     @Override
     public void readPacketData(PacketReadBuffer packetReadBuffer) throws IOException {
@@ -98,36 +92,27 @@ public class UpdateClientDataPacket extends Packet {
 
     @Override
     public void processPacketOnClient() {
-        ArrayList<FactionData> factionData = new ArrayList<>();
-        for(Object faction : dataMap.get(DataType.FACTION_DATA)) {
-            factionData.add((FactionData) faction);
+        if(dataMap.containsKey(DataType.FACTION_DATA)) {
+            ArrayList<FactionData> factionData = new ArrayList<>();
+            for(Object faction : dataMap.get(DataType.FACTION_DATA)) factionData.add((FactionData) faction);
+            FactionManager.updateFromServer(factionData);
         }
-        //FactionUtils.updateFromServer(factionData);
 
-        ArrayList<Federation> federations = new ArrayList<>();
-        for(Object federation : dataMap.get(DataType.FEDERATION_DATA)) {
-            federations.add((Federation) federation);
+        if(dataMap.containsKey(DataType.FEDERATION_DATA)) {
+            ArrayList<Federation> federations = new ArrayList<>();
+            for(Object federation : dataMap.get(DataType.FEDERATION_DATA)) federations.add((Federation) federation);
+            FederationManager.updateFromServer(federations);
         }
-        //FederationUtils.updateFromServer(federations);
     }
 
     @Override
     public void processPacketOnServer(PlayerState playerState) {
-        dataMap = new HashList<>();
+        HashMap<Integer, FactionData> factionDataMap = FactionManager.getFactionDataMap();
+        ArrayList<Object> factionDataList = new ArrayList<Object>(factionDataMap.values());
+        dataMap.put(DataType.FACTION_DATA, factionDataList);
 
-        HashMap<Integer, FactionData> factionDataMap = FactionUtils.getFactionDataMap();
-        if(factionDataMap != null) {
-            ArrayList<Object> factionDataList = new ArrayList<>();
-            factionDataList.addAll(factionDataMap.values());
-            dataMap.put(DataType.FACTION_DATA, factionDataList);
-        }
-
-        HashMap<Integer, Federation> federationMap = FederationUtils.getFederationMap();
-        if(federationMap != null) {
-            ArrayList<Object> federationList = new ArrayList<>();
-            federationList.addAll(federationMap.values());
-            dataMap.put(DataType.FEDERATION_DATA, federationList);
-        }
-        BetterFactions.getInstance().lastClientUpdate = 0;
+        HashMap<Integer, Federation> federationMap = FederationManager.getFederationMap();
+        ArrayList<Object> federationList = new ArrayList<Object>(federationMap.values());
+        dataMap.put(DataType.FEDERATION_DATA, federationList);
     }
 }

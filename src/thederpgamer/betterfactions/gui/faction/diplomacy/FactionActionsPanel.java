@@ -1,20 +1,25 @@
 package thederpgamer.betterfactions.gui.faction.diplomacy;
 
 import api.common.GameClient;
+import api.common.GameCommon;
 import org.schema.game.client.controller.PlayerGameOkCancelInput;
 import org.schema.game.client.controller.manager.ingame.faction.FactionDialogNew;
 import org.schema.game.client.view.gui.faction.newfaction.FactionIncomingInvitesPlayerInputNew;
-import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
+import org.schema.game.common.data.player.faction.FactionRelation;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea;
 import org.schema.schine.input.InputState;
+import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.faction.FactionData;
+import thederpgamer.betterfactions.data.faction.FactionMember;
 import thederpgamer.betterfactions.gui.elements.pane.GUIExpandableButtonPane;
+import thederpgamer.betterfactions.manager.FactionManager;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * <Description>
@@ -52,392 +57,21 @@ public class FactionActionsPanel extends GUIAncor {
         if(!initialized) onInit();
         int pos = 0;
         buttonPane.onInit();
-        createPersonalPane(pos);
-
-        //scrollPanel.setPos(getPos());
-        /*
-        (categories = new GUIElementList(getState())).onInit();
-        categories.add(new GUIListElement(createFactionDropDown(GameClient.getClientPlayerState()), getState()));
+        createPersonalPane(pos ++);
         if(GameClient.getClientPlayerState().getFactionId() != 0) {
-            FactionMember player = FactionUtils.getPlayerFactionMember();
-            if(player.hasPermission("diplomacy.[ANY]")) categories.add(new GUIListElement(createDiplomacyDropDown(player, player.getFactionData()), getState()));
-            if(player.hasPermission("federation.[ANY]") && player.getFactionData().getFederationId() != -1) categories.add(new GUIListElement(createFederationDropDown(player, player.getFactionData()), getState()));
-            if(player.hasPermission("trade.[ANY]")) categories.add(new GUIListElement(createTradeDropDown(player, player.getFactionData()), getState()));
+            FactionMember player = FactionManager.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
+            if(player != null) {
+                if(player.hasPermission("diplomacy.[ANY]")) createDiplomacyPane(pos ++, player);
+                if(player.hasPermission("federation.[ANY]") && player.getFactionData().getFederationId() != -1) createFederationPane(pos ++, player);
+                if(player.hasPermission("trade.[ANY]")) createTradePane(pos ++, player);
+            }
         }
-         */
-        /*
-        (categoryButtonPane = new GUIHorizontalButtonTablePane(getState(), 1, 1, this)).onInit();
-        int categoryIndex = 0;
-        int factionButtonIndex = 0;
-        int diplomacyButtonIndex = 0;
-        int federationButtonIndex = 0;
-        int tradeButtonIndex = 0;
-
-        (factionButtonPane = new GUIHorizontalButtonTablePane(getState(), 1, 1, this)).onInit();
-        (diplomacyButtonPane = new GUIHorizontalButtonTablePane(getState(), 1, 1, this)).onInit();
-        (federationButtonPane = new GUIHorizontalButtonTablePane(getState(), 1, 1, this)).onInit();
-        (tradeButtonPane = new GUIHorizontalButtonTablePane(getState(), 1, 1, this)).onInit();
-
-        final int playerFactionId = GameClient.getClientPlayerState().getFactionId();
-
-        categoryButtonPane.addButton(0, categoryIndex, "FACTION", GUIHorizontalArea.HButtonColor.PINK, new GUICallback() {
-            @Override
-            public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                if(mouseEvent.pressedLeftMouse()) {
-                    getState().getController().queueUIAudio("0022_menu_ui - select 1");
-                    toggleButtonPane(factionButtonPane);
-                }
-            }
-
-            @Override
-            public boolean isOccluded() {
-                return false;
-            }
-        }, new GUIActivationCallback() {
-            @Override
-            public boolean isVisible(InputState inputState) {
-                return true;
-            }
-
-            @Override
-            public boolean isActive(InputState inputState) {
-                return true;
-            }
-        });
-        categoryIndex ++;
-
-        factionButtonPane.addButton(0, factionButtonIndex, "", GUIHorizontalArea.HButtonType.TEXT_FIELD, new GUICallback() {
-            @Override
-            public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                if(mouseEvent.pressedLeftMouse()) {
-                    getState().getController().queueUIAudio("0022_menu_ui - select 1");
-                    toggleButtonPane(factionButtonPane);
-                }
-            }
-
-            @Override
-            public boolean isOccluded() {
-                return true;
-            }
-        }, new GUIActivationCallback() {
-            @Override
-            public boolean isVisible(InputState inputState) {
-                return false;
-            }
-
-            @Override
-            public boolean isActive(InputState inputState) {
-                return false;
-            }
-        });
-        factionButtonIndex ++;
-
-        factionButtonPane.addButton(0, factionButtonIndex, new Object() {
-            @Override
-            public String toString() {
-                return Lng.str("Faction Invites (%s)", GameClient.getClientPlayerState().getFactionController().getInvitesIncoming().size());
-            }
-        }.toString(), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new GUICallback() {
-            @Override
-            public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                if(mouseEvent.pressedLeftMouse()) {
-                    getState().getController().queueUIAudio("0022_menu_ui - select 2");
-                    (new FactionIncomingInvitesPlayerInputNew(GameClient.getClientState())).activate();
-                }
-            }
-
-            @Override
-            public boolean isOccluded() {
-                return factionButtonPane.isInvisible();
-            }
-        }, new GUIActivationCallback() {
-            @Override
-            public boolean isVisible(InputState inputState) {
-                return !factionButtonPane.isInvisible();
-            }
-
-            @Override
-            public boolean isActive(InputState inputState) {
-                return !factionButtonPane.isInvisible();
-            }
-        });
-        factionButtonIndex ++;
-
-        if(playerFactionId != 0) {
-            if(faction != null) {
-                if(faction.getIdFaction() == playerFactionId) {
-                    factionButtonPane.addButton(0, factionButtonIndex, "LEAVE FACTION", GUIHorizontalArea.HButtonColor.ORANGE, new GUICallback() {
-                        @Override
-                        public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                            if (mouseEvent.pressedLeftMouse()) {
-                                getState().getController().queueUIAudio("0022_menu_ui - select 2");
-                                (new PlayerGameOkCancelInput("CONFIRM", GameClient.getClientState(), "Confirm", "Do you really want to leave this faction?\n" + "You'll be unable to access any ship/structure that belongs to this\n" + "faction except for your ships that use the Personal Permission Rank.\n\n" + "If you are the last member, the faction will also automatically disband!") {
-                                    public void onDeactivate() {
-
-                                    }
-
-                                    public void pressedOK() {
-                                        getState().getController().queueUIAudio("0022_menu_ui - cancel");
-                                        System.err.println("[CLIENT][FactionControlManager] leaving Faction");
-                                        getState().getPlayer().getFactionController().leaveFaction();
-                                        deactivate();
-                                    }
-                                }).activate();
-                            }
-                        }
-
-                        @Override
-                        public boolean isOccluded() {
-                            return factionButtonPane.isInvisible();
-                        }
-                    }, new GUIActivationCallback() {
-                        @Override
-                        public boolean isVisible(InputState inputState) {
-                            return !factionButtonPane.isInvisible();
-                        }
-
-                        @Override
-                        public boolean isActive(InputState inputState) {
-                            return !factionButtonPane.isInvisible();
-                        }
-                    });
-                    factionButtonIndex ++;
-                } else {
-                    final FactionMember playerFactionMember = FactionUtils.getPlayerFactionMember();
-                    if(playerFactionMember.hasPermission("diplomacy.[ANY]")) {
-                        diplomacyButtonPane.addButton(0, diplomacyButtonIndex, "", GUIHorizontalArea.HButtonType.TEXT_FIELD, new GUICallback() {
-                            @Override
-                            public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                                if(mouseEvent.pressedLeftMouse()) {
-                                    getState().getController().queueUIAudio("0022_menu_ui - select 1");
-                                    toggleButtonPane(diplomacyButtonPane);
-                                }
-                            }
-
-                            @Override
-                            public boolean isOccluded() {
-                                return true;
-                            }
-                        }, new GUIActivationCallback() {
-                            @Override
-                            public boolean isVisible(InputState inputState) {
-                                return false;
-                            }
-
-                            @Override
-                            public boolean isActive(InputState inputState) {
-                                return false;
-                            }
-                        });
-                        diplomacyButtonIndex ++;
-
-                        categoryButtonPane.addButton(0, categoryIndex, "DIPLOMACY", GUIHorizontalArea.HButtonColor.BLUE, new GUICallback() {
-                            @Override
-                            public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                                if(mouseEvent.pressedLeftMouse()) {
-                                    getState().getController().queueUIAudio("0022_menu_ui - select 1");
-                                    toggleButtonPane(diplomacyButtonPane);
-                                }
-                            }
-
-                            @Override
-                            public boolean isOccluded() {
-                                return false;
-                            }
-                        }, new GUIActivationCallback() {
-                            @Override
-                            public boolean isVisible(InputState inputState) {
-                                return true;
-                            }
-
-                            @Override
-                            public boolean isActive(InputState inputState) {
-                                return true;
-                            }
-                        });
-                        categoryIndex ++;
-
-                        if(playerFactionMember.hasPermission("diplomacy.ally")) {
-                            if(faction.getFriends().contains(playerFactionMember.getFactionData().getFaction())) {
-                                diplomacyButtonPane.addButton(0, diplomacyButtonIndex, "REMOVE ALLY", GUIHorizontalArea.HButtonColor.ORANGE, new GUICallback() {
-                                    @Override
-                                    public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                                        if (mouseEvent.pressedLeftMouse()) {
-                                            getState().getController().queueUIAudio("0022_menu_ui - select 2");
-                                            (new PlayerGameOkCancelInput("CONFIRM", GameClient.getClientState(), "Confirm", "Do you really want to leave this faction?\n" + "You'll be unable to access any ship/structure that belongs to this\n" + "faction except for your ships that use the Personal Permission Rank.\n\n" + "If you are the last member, the faction will also automatically disband!") {
-                                                public void onDeactivate() {
-
-                                                }
-
-                                                public void pressedOK() {
-                                                    getState().getController().queueUIAudio("0022_menu_ui - cancel");
-                                                    GameCommon.getGameState().getFactionManager().setRelationServer(playerFactionId, faction.getIdFaction(), FactionRelation.RType.NEUTRAL.code);
-                                                    BetterFactions.getInstance().newFactionPanel.factionDiplomacyTab.updateTab();
-                                                    deactivate();
-                                                }
-                                            }).activate();
-                                        }
-                                    }
-
-                                    @Override
-                                    public boolean isOccluded() {
-                                        return diplomacyButtonPane.isInvisible() || !playerFactionMember.hasPermission("diplomacy.ally") || faction.getFriends().contains(playerFactionMember.getFactionData().getFaction());
-                                    }
-                                }, new GUIActivationCallback() {
-                                    @Override
-                                    public boolean isVisible(InputState inputState) {
-                                        return !diplomacyButtonPane.isInvisible() && !playerFactionMember.hasPermission("diplomacy.ally") && !faction.getFriends().contains(playerFactionMember.getFactionData().getFaction());
-                                    }
-
-                                    @Override
-                                    public boolean isActive(InputState inputState) {
-                                        return !diplomacyButtonPane.isInvisible() && !playerFactionMember.hasPermission("diplomacy.ally") && !faction.getFriends().contains(playerFactionMember.getFactionData().getFaction());
-                                    }
-                                });
-                                diplomacyButtonIndex ++;
-                            } else if(!faction.getEnemies().contains(playerFactionMember.getFactionData().getFaction())) {
-                                diplomacyButtonPane.addButton(0, diplomacyButtonIndex, "OFFER ALLIANCE", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
-                                    @Override
-                                    public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                                        if (mouseEvent.pressedLeftMouse()) {
-                                            getState().getController().queueUIAudio("0022_menu_ui - select 2");
-                                            //Todo: Faction alliance offer message panel
-                                        }
-                                    }
-
-                                    @Override
-                                    public boolean isOccluded() {
-                                        return diplomacyButtonPane.isInvisible() || !playerFactionMember.hasPermission("diplomacy.ally") || faction.getEnemies().contains(playerFactionMember.getFactionData().getFaction());
-                                    }
-                                }, new GUIActivationCallback() {
-                                    @Override
-                                    public boolean isVisible(InputState inputState) {
-                                        return !diplomacyButtonPane.isInvisible() && playerFactionMember.hasPermission("diplomacy.ally") && !faction.getEnemies().contains(playerFactionMember.getFactionData().getFaction());
-                                    }
-
-                                    @Override
-                                    public boolean isActive(InputState inputState) {
-                                        return !diplomacyButtonPane.isInvisible() && playerFactionMember.hasPermission("diplomacy.ally") && !faction.getEnemies().contains(playerFactionMember.getFactionData().getFaction());
-                                    }
-                                });
-                                diplomacyButtonIndex ++;
-                            }
-                        }
-
-                        if(playerFactionMember.hasPermission("diplomacy.war")) {
-                            if(!faction.getFriends().contains(playerFactionMember.getFactionData().getFaction())) {
-                                if(faction.getEnemies().contains(playerFactionMember.getFactionData().getFaction())) {
-                                    //Todo: Handle peace deals and options
-                                    diplomacyButtonPane.addButton(0, diplomacyButtonIndex, "OFFER PEACE", GUIHorizontalArea.HButtonColor.BLUE, new GUICallback() {
-                                        @Override
-                                        public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                                            if (mouseEvent.pressedLeftMouse()) {
-                                                getState().getController().queueUIAudio("0022_menu_ui - select 2");
-                                                //Todo: Offer peace panel
-                                            }
-                                        }
-
-                                        @Override
-                                        public boolean isOccluded() {
-                                            return diplomacyButtonPane.isInvisible() || !playerFactionMember.hasPermission("diplomacy.war") || !faction.getEnemies().contains(playerFactionMember.getFactionData().getFaction());
-                                        }
-                                    }, new GUIActivationCallback() {
-                                        @Override
-                                        public boolean isVisible(InputState inputState) {
-                                            return !diplomacyButtonPane.isInvisible() && playerFactionMember.hasPermission("diplomacy.war") && faction.getEnemies().contains(playerFactionMember.getFactionData().getFaction());
-                                        }
-
-                                        @Override
-                                        public boolean isActive(InputState inputState) {
-                                            return !diplomacyButtonPane.isInvisible() && playerFactionMember.hasPermission("diplomacy.war") && faction.getEnemies().contains(playerFactionMember.getFactionData().getFaction());
-                                        }
-                                    });
-                                    diplomacyButtonIndex ++;
-                                } else {
-                                    diplomacyButtonPane.addButton(0, diplomacyButtonIndex, "DECLARE WAR", GUIHorizontalArea.HButtonColor.RED, new GUICallback() {
-                                        @Override
-                                        public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                                            if(mouseEvent.pressedLeftMouse()) {
-                                                getState().getController().queueUIAudio("0022_menu_ui - select 2");
-                                                //Todo: War goal panel
-                                            }
-                                        }
-
-                                        @Override
-                                        public boolean isOccluded() {
-                                            return diplomacyButtonPane.isInvisible() || !playerFactionMember.hasPermission("diplomacy.war") || faction.getEnemies().contains(playerFactionMember.getFactionData().getFaction());
-                                        }
-                                    }, new GUIActivationCallback() {
-                                        @Override
-                                        public boolean isVisible(InputState inputState) {
-                                            return !diplomacyButtonPane.isInvisible() && playerFactionMember.hasPermission("diplomacy.war") && faction.getEnemies().contains(playerFactionMember.getFactionData().getFaction());
-                                        }
-
-                                        @Override
-                                        public boolean isActive(InputState inputState) {
-                                            return !diplomacyButtonPane.isInvisible() && playerFactionMember.hasPermission("diplomacy.war") && faction.getEnemies().contains(playerFactionMember.getFactionData().getFaction());
-                                        }
-                                    });
-                                    diplomacyButtonIndex ++;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
-            factionButtonPane.addButton(0, factionButtonIndex, "CREATE FACTION", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
-                @Override
-                public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                    if (mouseEvent.pressedLeftMouse()) {
-                        getState().getController().queueUIAudio("0022_menu_ui - select 2");
-                        (new FactionDialogNew(GameClient.getClientState(), Lng.str("Create Faction"))).activate();
-                    }
-                }
-
-                @Override
-                public boolean isOccluded() {
-                    return factionButtonPane.isInvisible();
-                }
-            }, new GUIActivationCallback() {
-                @Override
-                public boolean isVisible(InputState inputState) {
-                    return !factionButtonPane.isInvisible();
-                }
-
-                @Override
-                public boolean isActive(InputState inputState) {
-                    return !factionButtonPane.isInvisible();
-                }
-            });
-            factionButtonIndex ++;
-        }
-
-        attach(factionButtonPane);
-        factionButtonPane.setVisibility(1);
-        toggleButtonPane(factionButtonPane);
-
-        attach(diplomacyButtonPane);
-        diplomacyButtonPane.setVisibility(1);
-        toggleButtonPane(diplomacyButtonPane);
-
-        attach(federationButtonPane);
-        federationButtonPane.setVisibility(1);
-        toggleButtonPane(federationButtonPane);
-
-        attach(tradeButtonPane);
-        tradeButtonPane.setVisibility(1);
-        toggleButtonPane(tradeButtonPane);
-
-        attach(categoryButtonPane);
-
-         */
     }
 
     private void createPersonalPane(int pos) {
-        final GUIExpandableButtonPane personalButtonPane = new GUIExpandableButtonPane(getState(), 1, 1, buttonPane);
-        personalButtonPane.onInit();
-        personalButtonPane.setMainButton(0, pos, "PERSONAL", GUIHorizontalArea.HButtonColor.PINK, buttonPane, new GUIActivationCallback() {
+        final GUIExpandableButtonPane subPane = new GUIExpandableButtonPane(getState(), 1, 1, buttonPane);
+        subPane.onInit();
+        subPane.setMainButton(0, pos, "PERSONAL", GUIHorizontalArea.HButtonColor.PINK, buttonPane, new GUIActivationCallback() {
             @Override
             public boolean isVisible(InputState inputState) {
                 return false;
@@ -449,7 +83,7 @@ public class FactionActionsPanel extends GUIAncor {
             }
         });
 
-        personalButtonPane.addExpandedButton(0, 0, new Object() {
+        subPane.addExpandedButton(0, 0, new Object() {
             @Override
             public String toString() {
                 return Lng.str("Faction Invites (%s)", GameClient.getClientPlayerState().getFactionController().getInvitesIncoming().size()).toUpperCase();
@@ -484,7 +118,7 @@ public class FactionActionsPanel extends GUIAncor {
         });
 
         if(GameClient.getClientPlayerState().getFactionId() == 0) {
-            personalButtonPane.addExpandedButton(0, 1, "CREATE FACTION", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
+            subPane.addExpandedButton(0, 1, "CREATE FACTION", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                     if(mouseEvent.pressedLeftMouse()) {
@@ -513,7 +147,7 @@ public class FactionActionsPanel extends GUIAncor {
                 }
             });
         } else {
-            personalButtonPane.addExpandedButton(0, 1, "LEAVE FACTION", GUIHorizontalArea.HButtonColor.ORANGE, new GUICallback() {
+            subPane.addExpandedButton(0, 1, "LEAVE FACTION", GUIHorizontalArea.HButtonColor.ORANGE, new GUICallback() {
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                     if(mouseEvent.pressedLeftMouse()) {
@@ -556,6 +190,177 @@ public class FactionActionsPanel extends GUIAncor {
         }
     }
 
+    private void createDiplomacyPane(int pos, final FactionMember player) {
+        final GUIExpandableButtonPane subPane = new GUIExpandableButtonPane(getState(), 1, 1, buttonPane);
+        subPane.onInit();
+        subPane.setMainButton(0, pos, "DIPLOMACY", GUIHorizontalArea.HButtonColor.BLUE, buttonPane, new GUIActivationCallback() {
+            @Override
+            public boolean isVisible(InputState inputState) {
+                return false;
+            }
+
+            @Override
+            public boolean isActive(InputState inputState) {
+                return true;
+            }
+        });
+        int index = 0;
+
+        if(player.hasPermission("diplomacy.ally")) {
+            if(faction.getFriends().contains(player.getFactionData().getFaction())) {
+                subPane.addExpandedButton(0, index, "REMOVE ALLY", GUIHorizontalArea.HButtonColor.ORANGE, new GUICallback() {
+                    @Override
+                    public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                        if (mouseEvent.pressedLeftMouse()) {
+                            getState().getController().queueUIAudio("0022_menu_ui - select 2");
+                            (new PlayerGameOkCancelInput("CONFIRM", GameClient.getClientState(), "Confirm", "Do you really want to leave this faction?\n" + "You'll be unable to access any ship/structure that belongs to this\n" + "faction except for your ships that use the Personal Permission Rank.\n\n" + "If you are the last member, the faction will also automatically disband!") {
+                                public void onDeactivate() {
+
+                                }
+
+                                public void pressedOK() {
+                                    getState().getController().queueUIAudio("0022_menu_ui - cancel");
+                                    Objects.requireNonNull(GameCommon.getGameState()).getFactionManager().setRelationServer(player.getFactionId(), faction.getIdFaction(), FactionRelation.RType.NEUTRAL.code);
+                                    BetterFactions.getInstance().newFactionPanel.factionDiplomacyTab.updateTab();
+                                    deactivate();
+                                }
+                            }).activate();
+                        }
+                    }
+
+                    @Override
+                    public boolean isOccluded() {
+                        return false;
+                    }
+                }, new GUIActivationHighlightCallback() {
+                    @Override
+                    public boolean isVisible(InputState inputState) {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean isActive(InputState inputState) {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean isHighlighted(InputState inputState) {
+                        return false;
+                    }
+                });
+                index ++;
+            } else if(!faction.getEnemies().contains(player.getFactionData().getFaction())) {
+                subPane.addExpandedButton(0, index, "OFFER ALLIANCE", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
+                    @Override
+                    public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                        if(mouseEvent.pressedLeftMouse()) {
+                            getState().getController().queueUIAudio("0022_menu_ui - select 2");
+                            //Todo: Faction alliance offer message panel
+                        }
+                    }
+
+                    @Override
+                    public boolean isOccluded() {
+                        return false;
+                    }
+                }, new GUIActivationHighlightCallback() {
+                    @Override
+                    public boolean isVisible(InputState inputState) {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean isActive(InputState inputState) {
+                        return true;
+                    }
+
+                    @Override
+                    public boolean isHighlighted(InputState inputState) {
+                        return false;
+                    }
+                });
+                index ++;
+            }
+        }
+
+        if(player.hasPermission("diplomacy.war")) {
+            if(!faction.getFriends().contains(player.getFactionData().getFaction())) {
+                if(faction.getEnemies().contains(player.getFactionData().getFaction())) {
+                    //Todo: Handle peace deals and options
+                    subPane.addExpandedButton(0, index, "OFFER PEACE", GUIHorizontalArea.HButtonColor.BLUE, new GUICallback() {
+                        @Override
+                        public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                            if(mouseEvent.pressedLeftMouse()) {
+                                getState().getController().queueUIAudio("0022_menu_ui - select 2");
+                                //Todo: Offer peace panel
+                            }
+                        }
+
+                        @Override
+                        public boolean isOccluded() {
+                            return false;
+                        }
+                    }, new GUIActivationHighlightCallback() {
+                        @Override
+                        public boolean isVisible(InputState inputState) {
+                            return true;
+                        }
+
+                        @Override
+                        public boolean isActive(InputState inputState) {
+                            return true;
+                        }
+
+                        @Override
+                        public boolean isHighlighted(InputState inputState) {
+                            return false;
+                        }
+                    });
+                    index ++;
+                } else {
+                    subPane.addExpandedButton(0, index, "DECLARE WAR", GUIHorizontalArea.HButtonColor.RED, new GUICallback() {
+                        @Override
+                        public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                            if(mouseEvent.pressedLeftMouse()) {
+                                getState().getController().queueUIAudio("0022_menu_ui - select 2");
+                                //Todo: War goal panel
+                            }
+                        }
+
+                        @Override
+                        public boolean isOccluded() {
+                            return false;
+                        }
+                    }, new GUIActivationHighlightCallback() {
+                        @Override
+                        public boolean isVisible(InputState inputState) {
+                            return true;
+                        }
+
+                        @Override
+                        public boolean isActive(InputState inputState) {
+                            return true;
+                        }
+
+                        @Override
+                        public boolean isHighlighted(InputState inputState) {
+                            return false;
+                        }
+                    });
+                    index ++;
+                }
+            }
+        }
+    }
+
+    private void createFederationPane(int pos, FactionMember player) {
+
+    }
+
+    private void createTradePane(int pos, FactionMember player) {
+
+    }
+
     public Faction getFaction() {
         return faction;
     }
@@ -564,17 +369,16 @@ public class FactionActionsPanel extends GUIAncor {
         this.faction = faction;
     }
 
+    /*
     private void addActions(final PlayerState playerState) {
-
-        /*
-        if (faction != null && playerState.getFactionId() != 0 && faction.getIdFaction() != FactionUtils.getFaction(playerState).getIdFaction()) {
+        if (faction != null && playerState.getFactionId() != 0 && faction.getIdFaction() != FactionManager.getFaction(playerState).getIdFaction()) {
             final GUIElementList diplomacyButtonList = new GUIElementList(getState());
             diplomacyButtonList.onInit();
             diplomacyButtonList.getPos().x += 2;
             diplomacyButtonList.getPos().y += 2;
 
-            final FactionData fromFaction = FactionUtils.getPlayerFactionData();
-            final FactionData toFaction = FactionUtils.getFactionData(faction);
+            final FactionData fromFaction = FactionManager.getPlayerFactionData();
+            final FactionData toFaction = FactionManager.getFactionData(faction);
             String relation = Lng.str(toFaction.getRelationString());
 
             //Todo: Permissions check
@@ -941,7 +745,7 @@ public class FactionActionsPanel extends GUIAncor {
         factionButtonList.getPos().x += 2;
         factionButtonList.getPos().y += 2;
 
-        if (FactionUtils.inFaction(playerState)) {
+        if (FactionManager.inFaction(playerState)) {
             GUIButtonListElement leaveFactionButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.ORANGE, Lng.str("Leave Faction"), new GUICallback() {
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
@@ -967,7 +771,7 @@ public class FactionActionsPanel extends GUIAncor {
             leaveFactionButton.onInit();
             factionButtonList.add(leaveFactionButton);
 
-            if (FactionUtils.getPlayerFactionData().getFederationId() != -1) {
+            if (FactionManager.getPlayerFactionData().getFederationId() != -1) {
                 GUIButtonListElement leaveFederationButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.ORANGE, Lng.str("Leave Federation"), new GUICallback() {
                     @Override
                     public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
@@ -978,11 +782,11 @@ public class FactionActionsPanel extends GUIAncor {
                                 }
 
                                 public void pressedOK() {
-                                    FactionData playerFaction = FactionUtils.getPlayerFactionData();
+                                    FactionData playerFaction = FactionManager.getPlayerFactionData();
                                     if(playerFaction.getFederation().getMembers().size() <= 1) {
-                                        FederationUtils.disbandFederation(playerFaction.getFederation());
+                                        FederationManager.disbandFederation(playerFaction.getFederation());
                                     } else {
-                                        FederationUtils.leaveFederation(playerFaction);
+                                        FederationManager.leaveFederation(playerFaction);
                                     }
                                     this.deactivate();
                                 }
@@ -1021,7 +825,7 @@ public class FactionActionsPanel extends GUIAncor {
         factionInvitesButton.onInit();
         factionButtonList.add(factionInvitesButton);
 
-        if (FactionUtils.inFaction(GameClient.getClientPlayerState())) {
+        if (FactionManager.inFaction(GameClient.getClientPlayerState())) {
             GUIButtonListElement federationInvitesButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new Object() {
                 @Override
                 public String toString() {
@@ -1074,8 +878,8 @@ public class FactionActionsPanel extends GUIAncor {
         for (GUIListElement element : factionButtonList) {
             ((GUIButtonListElement) element).setButtonWidth(factionButtonList.width - 4);
         }
-         */
     }
+     */
 
     private String getFedDialogString(FactionData fromFaction, FactionData toFaction) {
         return "Form a new Federation between " + fromFaction.getFactionName() + " and " + toFaction.getFactionName() + ".\nIf both factions accept the proposal, they will become members of the new Federation and will be able to closely collaborate with each other.";

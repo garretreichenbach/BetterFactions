@@ -12,7 +12,7 @@ import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
-import thederpgamer.betterfactions.utils.FactionUtils;
+import thederpgamer.betterfactions.manager.FactionManager;
 import java.util.*;
 
 /**
@@ -43,9 +43,9 @@ public class FactionNewsScrollableList extends ScrollableTableList<FactionNewsEn
                     FactionData factionData = (FactionData) subject;
                     return playerState.getFactionId() == factionData.getFactionId();
                 } else if(subject instanceof Federation) {
-                    if(FactionUtils.getPlayerFactionData().getFederationId() != -1) {
+                    if(Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getFederationId() != -1) {
                         Federation federation = (Federation) subject;
-                        return federation.getId() == FactionUtils.getPlayerFactionData().getFederationId();
+                        return federation.getId() == Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getFederationId();
                     }
                 }
             }

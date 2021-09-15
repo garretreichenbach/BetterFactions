@@ -3,7 +3,8 @@ package thederpgamer.betterfactions.data.faction;
 import api.common.GameCommon;
 import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.common.data.player.PlayerState;
-import thederpgamer.betterfactions.utils.FactionUtils;
+import thederpgamer.betterfactions.manager.FactionManager;
+
 import java.io.Serializable;
 
 /**
@@ -73,6 +74,6 @@ public class FactionMember implements Serializable {
     }
 
     public FactionData getFactionData() {
-        return FactionUtils.getFactionData(factionId);
+        return FactionManager.getFactionData(factionId);
     }
 }

@@ -1,6 +1,7 @@
 package thederpgamer.betterfactions;
 
 import api.common.GameCommon;
+import api.common.GameServer;
 import api.listener.Listener;
 import api.listener.events.faction.FactionCreateEvent;
 import api.listener.events.gui.PlayerGUICreateEvent;
@@ -8,24 +9,22 @@ import api.listener.events.player.PlayerJoinFactionEvent;
 import api.listener.events.player.PlayerLeaveFactionEvent;
 import api.mod.StarLoader;
 import api.mod.StarMod;
+import api.network.packets.PacketUtil;
 import api.utils.StarRunnable;
-import org.apache.commons.io.IOUtils;
 import org.schema.game.client.view.gui.PlayerPanel;
+import org.schema.game.common.data.player.PlayerState;
 import org.schema.schine.resource.ResourceLoader;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionRank;
 import thederpgamer.betterfactions.gui.NewFactionPanel;
 import thederpgamer.betterfactions.manager.ConfigManager;
+import thederpgamer.betterfactions.manager.FactionManager;
 import thederpgamer.betterfactions.manager.ResourceManager;
+import thederpgamer.betterfactions.network.server.UpdateClientDataPacket;
+import thederpgamer.betterfactions.network.server.UpdateGUIsPacket;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
-import thederpgamer.betterfactions.utils.FactionUtils;
-import thederpgamer.betterfactions.utils.FederationUtils;
 
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 /**
  * BetterFactions mod main class.
@@ -48,20 +47,15 @@ public class BetterFactions extends StarMod {
     }
 
     //Data
-    public int lastClientUpdate = 0;
     public NewFactionPanel newFactionPanel;
-
-    //Overwrites
-    private final String[] overwriteClasses = {
-
-    };
 
     @Override
     public void onEnable() {
         inst = this;
         ConfigManager.initialize(this);
         registerListeners();
-        startTimers();
+        registerPackets();
+        startRunners();
     }
 
     @Override
@@ -69,17 +63,11 @@ public class BetterFactions extends StarMod {
         ResourceManager.loadResources(resourceLoader);
     }
 
-    @Override
-    public byte[] onClassTransform(String className, byte[] byteCode) {
-        for(String name : overwriteClasses) if(className.endsWith(name)) return overwriteClass(className, byteCode);
-        return super.onClassTransform(className, byteCode);
-    }
-
     private void registerListeners() {
         StarLoader.registerListener(PlayerGUICreateEvent.class, new Listener<PlayerGUICreateEvent>() {
             @Override
             public void onEvent(PlayerGUICreateEvent event) {
-                FactionUtils.initializeFactions();
+                FactionManager.initializeFactions();
                 try {
                     PlayerPanel playerPanel = event.getPlayerPanel();
                     Field factionPanelNewField = playerPanel.getClass().getDeclaredField("factionPanelNew");
@@ -97,35 +85,28 @@ public class BetterFactions extends StarMod {
         StarLoader.registerListener(FactionCreateEvent.class, new Listener<FactionCreateEvent>() {
             @Override
             public void onEvent(FactionCreateEvent event) {
-                FactionUtils.getFactionData(event.getFaction());
-                FactionUtils.saveData();
-                FederationUtils.saveData();
-                FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionCreateNews(FactionUtils.getFactionData(event.getFaction()), event.getPlayer()));
+                FactionManager.getFactionData(event.getFaction());
+                FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionCreateNews(FactionManager.getFactionData(event.getFaction()), event.getPlayer()));
                 FactionNewsUtils.saveData();
                 if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
-                    FactionData factionData = FactionUtils.getFactionData(event.getFaction());
+                    FactionData factionData = FactionManager.getFactionData(event.getFaction());
                     FactionRank founderRank = new FactionRank("Founder", 5, "*");
                     factionData.addRank(founderRank);
                     factionData.addMember(event.getPlayer().getName());
                     factionData.getMember(event.getPlayer().getName()).setRank(founderRank);
-                    newFactionPanel.factionDiplomacyTab.updateTab();
-                    newFactionPanel.factionManagementTab.updateTab();
                 }
+                updateClientData();
             }
         }, this);
 
         StarLoader.registerListener(PlayerJoinFactionEvent.class, new Listener<PlayerJoinFactionEvent>() {
             @Override
             public void onEvent(PlayerJoinFactionEvent event) {
-                FactionUtils.getFactionData(event.getFaction());
-                FactionUtils.saveData();
-                FederationUtils.saveData();
-                FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionJoinNews(FactionUtils.getFactionData(event.getFaction()), event.getPlayer()));
+                FactionManager.getFactionData(event.getFaction());
+                FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionJoinNews(FactionManager.getFactionData(event.getFaction()), event.getPlayer()));
                 FactionNewsUtils.saveData();
-                if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
-                    FactionUtils.getFactionData(event.getFaction()).addMember(event.getPlayer().getName());
-                    newFactionPanel.factionManagementTab.updateTab();
-                }
+                if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) FactionManager.getFactionData(event.getFaction()).addMember(event.getPlayer().getName());
+                updateClientData();
             }
         }, this);
 
@@ -134,57 +115,39 @@ public class BetterFactions extends StarMod {
             public void onEvent(PlayerLeaveFactionEvent event) {
                 if(event.getFaction() != null) {
                     if(event.getFaction().getMembersUID().keySet().size() <= 1) {
-                        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionDisbandNews(FactionUtils.getFactionData(event.getFaction())));
+                        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionDisbandNews(FactionManager.getFactionData(event.getFaction())));
                     } else {
-                        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionLeaveNews(FactionUtils.getFactionData(event.getFaction()), event.getPlayer()));
+                        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionLeaveNews(FactionManager.getFactionData(event.getFaction()), event.getPlayer()));
                     }
-                    FactionUtils.getFactionData(event.getFaction());
+                    FactionManager.getFactionData(event.getFaction());
                 }
-                FactionUtils.saveData();
-                FederationUtils.saveData();
                 FactionNewsUtils.saveData();
-                if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
-                    FactionUtils.getFactionData(event.getFaction()).removeMember(event.getPlayer().getName());
-                    newFactionPanel.factionManagementTab.updateTab();
-                }
+                if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) FactionManager.getFactionData(event.getFaction()).removeMember(event.getPlayer().getName());
+                updateClientData();
             }
         }, this);
     }
 
-    private void startTimers() {
-        if(GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer()) {
-            new StarRunnable() {
-                @Override
-                public void run() {
-                    lastClientUpdate += 5;
-                }
-            }.runTimer(this, 5);
+    private void registerPackets() {
+        PacketUtil.registerPacket(UpdateClientDataPacket.class);
+        PacketUtil.registerPacket(UpdateGUIsPacket.class);
+    }
 
+    private void startRunners() {
+        if(GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer()) {
+            updateClientData();
             new StarRunnable() {
                 @Override
                 public void run() {
-                    FactionUtils.saveData();
-                    FederationUtils.saveData();
-                    FactionNewsUtils.saveData();
+                    updateClientData();
                 }
-            }.runTimer(this, ConfigManager.getMainConfig().getLong("save-interval"));
+            }.runTimer(this, 1000);
         }
     }
 
-    private byte[] overwriteClass(String className, byte[] byteCode) {
-        byte[] bytes = null;
-        try {
-            ZipInputStream file = new ZipInputStream(new FileInputStream(this.getSkeleton().getJarFile()));
-            while(true) {
-                ZipEntry nextEntry = file.getNextEntry();
-                if(nextEntry == null) break;
-                if(nextEntry.getName().endsWith(className + ".class")) bytes = IOUtils.toByteArray(file);
-            }
-            file.close();
-        } catch(IOException e) {
-            e.printStackTrace();
-        }
-        if(bytes != null) return bytes;
-        else return byteCode;
+    public void updateClientData() {
+        if(GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer()) {
+            for(PlayerState playerState : GameServer.getServerState().getPlayerStatesByName().values()) PacketUtil.sendPacket(playerState, new UpdateClientDataPacket());
+        } else newFactionPanel.updateTabs();
     }
 }

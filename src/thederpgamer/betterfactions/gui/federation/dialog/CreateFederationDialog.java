@@ -7,7 +7,7 @@ import org.schema.schine.common.TextCallback;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.settings.PrefixNotFoundException;
 import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.utils.FederationUtils;
+import thederpgamer.betterfactions.manager.FederationManager;
 import java.util.regex.Pattern;
 
 /**
@@ -32,7 +32,7 @@ public class CreateFederationDialog extends PlayerGameTextInput {
             public boolean check(String input, TextCallback textCallback) {
                 if(input.length() >= minNameLength && input.length() <= maxNameLength) {
                     if(Pattern.matches("[a-zA-Z0-9 _-]+", input)) {
-                        if(!FederationUtils.federationExists(input)) {
+                        if(!FederationManager.federationExists(input)) {
                             return true;
                         } else {
                             textCallback.onFailedTextCheck(input + " is the name of an already existing federation!");
@@ -55,7 +55,7 @@ public class CreateFederationDialog extends PlayerGameTextInput {
 
     @Override
     public boolean onInput(String s) {
-        FederationUtils.createNewFederation(s, from, to);
+        FederationManager.createNewFederation(s, from, to);
         return true;
     }
 

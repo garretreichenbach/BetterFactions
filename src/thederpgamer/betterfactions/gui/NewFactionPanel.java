@@ -1,27 +1,27 @@
 package thederpgamer.betterfactions.gui;
 
 import api.common.GameClient;
-import thederpgamer.betterfactions.data.federation.Federation;
-import thederpgamer.betterfactions.gui.faction.management.FactionManagementTab;
-import thederpgamer.betterfactions.gui.faction.news.FactionNewsTab;
-import thederpgamer.betterfactions.gui.faction.diplomacy.FactionDiplomacyTab;
-import thederpgamer.betterfactions.gui.federation.FederationManagementTab;
 import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.utils.FactionUtils;
-import thederpgamer.betterfactions.utils.FederationUtils;
+import thederpgamer.betterfactions.data.federation.Federation;
+import thederpgamer.betterfactions.gui.faction.diplomacy.FactionDiplomacyTab;
+import thederpgamer.betterfactions.gui.faction.management.FactionManagementTab;
+import thederpgamer.betterfactions.gui.faction.news.FactionNewsTab;
+import thederpgamer.betterfactions.gui.federation.FederationManagementTab;
+import thederpgamer.betterfactions.manager.FactionManager;
+import thederpgamer.betterfactions.manager.FederationManager;
+
 import java.util.Objects;
 
 /**
- * NewFactionPanel.java
- * Improved version of FactionPanelNew
+ * Enhanced version of FactionPanelNew.
  *
- * @since 01/30/2021
- * @author TheDerpGamer
+ * @version 1.0 - [01/30/2021]
+ * @author TheDerpGamer, Schema (original)
  */
 public class NewFactionPanel extends FactionPanelNew {
 
-    private InputState inputState;
+    private final InputState inputState;
 
     public FactionNewsTab factionNewsTab;
     public FactionDiplomacyTab factionDiplomacyTab;
@@ -35,18 +35,18 @@ public class NewFactionPanel extends FactionPanelNew {
 
     public Federation getFederation() {
         if(getOwnFaction() != null) {
-            return FederationUtils.getFederation(Objects.requireNonNull(FactionUtils.getFactionData(getOwnFaction())));
+            return FederationManager.getFederation(Objects.requireNonNull(FactionManager.getFactionData(getOwnFaction())));
         } else {
             return null;
         }
     }
 
     public boolean isInFederation() {
-        return isInFaction() && FactionUtils.getFactionData(getOwnFaction()) != null && FactionUtils.getFactionData(getOwnFaction()).getFederationId() != -1;
+        return isInFaction() && FactionManager.getFactionData(getOwnFaction()).getFederationId() != -1;
     }
 
     public boolean isInFaction() {
-        return FactionUtils.inFaction(GameClient.getClientPlayerState());
+        return FactionManager.inFaction(GameClient.getClientPlayerState());
     }
 
     @Override
@@ -76,5 +76,12 @@ public class NewFactionPanel extends FactionPanelNew {
             }
         }
         if(selectedTab < factionPanel.getTabs().size()) factionPanel.setSelectedTab(selectedTab);
+    }
+
+    public void updateTabs() {
+        if(factionNewsTab != null) factionNewsTab.updateTab();
+        if(factionDiplomacyTab != null) factionDiplomacyTab.updateTab();
+        if(factionManagementTab != null) factionManagementTab.updateTab();
+        if(federationManagementTab != null) federationManagementTab.updateTab();
     }
 }
