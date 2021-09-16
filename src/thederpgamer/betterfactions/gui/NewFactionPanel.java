@@ -3,7 +3,7 @@ package thederpgamer.betterfactions.gui;
 import api.common.GameClient;
 import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.federation.Federation;
+import thederpgamer.betterfactions.data.persistent.federation.FederationData;
 import thederpgamer.betterfactions.gui.faction.diplomacy.FactionDiplomacyTab;
 import thederpgamer.betterfactions.gui.faction.management.FactionManagementTab;
 import thederpgamer.betterfactions.gui.faction.news.FactionNewsTab;
@@ -33,7 +33,7 @@ public class NewFactionPanel extends FactionPanelNew {
         this.inputState = inputState;
     }
 
-    public Federation getFederation() {
+    public FederationData getFederation() {
         if(getOwnFaction() != null) {
             return FederationManager.getFederation(Objects.requireNonNull(FactionManager.getFactionData(getOwnFaction())));
         } else {

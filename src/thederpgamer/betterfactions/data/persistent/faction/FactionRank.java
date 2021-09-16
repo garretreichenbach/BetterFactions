@@ -1,4 +1,4 @@
-package thederpgamer.betterfactions.data.faction;
+package thederpgamer.betterfactions.data.persistent.faction;
 
 import thederpgamer.betterfactions.utils.PermissionUtils;
 import java.io.Serializable;

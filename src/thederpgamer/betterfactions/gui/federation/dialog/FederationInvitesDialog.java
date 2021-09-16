@@ -10,8 +10,8 @@ import org.schema.schine.graphicsengine.forms.font.FontLibrary;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.input.InputState;
 import org.schema.schine.network.client.ClientState;
-import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.data.federation.FactionMessage;
+import thederpgamer.betterfactions.data.persistent.faction.FactionData;
+import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
 import thederpgamer.betterfactions.manager.FactionManager;
 import thederpgamer.betterfactions.manager.FederationManager;
 

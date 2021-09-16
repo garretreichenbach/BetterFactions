@@ -1,4 +1,4 @@
-package thederpgamer.betterfactions.data.federation;
+package thederpgamer.betterfactions.data.persistent.federation;
 
 import api.common.GameCommon;
 import org.schema.game.common.data.player.faction.Faction;

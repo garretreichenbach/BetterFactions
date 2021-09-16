@@ -11,8 +11,8 @@ import org.schema.schine.graphicsengine.forms.gui.GUICallback;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActivatableTextBar;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIDialogWindow;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.data.federation.FactionMessage;
+import thederpgamer.betterfactions.data.persistent.faction.FactionData;
+import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
 import thederpgamer.betterfactions.manager.FactionManager;
 
 /**

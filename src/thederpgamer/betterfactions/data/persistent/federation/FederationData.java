@@ -1,12 +1,13 @@
-package thederpgamer.betterfactions.data.federation;
+package thederpgamer.betterfactions.data.persistent.federation;
 
-import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.data.faction.FactionScore;
-import thederpgamer.betterfactions.manager.GUIManager;
-import thederpgamer.betterfactions.utils.FactionNewsUtils;
+import thederpgamer.betterfactions.data.persistent.PersistentData;
+import thederpgamer.betterfactions.data.persistent.faction.FactionData;
+import thederpgamer.betterfactions.data.persistent.faction.FactionScore;
 import thederpgamer.betterfactions.manager.FederationManager;
+import thederpgamer.betterfactions.manager.GUIManager;
+import thederpgamer.betterfactions.manager.NetworkSyncManager;
+import thederpgamer.betterfactions.utils.FactionNewsUtils;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 
 /**
@@ -16,18 +17,20 @@ import java.util.ArrayList;
  * @since 01/30/2021
  * @author TheDerpGamer
  */
-public class Federation implements Serializable, FactionScore {
+public class FederationData implements PersistentData, FactionScore {
 
-    public int id;
-    public String name;
-    public ArrayList<FactionData> members;
+    private final int id;
+    private String name;
+    private final ArrayList<FactionData> members;
+    private boolean needsUpdate = true;
 
-    public Federation(String name, FactionData fromFaction, FactionData toFaction) {
+    public FederationData(String name, FactionData fromFaction, FactionData toFaction) {
         this.name = name;
         this.members = new ArrayList<>();
         this.members.add(fromFaction);
         this.members.add(toFaction);
         this.id = FederationManager.getNewId();
+        queueUpdate(true);
     }
 
     public int getId() {
@@ -40,6 +43,7 @@ public class Federation implements Serializable, FactionScore {
 
     public void setName(String name) {
         this.name = name;
+        queueUpdate(true);
     }
 
     public ArrayList<FactionData> getMembers() {
@@ -51,6 +55,7 @@ public class Federation implements Serializable, FactionScore {
         factionData.setFederationId(id);
         FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationJoinNews(this, factionData));
         GUIManager.updateTabs();
+        queueUpdate(true);
     }
 
     public void removeMember(FactionData factionData) {
@@ -59,12 +64,14 @@ public class Federation implements Serializable, FactionScore {
         factionData.setFederationId(-1);
         if(members.isEmpty()) disband();
         GUIManager.updateTabs();
+        queueUpdate(true);
     }
 
     public void disband() {
         FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationDisbandNews(this));
         for(FactionData factionData : members) factionData.setFederationId(-1);
         FederationManager.removeFederation(this);
+        queueUpdate(true);
     }
 
     public String[] getDataArray() {
@@ -100,5 +107,25 @@ public class Federation implements Serializable, FactionScore {
         System.arraycopy(dataArray, 0, infoArray, 0, dataArray.length);
         System.arraycopy(scoreArray, 0, infoArray, dataArray.length, scoreArray.length);
         return infoArray;
+    }
+
+    @Override
+    public int getDataType() {
+        return NetworkSyncManager.FEDERATION_DATA;
+    }
+
+    @Override
+    public int getDataId() {
+        return getId();
+    }
+
+    @Override
+    public boolean needsUpdate() {
+        return needsUpdate;
+    }
+
+    @Override
+    public void queueUpdate(boolean update) {
+        needsUpdate = update;
     }
 }

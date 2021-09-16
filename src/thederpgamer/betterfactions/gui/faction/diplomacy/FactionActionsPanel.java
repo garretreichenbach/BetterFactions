@@ -13,8 +13,8 @@ import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.BetterFactions;
-import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.data.faction.FactionMember;
+import thederpgamer.betterfactions.data.persistent.faction.FactionData;
+import thederpgamer.betterfactions.data.persistent.faction.FactionMember;
 import thederpgamer.betterfactions.gui.elements.pane.GUIExpandableButtonPane;
 import thederpgamer.betterfactions.manager.FactionManager;
 

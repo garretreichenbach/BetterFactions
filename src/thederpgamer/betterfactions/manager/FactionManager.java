@@ -8,13 +8,11 @@ import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionPermission;
 import org.schema.schine.graphicsengine.forms.Sprite;
 import thederpgamer.betterfactions.BetterFactions;
-import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.data.faction.FactionMember;
+import thederpgamer.betterfactions.data.persistent.faction.FactionData;
+import thederpgamer.betterfactions.data.persistent.faction.FactionMember;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * <Description>
@@ -30,8 +28,6 @@ public class FactionManager {
     private static final String piratesDescription = "Small clans of ravaging space pirates that attack and loot everything in sight. Despite their savagery, they are currently quite weak due to their lack of an organized leadership.";
     private static final String tradingGuildDescription = "A friendly organization made up of wealthy trading guilds spread across the galaxy. They boast a large navy made up of the combined forces of their many guild members and may sometimes defend weaker factions from larger aggressors.";
 
-    private static final ConcurrentLinkedQueue<FactionData> clientDataCache = new ConcurrentLinkedQueue<>();
-
     public static boolean inFaction(PlayerState playerState) {
         return playerState.getFactionId() != 0;
     }
@@ -43,12 +39,11 @@ public class FactionManager {
 
     public static HashMap<Integer, FactionData> getFactionDataMap() {
         HashMap<Integer, FactionData> factionDataMap = new HashMap<>();
-        if(GameCommon.isClientConnectedToServer() || GameCommon.isOnSinglePlayer()) {
-            for(FactionData factionData : clientDataCache) factionDataMap.put(factionData.getFactionId(), factionData);
-        } else {
+        if(NetworkSyncManager.onClient()) factionDataMap = NetworkSyncManager.getFactionDataCache();
+        else {
             for(Object factionDataObject : PersistentObjectUtil.getObjects(instance, FactionData.class)) {
                 FactionData factionData = (FactionData) factionDataObject;
-                factionDataMap.put(factionData.factionId, factionData);
+                factionDataMap.put(factionData.getFactionId(), factionData);
             }
         }
         return factionDataMap;
@@ -118,15 +113,7 @@ public class FactionManager {
     }
 
     public static Sprite getFactionLogo(FactionData factionData) {
-        String spriteName = factionData.factionName.replace(" ", "-") + "-logo";
+        String spriteName = factionData.getFactionName().replace(" ", "-") + "-logo";
         return ResourceManager.getSprite(spriteName);
-    }
-
-    public static void updateFromServer(ArrayList<FactionData> factionData) {
-        if(GameCommon.isClientConnectedToServer() || GameCommon.isOnSinglePlayer()) {
-            clientDataCache.clear();
-            clientDataCache.addAll(factionData);
-            //Todo: Maybe only send the data that actually needs updating
-        }
     }
 }

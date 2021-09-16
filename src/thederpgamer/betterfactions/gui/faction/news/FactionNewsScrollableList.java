@@ -9,8 +9,8 @@ import org.schema.schine.graphicsengine.forms.font.FontLibrary;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.data.federation.Federation;
+import thederpgamer.betterfactions.data.persistent.faction.FactionData;
+import thederpgamer.betterfactions.data.persistent.federation.FederationData;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
 import thederpgamer.betterfactions.manager.FactionManager;
 import java.util.*;
@@ -42,10 +42,10 @@ public class FactionNewsScrollableList extends ScrollableTableList<FactionNewsEn
                 if(subject instanceof FactionData) {
                     FactionData factionData = (FactionData) subject;
                     return playerState.getFactionId() == factionData.getFactionId();
-                } else if(subject instanceof Federation) {
+                } else if(subject instanceof FederationData) {
                     if(Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getFederationId() != -1) {
-                        Federation federation = (Federation) subject;
-                        return federation.getId() == Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getFederationId();
+                        FederationData federationData = (FederationData) subject;
+                        return federationData.getId() == Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getFederationId();
                     }
                 }
             }

@@ -1,4 +1,4 @@
-package thederpgamer.betterfactions.data.faction;
+package thederpgamer.betterfactions.data.persistent.faction;
 
 import api.common.GameClient;
 import api.common.GameCommon;
@@ -8,32 +8,33 @@ import org.schema.game.common.data.player.faction.FactionRelation;
 import org.schema.game.common.data.player.faction.FactionRoles;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.forms.Sprite;
-import thederpgamer.betterfactions.data.federation.FactionMessage;
-import thederpgamer.betterfactions.data.federation.Federation;
-import thederpgamer.betterfactions.manager.ResourceManager;
+import thederpgamer.betterfactions.data.persistent.PersistentData;
+import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
+import thederpgamer.betterfactions.data.persistent.federation.FederationData;
 import thederpgamer.betterfactions.manager.FactionManager;
 import thederpgamer.betterfactions.manager.FederationManager;
+import thederpgamer.betterfactions.manager.NetworkSyncManager;
+import thederpgamer.betterfactions.manager.ResourceManager;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 
 /**
- * <Description>
+ * Stores persistent data for factions.
  *
+ * @version 2.0 - [09/15/2021]
  * @author TheDerpGamer
- * @since 01/30/2021
  */
-public class FactionData implements FactionScore, Serializable {
+public class FactionData implements PersistentData, FactionScore {
 
-    //Info
-    public int factionId;
-    public int federationId;
-    public String factionName;
-    public String factionDescription;
-    public String factionLogo;
-    public ArrayList<FactionMember> members = new ArrayList<>();
-    public ArrayList<FactionRank> ranks = new ArrayList<>();
-    public ArrayList<FactionMessage> inbox = new ArrayList<>();
+    private int factionId;
+    private int federationId;
+    private String factionName;
+    private String factionDescription;
+    private String factionLogo;
+    private final ArrayList<FactionMember> members = new ArrayList<>();
+    private final ArrayList<FactionRank> ranks = new ArrayList<>();
+    private final ArrayList<FactionMessage> inbox = new ArrayList<>();
+    private boolean needsUpdate = true;
 
     public FactionData(Faction faction) {
         factionId = faction.getIdFaction();
@@ -41,6 +42,7 @@ public class FactionData implements FactionScore, Serializable {
         factionName = faction.getName();
         factionDescription = faction.getDescription();
         factionLogo = FactionManager.getFactionLogo(this).getName();
+        queueUpdate(true);
     }
 
     public Faction getFaction() {
@@ -57,6 +59,7 @@ public class FactionData implements FactionScore, Serializable {
 
     public void setFactionName(String factionName) {
         this.factionName = factionName;
+        queueUpdate(true);
     }
 
     public String getFactionDescription() {
@@ -65,9 +68,10 @@ public class FactionData implements FactionScore, Serializable {
 
     public void setFactionDescription(String factionDescription) {
         this.factionDescription = factionDescription;
+        queueUpdate(true);
     }
 
-    public Federation getFederation() {
+    public FederationData getFederation() {
         if(federationId != -1) return FederationManager.getFederation(this);
         else return null;
     }
@@ -78,6 +82,7 @@ public class FactionData implements FactionScore, Serializable {
 
     public void setFederationId(int federationId) {
         this.federationId = federationId;
+        queueUpdate(true);
     }
 
     public Sprite getFactionLogo() {
@@ -86,6 +91,7 @@ public class FactionData implements FactionScore, Serializable {
 
     public void setFactionLogo(Sprite factionLogo) {
         this.factionLogo = factionLogo.getName();
+        queueUpdate(true);
     }
 
     public String getInfo() {
@@ -168,6 +174,7 @@ public class FactionData implements FactionScore, Serializable {
 
     public void addMessage(FactionMessage message) {
         inbox.add(message);
+        queueUpdate(true);
     }
 
     public ArrayList<FactionMessage> getInbox() {
@@ -192,6 +199,7 @@ public class FactionData implements FactionScore, Serializable {
     public void addMember(String playerName) {
         getFaction().addOrModifyMember(playerName, playerName, FactionRoles.INDEX_DEFAULT_ROLE, System.currentTimeMillis(), GameCommon.getGameState(), true);
         members.add(new FactionMember(playerName, this, getLowestRank()));
+        queueUpdate(true);
     }
 
     public void removeMember(String playerName) {
@@ -201,6 +209,7 @@ public class FactionData implements FactionScore, Serializable {
                 members.remove(member);
             }
         }
+        queueUpdate(true);
     }
 
     public Vector3i getHomebaseSector() {
@@ -215,16 +224,16 @@ public class FactionData implements FactionScore, Serializable {
     public boolean addRank(FactionRank rank) {
         for(FactionRank factionRank : ranks) if(factionRank.getRankName().equalsIgnoreCase(rank.getRankName())) return false;
         ranks.add(rank);
+        queueUpdate(true);
         return true;
     }
 
     public boolean removeRank(FactionRank rank) {
         if(ranks.size() > 0 || getLowestRank().equals(rank)) return false;
         else {
-            for(FactionMember member : members) {
-                if(member.getRank().equals(rank)) member.setRank(getLowestRank());
-            }
+            for(FactionMember member : members) if(member.getRank().equals(rank)) member.setRank(getLowestRank());
             ranks.remove(rank);
+            queueUpdate(true);
             return true;
         }
     }
@@ -238,5 +247,25 @@ public class FactionData implements FactionScore, Serializable {
             ranks.add(FactionRank.getDefaultRank());
             return ranks.get(0);
         }
+    }
+
+    @Override
+    public int getDataType() {
+        return NetworkSyncManager.FACTION_DATA;
+    }
+
+    @Override
+    public int getDataId() {
+        return getFactionId();
+    }
+
+    @Override
+    public boolean needsUpdate() {
+        return needsUpdate;
+    }
+
+    @Override
+    public void queueUpdate(boolean update) {
+        needsUpdate = update;
     }
 }

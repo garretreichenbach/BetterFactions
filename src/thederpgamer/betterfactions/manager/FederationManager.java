@@ -5,11 +5,10 @@ import api.common.GameCommon;
 import api.mod.ModSkeleton;
 import api.mod.config.PersistentObjectUtil;
 import thederpgamer.betterfactions.BetterFactions;
-import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.data.federation.Federation;
+import thederpgamer.betterfactions.data.persistent.faction.FactionData;
+import thederpgamer.betterfactions.data.persistent.federation.FederationData;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -24,60 +23,52 @@ public class FederationManager {
 
     private static final ModSkeleton instance = BetterFactions.getInstance().getSkeleton();
 
-    private static final ConcurrentLinkedQueue<Federation> clientDataCache = new ConcurrentLinkedQueue<>();
+    private static final ConcurrentLinkedQueue<FederationData> clientDataCache = new ConcurrentLinkedQueue<>();
 
     public static void createNewFederation(String federationName, final FactionData fromFaction, final FactionData toFaction) {
-        Federation federation = new Federation(federationName, fromFaction, toFaction);
-        fromFaction.setFederationId(federation.getId());
-        toFaction.setFederationId(federation.getId());
-        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationCreateNews(federation));
-        PersistentObjectUtil.addObject(instance, federation);
+        FederationData federationData = new FederationData(federationName, fromFaction, toFaction);
+        fromFaction.setFederationId(federationData.getId());
+        toFaction.setFederationId(federationData.getId());
+        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationCreateNews(federationData));
+        PersistentObjectUtil.addObject(instance, federationData);
         BetterFactions.getInstance().newFactionPanel.factionDiplomacyTab.updateTab();
-        if(FactionManager.inFaction(GameClient.getClientPlayerState()) && (Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getFederationId() == federation.getId())) {
+        if(FactionManager.inFaction(GameClient.getClientPlayerState()) && (Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getFederationId() == federationData.getId())) {
             BetterFactions.getInstance().newFactionPanel.factionManagementTab.updateTab();
             BetterFactions.getInstance().newFactionPanel.federationManagementTab.updateTab();
         }
     }
 
-    public static void removeFederation(Federation federation) {
-        PersistentObjectUtil.removeObject(instance, federation);
+    public static void removeFederation(FederationData federationData) {
+        PersistentObjectUtil.removeObject(instance, federationData);
     }
 
     public static boolean federationExists(String name) {
-        for(Federation federation : getFederationMap().values()) if(federation.getName().equals(name)) return true;
+        for(FederationData federationData : getFederationDataMap().values()) if(federationData.getName().equals(name)) return true;
         return false;
     }
 
-    public static HashMap<Integer, Federation> getFederationMap() {
-        HashMap<Integer, Federation> federationMap = new HashMap<>();
+    public static HashMap<Integer, FederationData> getFederationDataMap() {
+        HashMap<Integer, FederationData> federationMap = new HashMap<>();
         if(GameCommon.isClientConnectedToServer() || GameCommon.isOnSinglePlayer()) {
-            for(Federation federation : clientDataCache) federationMap.put(federation.id, federation);
+            for(FederationData federationData : clientDataCache) federationMap.put(federationData.getId(), federationData);
         } else {
-            for(Object federationObject : PersistentObjectUtil.getObjects(instance, Federation.class)) {
-                Federation federation = (Federation) federationObject;
-                federationMap.put(federation.id, federation);
+            for(Object federationObject : PersistentObjectUtil.getObjects(instance, FederationData.class)) {
+                FederationData federationData = (FederationData) federationObject;
+                federationMap.put(federationData.getId(), federationData);
             }
         }
         return federationMap;
     }
 
-    public static Federation getFederation(FactionData factionData) {
-        return getFederationMap().get(factionData.federationId);
+    public static FederationData getFederation(FactionData factionData) {
+        return getFederationDataMap().get(factionData.getFederationId());
     }
 
     public static int getNewId() {
-        HashMap<Integer, Federation> federationMap = getFederationMap();
+        HashMap<Integer, FederationData> federationMap = getFederationDataMap();
         for(int i = 0; i < federationMap.keySet().size(); i ++) {
-            if(!federationMap.containsKey(i)) return i;
+            if(!federationMap.containsKey(i)) return i + 100000;
         }
         return -1;
-    }
-
-    public static void updateFromServer(ArrayList<Federation> federations) {
-        if(GameCommon.isClientConnectedToServer() || GameCommon.isOnSinglePlayer()) {
-            clientDataCache.clear();
-            clientDataCache.addAll(federations);
-            //Todo: Maybe only send the data that actually needs updating
-        }
     }
 }

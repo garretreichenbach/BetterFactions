@@ -5,7 +5,7 @@ import api.network.Packet;
 import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
 import org.schema.game.common.data.player.PlayerState;
-import thederpgamer.betterfactions.data.faction.FactionData;
+import thederpgamer.betterfactions.data.persistent.faction.FactionData;
 import thederpgamer.betterfactions.manager.FactionManager;
 import thederpgamer.betterfactions.manager.FederationManager;
 

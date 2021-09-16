@@ -10,7 +10,7 @@ import org.schema.schine.graphicsengine.forms.gui.GUICallback;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.GUIOverlay;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.faction.FactionData;
+import thederpgamer.betterfactions.data.persistent.faction.FactionData;
 import thederpgamer.betterfactions.manager.ResourceManager;
 import thederpgamer.betterfactions.manager.FactionManager;
 import thederpgamer.betterfactions.utils.ImageUtils;

@@ -8,7 +8,7 @@ import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIWindowInterface;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.faction.FactionData;
+import thederpgamer.betterfactions.data.persistent.faction.FactionData;
 import thederpgamer.betterfactions.manager.ResourceManager;
 import thederpgamer.betterfactions.manager.FactionManager;
 

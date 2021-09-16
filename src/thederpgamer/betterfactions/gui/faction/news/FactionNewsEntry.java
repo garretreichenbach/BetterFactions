@@ -2,8 +2,8 @@ package thederpgamer.betterfactions.gui.faction.news;
 
 import org.schema.common.util.StringTools;
 import org.schema.schine.common.language.Lng;
-import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.data.federation.Federation;
+import thederpgamer.betterfactions.data.persistent.faction.FactionData;
+import thederpgamer.betterfactions.data.persistent.federation.FederationData;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -50,7 +50,7 @@ public class FactionNewsEntry implements Serializable {
         this.subject = subject;
     }
 
-    public FactionNewsEntry(FactionNewsType type, Federation subject, String title, String text) {
+    public FactionNewsEntry(FactionNewsType type, FederationData subject, String title, String text) {
         this.date = new Date().toString();
         this.type = type;
         this.title = Lng.str(title);
@@ -76,9 +76,9 @@ public class FactionNewsEntry implements Serializable {
             if (subject instanceof FactionData) {
                 FactionData factionData = (FactionData) subject;
                 return factionData;
-            } else if (subject instanceof Federation) {
-                Federation federation = (Federation) subject;
-                return federation;
+            } else if (subject instanceof FederationData) {
+                FederationData federationData = (FederationData) subject;
+                return federationData;
             }
         }
         return null;

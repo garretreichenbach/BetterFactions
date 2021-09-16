@@ -7,8 +7,8 @@ import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.input.KeyEventInterface;
-import thederpgamer.betterfactions.data.federation.FactionMessage;
-import thederpgamer.betterfactions.data.federation.Federation;
+import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
+import thederpgamer.betterfactions.data.persistent.federation.FederationData;
 import thederpgamer.betterfactions.gui.elements.dialog.FactionMessagePanel;
 
 /**
@@ -22,9 +22,9 @@ public class RequestJoinFederationDialog extends PlayerInput {
 
     private FactionMessagePanel messagePanel;
 
-    public RequestJoinFederationDialog(Faction from, Faction to, Federation federation) {
+    public RequestJoinFederationDialog(Faction from, Faction to, FederationData federationData) {
         super(GameClient.getClientState());
-        messagePanel = new FactionMessagePanel(GameClient.getClientState(), this, getDefaultTitle(from, federation), from, to);
+        messagePanel = new FactionMessagePanel(GameClient.getClientState(), this, getDefaultTitle(from, federationData), from, to);
         messagePanel.setCallback(this);
     }
 
@@ -66,7 +66,7 @@ public class RequestJoinFederationDialog extends PlayerInput {
         }
     }
 
-    private String getDefaultTitle(Faction from, Federation federation) {
-        return Lng.str("Request to join " + federation.getName() + " from " + from.getName() + ".");
+    private String getDefaultTitle(Faction from, FederationData federationData) {
+        return Lng.str("Request to join " + federationData.getName() + " from " + from.getName() + ".");
     }
 }

@@ -1,4 +1,4 @@
-package thederpgamer.betterfactions.data.faction;
+package thederpgamer.betterfactions.data.persistent.faction;
 
 import api.common.GameCommon;
 import org.schema.common.util.linAlg.Vector3i;

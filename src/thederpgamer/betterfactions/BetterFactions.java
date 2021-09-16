@@ -1,7 +1,5 @@
 package thederpgamer.betterfactions;
 
-import api.common.GameCommon;
-import api.common.GameServer;
 import api.listener.Listener;
 import api.listener.events.faction.FactionCreateEvent;
 import api.listener.events.gui.PlayerGUICreateEvent;
@@ -12,15 +10,15 @@ import api.mod.StarMod;
 import api.network.packets.PacketUtil;
 import api.utils.StarRunnable;
 import org.schema.game.client.view.gui.PlayerPanel;
-import org.schema.game.common.data.player.PlayerState;
 import org.schema.schine.resource.ResourceLoader;
-import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.data.faction.FactionRank;
+import thederpgamer.betterfactions.data.persistent.faction.FactionData;
+import thederpgamer.betterfactions.data.persistent.faction.FactionRank;
 import thederpgamer.betterfactions.gui.NewFactionPanel;
 import thederpgamer.betterfactions.manager.ConfigManager;
 import thederpgamer.betterfactions.manager.FactionManager;
+import thederpgamer.betterfactions.manager.NetworkSyncManager;
 import thederpgamer.betterfactions.manager.ResourceManager;
-import thederpgamer.betterfactions.network.server.UpdateClientDataPacket;
+import thederpgamer.betterfactions.network.server.ServerSyncDataPacket;
 import thederpgamer.betterfactions.network.server.UpdateGUIsPacket;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
 
@@ -129,12 +127,12 @@ public class BetterFactions extends StarMod {
     }
 
     private void registerPackets() {
-        PacketUtil.registerPacket(UpdateClientDataPacket.class);
+        PacketUtil.registerPacket(ServerSyncDataPacket.class);
         PacketUtil.registerPacket(UpdateGUIsPacket.class);
     }
 
     private void startRunners() {
-        if(GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer()) {
+        if(NetworkSyncManager.onServer()) {
             updateClientData();
             new StarRunnable() {
                 @Override
@@ -146,8 +144,7 @@ public class BetterFactions extends StarMod {
     }
 
     public void updateClientData() {
-        if(GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer()) {
-            for(PlayerState playerState : GameServer.getServerState().getPlayerStatesByName().values()) PacketUtil.sendPacket(playerState, new UpdateClientDataPacket());
-        } else newFactionPanel.updateTabs();
+        if(NetworkSyncManager.onServer()) NetworkSyncManager.sendServerModifications();
+        else newFactionPanel.updateTabs();
     }
 }

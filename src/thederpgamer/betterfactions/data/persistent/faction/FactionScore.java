@@ -1,4 +1,4 @@
-package thederpgamer.betterfactions.data.faction;
+package thederpgamer.betterfactions.data.persistent.faction;
 
 /**
  * FactionScore.java
