@@ -3,10 +3,12 @@ package thederpgamer.betterfactions;
 import api.listener.Listener;
 import api.listener.events.faction.FactionCreateEvent;
 import api.listener.events.gui.PlayerGUICreateEvent;
+import api.listener.events.player.PlayerDeathEvent;
 import api.listener.events.player.PlayerJoinFactionEvent;
 import api.listener.events.player.PlayerLeaveFactionEvent;
 import api.mod.StarLoader;
 import api.mod.StarMod;
+import api.mod.config.PersistentObjectUtil;
 import api.network.packets.PacketUtil;
 import api.utils.StarRunnable;
 import org.schema.game.client.view.gui.PlayerPanel;
@@ -14,10 +16,8 @@ import org.schema.schine.resource.ResourceLoader;
 import thederpgamer.betterfactions.data.persistent.faction.FactionData;
 import thederpgamer.betterfactions.data.persistent.faction.FactionRank;
 import thederpgamer.betterfactions.gui.NewFactionPanel;
-import thederpgamer.betterfactions.manager.ConfigManager;
-import thederpgamer.betterfactions.manager.FactionManager;
-import thederpgamer.betterfactions.manager.NetworkSyncManager;
-import thederpgamer.betterfactions.manager.ResourceManager;
+import thederpgamer.betterfactions.manager.*;
+import thederpgamer.betterfactions.network.client.CreateNewFederationPacket;
 import thederpgamer.betterfactions.network.server.ServerSyncDataPacket;
 import thederpgamer.betterfactions.network.server.UpdateGUIsPacket;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
@@ -86,13 +86,12 @@ public class BetterFactions extends StarMod {
                 FactionManager.getFactionData(event.getFaction());
                 FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionCreateNews(FactionManager.getFactionData(event.getFaction()), event.getPlayer()));
                 FactionNewsUtils.saveData();
-                if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
-                    FactionData factionData = FactionManager.getFactionData(event.getFaction());
-                    FactionRank founderRank = new FactionRank("Founder", 5, "*");
-                    factionData.addRank(founderRank);
-                    factionData.addMember(event.getPlayer().getName());
-                    factionData.getMember(event.getPlayer().getName()).setRank(founderRank);
-                }
+                FactionData factionData = FactionManager.getFactionData(event.getFaction());
+                FactionRank founderRank = new FactionRank("Founder", 5, "*");
+                factionData.addRank(founderRank);
+                factionData.addMember(event.getPlayer().getName());
+                factionData.getMember(event.getPlayer().getName()).setRank(founderRank);
+                PersistentObjectUtil.save(getSkeleton());
                 updateClientData();
             }
         }, this);
@@ -104,6 +103,7 @@ public class BetterFactions extends StarMod {
                 FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionJoinNews(FactionManager.getFactionData(event.getFaction()), event.getPlayer()));
                 FactionNewsUtils.saveData();
                 if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) FactionManager.getFactionData(event.getFaction()).addMember(event.getPlayer().getName());
+                PersistentObjectUtil.save(getSkeleton());
                 updateClientData();
             }
         }, this);
@@ -121,7 +121,15 @@ public class BetterFactions extends StarMod {
                 }
                 FactionNewsUtils.saveData();
                 if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) FactionManager.getFactionData(event.getFaction()).removeMember(event.getPlayer().getName());
+                PersistentObjectUtil.save(getSkeleton());
                 updateClientData();
+            }
+        }, this);
+
+        StarLoader.registerListener(PlayerDeathEvent.class, new Listener<PlayerDeathEvent>() {
+            @Override
+            public void onEvent(PlayerDeathEvent event) {
+                TradeGuildManager.handleAggressionEvent(event);
             }
         }, this);
     }
@@ -129,6 +137,7 @@ public class BetterFactions extends StarMod {
     private void registerPackets() {
         PacketUtil.registerPacket(ServerSyncDataPacket.class);
         PacketUtil.registerPacket(UpdateGUIsPacket.class);
+        PacketUtil.registerPacket(CreateNewFederationPacket.class);
     }
 
     private void startRunners() {

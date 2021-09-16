@@ -62,7 +62,10 @@ public class ServerSyncDataPacket extends Packet {
     public void writePacketData(PacketWriteBuffer packetWriteBuffer) throws IOException {
         packetWriteBuffer.writeInt(modType);
         packetWriteBuffer.writeInt(data.length);
-        packetWriteBuffer.writeObject(data);
+        for(PersistentData persistentData : data) {
+            packetWriteBuffer.writeInt(persistentData.getDataType());
+            packetWriteBuffer.writeObject(persistentData);
+        }
     }
 
     @Override

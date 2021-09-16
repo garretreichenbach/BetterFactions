@@ -30,7 +30,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
     private FactionManagementTab managementTab;
 
     public FactionMembersList(InputState inputState, GUIAncor anchor, FactionManagementTab managementTab) {
-        super(inputState, 100, 100, anchor);
+        super(inputState, 300, 100, anchor);
         this.managementTab = managementTab;
         anchor.attach(this);
         ((GameClientState) inputState).getFactionManager().addObserver(this);
@@ -38,7 +38,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
 
     @Override
     public ArrayList<FactionMember> getElementList() {
-        return Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getMembers();
+        return FactionManager.getFactionData(FactionManager.getFaction(GameClient.getClientPlayerState())).getMembers();
     }
 
     @Override
@@ -120,7 +120,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
         ArrayList<String> ranksStringList = new ArrayList<>();
         ranksStringList.add("ALL");
         for(FactionRank rank : Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getRanks()) {
-            ranksStringList.add(rank.getRankName());
+            ranksStringList.add(rank.getRankName().toUpperCase());
         }
         return ranksStringList.toArray(new String[0]);
     }
@@ -130,21 +130,38 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
         guiElementList.deleteObservers();
         guiElementList.addObserver(this);
         FactionMember playerFactionMember = FactionManager.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
+        assert playerFactionMember != null;
         for(FactionMember factionMember : set) {
-            if(factionMember != null) {
-                GUITextOverlayTable nameTextElement;
-                (nameTextElement = new GUITextOverlayTable(10, 10, getState())).setTextSimple(factionMember.getName());
-                GUIClippedRow nameRowElement;
-                (nameRowElement = new GUIClippedRow(getState())).attach(nameTextElement);
+            GUITextOverlayTable nameTextElement;
+            (nameTextElement = new GUITextOverlayTable(10, 10, getState())).setTextSimple(factionMember.getName());
+            GUIClippedRow nameRowElement;
+            (nameRowElement = new GUIClippedRow(getState())).attach(nameTextElement);
 
-                FactionMembersListRow factionMembersListRow = new FactionMembersListRow(getState(), factionMember, nameRowElement);
+            GUITextOverlayTable rankTextElement;
+            (rankTextElement = new GUITextOverlayTable(10, 10, getState())).setTextSimple(factionMember.getRank().getRankName() + "[" + factionMember.getRank().getRankLevel() + "]");
+            GUIClippedRow rankRowElement;
+            (rankRowElement = new GUIClippedRow(getState())).attach(rankTextElement);
+
+            GUITextOverlayTable statusTextElement;
+            (statusTextElement = new GUITextOverlayTable(10, 10, getState())).setTextSimple((factionMember.isOnline()) ? "ONLINE" : "OFFLINE");
+            GUIClippedRow statusRowElement;
+            (statusRowElement = new GUIClippedRow(getState())).attach(statusTextElement);
+
+            GUITextOverlayTable locationTextElement;
+            (locationTextElement = new GUITextOverlayTable(10, 10, getState())).setTextSimple((factionMember.getLocation() != null) ? factionMember.getLocation().toString() : "");
+            GUIClippedRow locationRowElement;
+            (locationRowElement = new GUIClippedRow(getState())).attach(locationTextElement);
+
+            FactionMembersListRow factionMembersListRow = new FactionMembersListRow(getState(), factionMember, nameRowElement, rankRowElement, statusRowElement, locationRowElement);
+            if(playerFactionMember.hasPermission("manage.members.[ANY]")) {
+                GUIAncor anchor = new GUIAncor(getState(), 300, 28.0f);
+                anchor.attach(redrawButtonPane(factionMember, playerFactionMember, anchor));
                 factionMembersListRow.expanded = new GUIElementList(getState());
-                GUIAncor anchor = new GUIAncor(getState(), getWidth() - 4, 28.0f);
-                if(playerFactionMember != null && playerFactionMember.hasPermission("manage.members.[ANY]")) anchor.attach(redrawButtonPane(factionMember, playerFactionMember, anchor));
                 factionMembersListRow.expanded.add(new GUIListElement(anchor, getState()));
-                factionMembersListRow.onInit();
-                guiElementList.add(factionMembersListRow);
+                factionMembersListRow.expanded.attach(anchor);
             }
+            factionMembersListRow.onInit();
+            guiElementList.addWithoutUpdate(factionMembersListRow);
         }
         guiElementList.updateDim();
     }
@@ -160,7 +177,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
         final FactionData factionData = playerFactionMember.getFactionData();
         int buttonIndex = 0;
         if(playerFactionMember.getRank().getRankLevel() >= factionMember.getRank().getRankLevel()) {
-            if(playerFactionMember.hasPermission("manage.members.kick")) {
+            if(playerFactionMember.hasPermission("manage.members.kick") && factionMember != playerFactionMember) {
                 buttonPane.addButton(buttonIndex, 0, "KICK", GUIHorizontalArea.HButtonColor.RED, new GUICallback() {
                     @Override
                     public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
@@ -188,6 +205,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
             }
 
             if(playerFactionMember.hasPermission("manage.members.ranks")) {
+                buttonPane.addColumn();
                 buttonPane.addButton(buttonIndex, 0, "EDIT RANK", GUIHorizontalArea.HButtonColor.YELLOW, new GUICallback() {
                     @Override
                     public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
@@ -213,7 +231,6 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
                 buttonIndex ++;
             }
         }
-
         return buttonPane;
     }
 

@@ -112,9 +112,7 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
 
     @Override
     public Collection<FactionData> getElementList() {
-        ArrayList<FactionData> factionList = new ArrayList<>();
-        factionList.addAll(FactionManager.getFactionDataMap().values());
-        return factionList;
+        return new ArrayList<>(FactionManager.getFactionDataMap().values());
     }
 
     @Override
@@ -122,31 +120,32 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
         guiElementList.deleteObservers();
         guiElementList.addObserver(this);
         for(FactionData factionData : set) {
+            if(factionData != null) {
+                GUITextOverlayTable nameTextElement;
+                (nameTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(factionData.getFactionName());
+                GUIClippedRow nameRowElement;
+                (nameRowElement = new GUIClippedRow(this.getState())).attach(nameTextElement);
 
-            GUITextOverlayTable nameTextElement;
-            (nameTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(factionData.getFactionName());
-            GUIClippedRow nameRowElement;
-            (nameRowElement = new GUIClippedRow(this.getState())).attach(nameTextElement);
+                String federationName = (FederationManager.getFederation(factionData) != null) ? FederationManager.getFederation(factionData).getName() : "Non-Aligned";
+                GUITextOverlayTable federationTextElement;
+                (federationTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(federationName);
+                GUIClippedRow federationRowElement;
+                (federationRowElement = new GUIClippedRow(this.getState())).attach(federationTextElement);
 
-            String federationName = (FederationManager.getFederation(factionData) != null) ? FederationManager.getFederation(factionData).getName() : "Non-Aligned";
-            GUITextOverlayTable federationTextElement;
-            (federationTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(federationName);
-            GUIClippedRow federationRowElement;
-            (federationRowElement = new GUIClippedRow(this.getState())).attach(federationTextElement);
+                GUITextOverlayTable membersTextElement;
+                (membersTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(GameCommon.getGameState().getFactionManager().getFaction(factionData.getFactionId()).getMembersUID().size() + " members");
+                GUIClippedRow membersRowElement;
+                (membersRowElement = new GUIClippedRow(this.getState())).attach(membersTextElement);
 
-            GUITextOverlayTable membersTextElement;
-            (membersTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(GameCommon.getGameState().getFactionManager().getFaction(factionData.getFactionId()).getMembersUID().size() + " members");
-            GUIClippedRow membersRowElement;
-            (membersRowElement = new GUIClippedRow(this.getState())).attach(membersTextElement);
+                GUITextOverlayTable relationTextElement;
+                (relationTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(factionData.getRelationString());
+                GUIClippedRow relationRowElement;
+                (relationRowElement = new GUIClippedRow(this.getState())).attach(relationTextElement);
 
-            GUITextOverlayTable relationTextElement;
-            (relationTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(factionData.getRelationString());
-            GUIClippedRow relationRowElement;
-            (relationRowElement = new GUIClippedRow(this.getState())).attach(relationTextElement);
-
-            FactionDiplomacyListRow factionDiplomacyListRow = new FactionDiplomacyListRow(getState(), factionData, nameRowElement, federationRowElement, membersRowElement, relationRowElement);
-            factionDiplomacyListRow.onInit();
-            guiElementList.add(factionDiplomacyListRow);
+                FactionDiplomacyListRow factionDiplomacyListRow = new FactionDiplomacyListRow(getState(), factionData, nameRowElement, federationRowElement, membersRowElement, relationRowElement);
+                factionDiplomacyListRow.onInit();
+                guiElementList.add(factionDiplomacyListRow);
+            }
         }
         guiElementList.updateDim();
     }

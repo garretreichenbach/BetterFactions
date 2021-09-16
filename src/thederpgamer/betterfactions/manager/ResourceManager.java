@@ -7,6 +7,7 @@ import org.newdawn.slick.font.effects.OutlineEffect;
 import org.schema.schine.graphicsengine.forms.Sprite;
 import org.schema.schine.resource.ResourceLoader;
 import thederpgamer.betterfactions.BetterFactions;
+import thederpgamer.betterfactions.utils.ImageUtils;
 
 import java.awt.*;
 import java.util.HashMap;
@@ -70,6 +71,12 @@ public class ResourceManager {
 
     public static Sprite getSprite(String name) {
         Sprite sprite = spriteMap.get(name);
+        if(sprite == null) {
+            if((name.startsWith("https://")) && (name.toLowerCase().endsWith(".png") || name.toLowerCase().endsWith(".jpg") || name.toLowerCase().endsWith(".jpeg"))) {
+                sprite = ImageUtils.getImage(name);
+                if(sprite != null) spriteMap.put(sprite.getName(), sprite);
+            }
+        }
         if(sprite == null) sprite = getSprite("default-logo");
         sprite.setWidth(SPRITE_WIDTH);
         sprite.setHeight(SPRITE_HEIGHT);

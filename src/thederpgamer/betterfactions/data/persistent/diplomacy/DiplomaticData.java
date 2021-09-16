@@ -11,7 +11,7 @@ import thederpgamer.betterfactions.manager.NetworkSyncManager;
  */
 public class DiplomaticData implements PersistentData {
 
-    private boolean needsUpdate = true;
+    private transient boolean needsUpdate = true;
 
     @Override
     public int getDataType() {

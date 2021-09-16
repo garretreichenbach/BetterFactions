@@ -1,7 +1,9 @@
 package thederpgamer.betterfactions.gui;
 
 import api.common.GameClient;
+import api.common.GameCommon;
 import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;
+import org.schema.game.common.data.player.faction.Faction;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.persistent.federation.FederationData;
 import thederpgamer.betterfactions.gui.faction.diplomacy.FactionDiplomacyTab;
@@ -34,11 +36,8 @@ public class NewFactionPanel extends FactionPanelNew {
     }
 
     public FederationData getFederation() {
-        if(getOwnFaction() != null) {
-            return FederationManager.getFederation(Objects.requireNonNull(FactionManager.getFactionData(getOwnFaction())));
-        } else {
-            return null;
-        }
+        if(isInFaction()) return FederationManager.getFederation(FactionManager.getFactionData(getOwnFaction()));
+        else return null;
     }
 
     public boolean isInFederation() {
@@ -46,7 +45,12 @@ public class NewFactionPanel extends FactionPanelNew {
     }
 
     public boolean isInFaction() {
-        return FactionManager.inFaction(GameClient.getClientPlayerState());
+        return getOwnFaction() != null;
+    }
+
+    @Override
+    public Faction getOwnFaction() {
+        return Objects.requireNonNull(GameCommon.getGameState()).getFactionManager().getFaction(GameClient.getClientPlayerState().getFactionId());
     }
 
     @Override

@@ -34,6 +34,7 @@ public class FactionActionsPanel extends GUIAncor {
     private Faction faction;
 
     private boolean initialized = false;
+    private int currentButtonOffset = 0;
 
     public FactionActionsPanel(InputState inputState, float width, float height) {
         super(inputState, width, height);
@@ -41,29 +42,30 @@ public class FactionActionsPanel extends GUIAncor {
 
     @Override
     public void onInit() {
-        GUIScrollablePanel scrollPanel = new GUIScrollablePanel(24, 30, this, getState());
-        buttonPane = new GUIExpandableButtonPane(getState(), 1, 1, this);
+        GUIScrollablePanel scrollPanel = new GUIScrollablePanel(width, height, this, getState());
+        buttonPane = new GUIExpandableButtonPane(getState(), 1, 1, scrollPanel);
         scrollPanel.setContent(buttonPane);
         scrollPanel.setScrollable(GUIScrollablePanel.SCROLLABLE_VERTICAL);
         scrollPanel.onInit();
         attach(scrollPanel);
 
-        scrollPanel.getPos().x += 1;
-        scrollPanel.getPos().y += 1;
+        scrollPanel.getPos().x += 2;
+        scrollPanel.getPos().y += 2;
         initialized = true;
     }
 
     public void recreateButtonPane() {
         if(!initialized) onInit();
         int pos = 0;
+        currentButtonOffset = 0;
         buttonPane.onInit();
         createPersonalPane(pos ++);
         if(GameClient.getClientPlayerState().getFactionId() != 0) {
             FactionMember player = FactionManager.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
             if(player != null) {
-                if(player.hasPermission("diplomacy.[ANY]")) createDiplomacyPane(pos ++, player);
-                if(player.hasPermission("federation.[ANY]") && player.getFactionData().getFederationId() != -1) createFederationPane(pos ++, player);
-                if(player.hasPermission("trade.[ANY]")) createTradePane(pos ++, player);
+                if(player.hasPermission("diplomacy.[ANY]") && faction.getIdFaction() != player.getFactionId()) createDiplomacyPane(pos ++, player);
+                if(player.hasPermission("federation.[ANY]") && faction.getIdFaction() != player.getFactionId() && player.getFactionData().getFederationId() != -1) createFederationPane(pos ++, player);
+                if(player.hasPermission("trade.[ANY]") && faction.getIdFaction() != player.getFactionId()) createTradePane(pos ++, player);
             }
         }
     }
@@ -71,10 +73,10 @@ public class FactionActionsPanel extends GUIAncor {
     private void createPersonalPane(int pos) {
         final GUIExpandableButtonPane subPane = new GUIExpandableButtonPane(getState(), 1, 1, buttonPane);
         subPane.onInit();
-        subPane.setMainButton(0, pos, "PERSONAL", GUIHorizontalArea.HButtonColor.PINK, buttonPane, new GUIActivationCallback() {
+        subPane.setMainButton(0, pos, currentButtonOffset, "PERSONAL", GUIHorizontalArea.HButtonColor.PINK, buttonPane, new GUIActivationCallback() {
             @Override
             public boolean isVisible(InputState inputState) {
-                return false;
+                return true;
             }
 
             @Override
@@ -83,7 +85,7 @@ public class FactionActionsPanel extends GUIAncor {
             }
         });
 
-        subPane.addExpandedButton(0, 0, new Object() {
+        (subPane.addExpandedButton(0, 0, new Object() {
             @Override
             public String toString() {
                 return Lng.str("Faction Invites (%s)", GameClient.getClientPlayerState().getFactionController().getInvitesIncoming().size()).toUpperCase();
@@ -115,10 +117,10 @@ public class FactionActionsPanel extends GUIAncor {
             public boolean isHighlighted(InputState inputState) {
                 return GameClient.getClientState().getGlobalGameControlManager().getIngameControlManager().getPlayerMailManager().isTreeActive();
             }
-        });
+        })).getPos().y -= 26;
 
         if(GameClient.getClientPlayerState().getFactionId() == 0) {
-            subPane.addExpandedButton(0, 1, "CREATE FACTION", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
+            (subPane.addExpandedButton(0, 1, "CREATE FACTION", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                     if(mouseEvent.pressedLeftMouse()) {
@@ -145,9 +147,9 @@ public class FactionActionsPanel extends GUIAncor {
                 public boolean isHighlighted(InputState inputState) {
                     return false;
                 }
-            });
+            })).getPos().y -= 26;
         } else {
-            subPane.addExpandedButton(0, 1, "LEAVE FACTION", GUIHorizontalArea.HButtonColor.ORANGE, new GUICallback() {
+            (subPane.addExpandedButton(0, 1, "LEAVE FACTION", GUIHorizontalArea.HButtonColor.ORANGE, new GUICallback() {
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                     if(mouseEvent.pressedLeftMouse()) {
@@ -186,17 +188,19 @@ public class FactionActionsPanel extends GUIAncor {
                 public boolean isHighlighted(InputState inputState) {
                     return false;
                 }
-            });
+            })).getPos().y -= 26;
         }
+
+        currentButtonOffset += 26 * (subPane.getButtons()[0].length);
     }
 
     private void createDiplomacyPane(int pos, final FactionMember player) {
         final GUIExpandableButtonPane subPane = new GUIExpandableButtonPane(getState(), 1, 1, buttonPane);
         subPane.onInit();
-        subPane.setMainButton(0, pos, "DIPLOMACY", GUIHorizontalArea.HButtonColor.BLUE, buttonPane, new GUIActivationCallback() {
+        subPane.setMainButton(0, pos, currentButtonOffset, "DIPLOMACY", GUIHorizontalArea.HButtonColor.BLUE, buttonPane, new GUIActivationCallback() {
             @Override
             public boolean isVisible(InputState inputState) {
-                return false;
+                return true;
             }
 
             @Override
@@ -208,7 +212,7 @@ public class FactionActionsPanel extends GUIAncor {
 
         if(player.hasPermission("diplomacy.ally")) {
             if(faction.getFriends().contains(player.getFactionData().getFaction())) {
-                subPane.addExpandedButton(0, index, "REMOVE ALLY", GUIHorizontalArea.HButtonColor.ORANGE, new GUICallback() {
+                (subPane.addExpandedButton(0, index, "REMOVE ALLY", GUIHorizontalArea.HButtonColor.ORANGE, new GUICallback() {
                     @Override
                     public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                         if (mouseEvent.pressedLeftMouse()) {
@@ -247,10 +251,10 @@ public class FactionActionsPanel extends GUIAncor {
                     public boolean isHighlighted(InputState inputState) {
                         return false;
                     }
-                });
+                })).getPos().y += 26 * 2;
                 index ++;
             } else if(!faction.getEnemies().contains(player.getFactionData().getFaction())) {
-                subPane.addExpandedButton(0, index, "OFFER ALLIANCE", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
+                (subPane.addExpandedButton(0, index, "OFFER ALLIANCE", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
                     @Override
                     public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                         if(mouseEvent.pressedLeftMouse()) {
@@ -278,7 +282,7 @@ public class FactionActionsPanel extends GUIAncor {
                     public boolean isHighlighted(InputState inputState) {
                         return false;
                     }
-                });
+                })).getPos().y += 26;
                 index ++;
             }
         }
@@ -287,7 +291,7 @@ public class FactionActionsPanel extends GUIAncor {
             if(!faction.getFriends().contains(player.getFactionData().getFaction())) {
                 if(faction.getEnemies().contains(player.getFactionData().getFaction())) {
                     //Todo: Handle peace deals and options
-                    subPane.addExpandedButton(0, index, "OFFER PEACE", GUIHorizontalArea.HButtonColor.BLUE, new GUICallback() {
+                    (subPane.addExpandedButton(0, index, "OFFER PEACE", GUIHorizontalArea.HButtonColor.BLUE, new GUICallback() {
                         @Override
                         public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                             if(mouseEvent.pressedLeftMouse()) {
@@ -315,10 +319,10 @@ public class FactionActionsPanel extends GUIAncor {
                         public boolean isHighlighted(InputState inputState) {
                             return false;
                         }
-                    });
+                    })).getPos().y += 26;
                     index ++;
                 } else {
-                    subPane.addExpandedButton(0, index, "DECLARE WAR", GUIHorizontalArea.HButtonColor.RED, new GUICallback() {
+                    (subPane.addExpandedButton(0, index, "DECLARE WAR", GUIHorizontalArea.HButtonColor.RED, new GUICallback() {
                         @Override
                         public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                             if(mouseEvent.pressedLeftMouse()) {
@@ -346,11 +350,12 @@ public class FactionActionsPanel extends GUIAncor {
                         public boolean isHighlighted(InputState inputState) {
                             return false;
                         }
-                    });
+                    })).getPos().y += 26;
                     index ++;
                 }
             }
         }
+        currentButtonOffset += 26 * (subPane.getButtons()[0].length);
     }
 
     private void createFederationPane(int pos, FactionMember player) {

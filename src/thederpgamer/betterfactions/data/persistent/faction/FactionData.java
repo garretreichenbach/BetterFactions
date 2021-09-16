@@ -26,7 +26,7 @@ import java.util.ArrayList;
  */
 public class FactionData implements PersistentData, FactionScore {
 
-    private int factionId;
+    private final int factionId;
     private int federationId;
     private String factionName;
     private String factionDescription;
@@ -34,14 +34,14 @@ public class FactionData implements PersistentData, FactionScore {
     private final ArrayList<FactionMember> members = new ArrayList<>();
     private final ArrayList<FactionRank> ranks = new ArrayList<>();
     private final ArrayList<FactionMessage> inbox = new ArrayList<>();
-    private boolean needsUpdate = true;
+    private transient boolean needsUpdate = true;
 
     public FactionData(Faction faction) {
         factionId = faction.getIdFaction();
         federationId = -1;
         factionName = faction.getName();
         factionDescription = faction.getDescription();
-        factionLogo = FactionManager.getFactionLogo(this).getName();
+        if(factionLogo == null) factionLogo = "default-logo";
         queueUpdate(true);
     }
 
@@ -203,7 +203,8 @@ public class FactionData implements PersistentData, FactionScore {
     }
 
     public void removeMember(String playerName) {
-        for(FactionMember member : getMembers()) {
+        ArrayList<FactionMember> membersTemp = new ArrayList<>(getMembers());
+        for(FactionMember member : membersTemp) {
             if(member.getName().equalsIgnoreCase(playerName)) {
                 getFaction().removeMember(playerName, GameCommon.getGameState());
                 members.remove(member);

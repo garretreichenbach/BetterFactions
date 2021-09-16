@@ -29,6 +29,7 @@ public class FactionManagementTab extends GUIContentPane {
         addNewTextBox(0, 130);
         addDivider(300);
         addNewTextBox(1, 100);
+        setTextBoxHeight(1, 0, 300);
 
         (membersList = new FactionMembersList(getState(), getContent(1, 0), this)).onInit();
     }

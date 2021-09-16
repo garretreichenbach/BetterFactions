@@ -35,10 +35,10 @@ public class FactionDiplomacyTab extends GUIContentPane {
         super.onInit();
         setTextBoxHeightLast(270);
         addNewTextBox(0, 80);
-        addDivider(248);
+        addDivider(250);
 
         setContent(0, 0, infoPanel = new FactionInfoPanel(getState()));
-        setContent(0, 1, actionsPanel = new FactionActionsPanel(getState(), 248, 300));
+        setContent(0, 1, actionsPanel = new FactionActionsPanel(getState(), 250, 300));
         getContent(1, 0).attach(factionList = new FactionDiplomacyList(getState(), getContent(1, 0), this));
 
         infoPanel.onInit();

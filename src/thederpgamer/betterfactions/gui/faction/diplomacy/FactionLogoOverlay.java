@@ -11,11 +11,8 @@ import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.GUIOverlay;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.persistent.faction.FactionData;
-import thederpgamer.betterfactions.manager.ResourceManager;
 import thederpgamer.betterfactions.manager.FactionManager;
-import thederpgamer.betterfactions.utils.ImageUtils;
-
-import java.util.Locale;
+import thederpgamer.betterfactions.manager.ResourceManager;
 
 /**
  * FactionLogoOverlay.java
@@ -53,13 +50,8 @@ public class FactionLogoOverlay extends GUIOverlay implements GUICallback {
                 new SimplePlayerTextInput("Change Faction Logo", "Link to image (No inappropriate images!)") {
                     @Override
                     public boolean onInput(String s) {
-                        if((s.startsWith("https://") || s.startsWith("http://")) && (s.toLowerCase(Locale.ROOT).endsWith(".png")
-                                || s.toLowerCase(Locale.ROOT).endsWith(".jpg") || s.toLowerCase(Locale.ROOT).endsWith(".jpeg"))) {
-                            Sprite sprite = ImageUtils.getImage(s, faction.getName().replace(" ", "-") + "-logo");
-                            assert sprite != null;
-                            sprite.setWidth(ResourceManager.SPRITE_WIDTH);
-                            sprite.setHeight(ResourceManager.SPRITE_HEIGHT);
-                            ResourceManager.addSprite(sprite);
+                        if((s.startsWith("https://")) && (s.toLowerCase().endsWith(".png") || s.toLowerCase().endsWith(".jpg") || s.toLowerCase().endsWith(".jpeg"))) {
+                            Sprite sprite = ResourceManager.getSprite(s);
                             FactionData factionData = FactionManager.getFactionData(faction);
                             factionData.setFactionLogo(FactionManager.getFactionLogo(factionData));
                             infoPanel.updateLogo(sprite);

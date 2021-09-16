@@ -1,5 +1,6 @@
 package thederpgamer.betterfactions.gui.faction.diplomacy;
 
+import api.common.GameClient;
 import org.newdawn.slick.Color;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.schine.graphicsengine.forms.Sprite;
@@ -100,6 +101,7 @@ public class FactionInfoPanel extends GUIAncor {
 
     public void updateLogo(Sprite logo) {
         factionLogo.setSprite(logo);
+        factionLogo.updateGUI(GameClient.getClientState());
     }
 
     public void setNameText(String nameText) {
@@ -111,6 +113,7 @@ public class FactionInfoPanel extends GUIAncor {
         nameOverlay.setFont(FontLibrary.FontSize.MEDIUM.getFont());
         nameOverlay.setColor(color);
         nameOverlay.setTextSimple(nameText);
+        nameOverlay.updateCacheForced();
     }
 
     public void setInfoText(String newText) {

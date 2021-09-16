@@ -22,7 +22,7 @@ public class FederationData implements PersistentData, FactionScore {
     private final int id;
     private String name;
     private final ArrayList<FactionData> members;
-    private boolean needsUpdate = true;
+    private transient boolean needsUpdate = true;
 
     public FederationData(String name, FactionData fromFaction, FactionData toFaction) {
         this.name = name;

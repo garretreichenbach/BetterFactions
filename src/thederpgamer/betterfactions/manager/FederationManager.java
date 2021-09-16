@@ -1,7 +1,6 @@
 package thederpgamer.betterfactions.manager;
 
 import api.common.GameClient;
-import api.common.GameCommon;
 import api.mod.ModSkeleton;
 import api.mod.config.PersistentObjectUtil;
 import thederpgamer.betterfactions.BetterFactions;
@@ -9,9 +8,9 @@ import thederpgamer.betterfactions.data.persistent.faction.FactionData;
 import thederpgamer.betterfactions.data.persistent.federation.FederationData;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * <Description>
@@ -23,9 +22,13 @@ public class FederationManager {
 
     private static final ModSkeleton instance = BetterFactions.getInstance().getSkeleton();
 
-    private static final ConcurrentLinkedQueue<FederationData> clientDataCache = new ConcurrentLinkedQueue<>();
-
     public static void createNewFederation(String federationName, final FactionData fromFaction, final FactionData toFaction) {
+        ArrayList<FederationData> toRemove = new ArrayList<>();
+        for(Object obj : PersistentObjectUtil.getObjects(instance, FactionData.class)) {
+            if(((FederationData) obj).getName() == federationName) toRemove.add((FederationData) obj);
+        }
+        for(FederationData oldData : toRemove) PersistentObjectUtil.removeObject(instance, oldData);
+
         FederationData federationData = new FederationData(federationName, fromFaction, toFaction);
         fromFaction.setFederationId(federationData.getId());
         toFaction.setFederationId(federationData.getId());
@@ -48,16 +51,15 @@ public class FederationManager {
     }
 
     public static HashMap<Integer, FederationData> getFederationDataMap() {
-        HashMap<Integer, FederationData> federationMap = new HashMap<>();
-        if(GameCommon.isClientConnectedToServer() || GameCommon.isOnSinglePlayer()) {
-            for(FederationData federationData : clientDataCache) federationMap.put(federationData.getId(), federationData);
-        } else {
-            for(Object federationObject : PersistentObjectUtil.getObjects(instance, FederationData.class)) {
-                FederationData federationData = (FederationData) federationObject;
-                federationMap.put(federationData.getId(), federationData);
+        HashMap<Integer, FederationData> federationDataMap = new HashMap<>();
+        if(NetworkSyncManager.onClient()) federationDataMap = NetworkSyncManager.getFederationDataCache();
+        else {
+            for(Object factionDataObject : PersistentObjectUtil.getObjects(instance, FederationData.class)) {
+                FederationData federationData = (FederationData) factionDataObject;
+                federationDataMap.put(federationData.getId(), federationData);
             }
         }
-        return federationMap;
+        return federationDataMap;
     }
 
     public static FederationData getFederation(FactionData factionData) {

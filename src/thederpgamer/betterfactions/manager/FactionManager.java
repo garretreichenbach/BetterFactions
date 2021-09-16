@@ -11,6 +11,7 @@ import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.persistent.faction.FactionData;
 import thederpgamer.betterfactions.data.persistent.faction.FactionMember;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
 
@@ -29,23 +30,22 @@ public class FactionManager {
     private static final String tradingGuildDescription = "A friendly organization made up of wealthy trading guilds spread across the galaxy. They boast a large navy made up of the combined forces of their many guild members and may sometimes defend weaker factions from larger aggressors.";
 
     public static boolean inFaction(PlayerState playerState) {
-        return playerState.getFactionId() != 0;
+        return playerState.getFactionId() > 0;
     }
 
     public static Faction getFaction(PlayerState playerState) {
-        if(playerState.getFactionId() == 0) return null;
+        if(playerState.getFactionId() <= 0) return null;
         else return Objects.requireNonNull(GameCommon.getGameState()).getFactionManager().getFaction(playerState.getFactionId());
     }
 
     public static HashMap<Integer, FactionData> getFactionDataMap() {
         HashMap<Integer, FactionData> factionDataMap = new HashMap<>();
-        if(NetworkSyncManager.onClient()) factionDataMap = NetworkSyncManager.getFactionDataCache();
-        else {
+        if(NetworkSyncManager.onServer()) {
             for(Object factionDataObject : PersistentObjectUtil.getObjects(instance, FactionData.class)) {
                 FactionData factionData = (FactionData) factionDataObject;
                 factionDataMap.put(factionData.getFactionId(), factionData);
             }
-        }
+        } else factionDataMap = NetworkSyncManager.getFactionDataCache();
         return factionDataMap;
     }
 
@@ -56,7 +56,6 @@ public class FactionManager {
     }
 
     public static FactionMember getPlayerFactionMember(String playerName) {
-        if(GameCommon.isClientConnectedToServer() || GameCommon.isOnSinglePlayer())
         try {
             return getFactionData(Objects.requireNonNull(getFaction(GameCommon.getPlayerFromName(playerName)))).getMember(playerName);
         } catch(Exception exception) {
@@ -70,13 +69,15 @@ public class FactionManager {
     }
 
     public static FactionData getFactionData(Faction faction) {
-        try {
-            FactionData factionData = getFactionDataMap().get(faction.getIdFaction());
-            if(factionData == null) factionData = createFactionData(faction.getIdFaction());
-            return factionData;
-        } catch(Exception ignored) {
-            return createFactionData(faction.getIdFaction());
-        }
+        if(faction != null) {
+            try {
+                FactionData factionData = getFactionDataMap().get(faction.getIdFaction());
+                if(factionData == null) factionData = createFactionData(faction.getIdFaction());
+                return factionData;
+            } catch(Exception ignored) {
+                return createFactionData(faction.getIdFaction());
+            }
+        } else return null;
     }
 
     public static void initializeFactions() {
@@ -89,7 +90,13 @@ public class FactionManager {
     }
 
     private static FactionData createFactionData(int factionId) {
-        if(GameCommon.isDedicatedServer() || GameCommon.isOnSinglePlayer()) {
+        if(NetworkSyncManager.onServer()) {
+            ArrayList<FactionData> toRemove = new ArrayList<>();
+            for(Object obj : PersistentObjectUtil.getObjects(instance, FactionData.class)) {
+                if(((FactionData) obj).getFactionId() == factionId) toRemove.add((FactionData) obj);
+            }
+            for(FactionData oldData : toRemove) PersistentObjectUtil.removeObject(instance, oldData);
+
             Faction faction = Objects.requireNonNull(GameCommon.getGameState()).getFactionManager().getFaction(factionId);
             FactionData fData = new FactionData(faction);
 

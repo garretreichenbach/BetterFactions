@@ -79,21 +79,24 @@ public class GUIExpandableButtonPane extends GUIHorizontalButtonTablePane {
         });
     }
 
-    public void setMainButton(int x, int y, Object text, GUIHorizontalArea.HButtonColor color, GUIHorizontalButtonTablePane parent, final GUIActivationCallback activationCallback) {
+    public void setMainButton(int x, final int y, int heightOffset, Object text, GUIHorizontalArea.HButtonColor color, final GUIHorizontalButtonTablePane parent, final GUIActivationCallback activationCallback) {
         if(y >= parent.getButtons().length) {
             if(parent.getButtons().length == 0 || parent.getButtons()[0] == null) parent.addRow();
-            for(int i = 0; i < y - parent.getButtons().length; i ++) parent.addRow();
+            for(int i = 0; i <= y - parent.getButtons().length; i ++) parent.addRow();
         }
 
         if(parent.getButtons().length > 0 && parent.getButtons()[0] != null && x >= parent.getButtons()[0].length) {
-            for(int i = 0; i < x - parent.getButtons()[0].length; i ++) parent.addColumn();
+            for(int i = 0; i <= x - parent.getButtons()[0].length; i ++) parent.addColumn();
         }
 
         parent.addButton(x, y, text, color, new GUICallback() {
 
             @Override
             public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                if(mouseEvent.pressedLeftMouse()) expanded = !expanded;
+                if(mouseEvent.pressedLeftMouse()) {
+                    expanded = !expanded;
+                    handleExpanded(parent, y);
+                }
             }
             @Override
             public boolean isOccluded() {
@@ -117,11 +120,11 @@ public class GUIExpandableButtonPane extends GUIHorizontalButtonTablePane {
             }
         });
         dependend = parent.getButtons()[y][x];
-        setPos(0, parent.getHeight(), 0);
+        setPos(0, 25 + heightOffset, 0);
         parent.getButtons()[y][x].attach(this);
     }
 
-    public void setMainButton(int x, int y, Object text, GUIHorizontalArea.HButtonType type, GUIHorizontalButtonTablePane parent, final GUIActivationCallback activationCallback) {
+    public void setMainButton(int x, final int y, int heightOffset, Object text, GUIHorizontalArea.HButtonType type, final GUIHorizontalButtonTablePane parent, final GUIActivationCallback activationCallback) {
         if(y >= parent.getButtons().length) {
             if(parent.getButtons().length == 0 || parent.getButtons()[0] == null) parent.addRow();
             for(int i = 0; i < y - parent.getButtons().length; i ++) parent.addRow();
@@ -135,7 +138,10 @@ public class GUIExpandableButtonPane extends GUIHorizontalButtonTablePane {
 
             @Override
             public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                if(mouseEvent.pressedLeftMouse()) expanded = !expanded;
+                if(mouseEvent.pressedLeftMouse()) {
+                    expanded = !expanded;
+                    handleExpanded(parent, y);
+                }
             }
             @Override
             public boolean isOccluded() {
@@ -159,8 +165,15 @@ public class GUIExpandableButtonPane extends GUIHorizontalButtonTablePane {
             }
         });
         dependend = parent.getButtons()[y][x];
-        setPos(0, parent.getHeight(), 0);
+        setPos(0, 25 + heightOffset, 0);
         parent.getButtons()[y][x].attach(this);
+    }
+
+    private void handleExpanded(GUIHorizontalButtonTablePane parent, int index) {
+        for(int i = index; i <= parent.getButtons()[0].length; i ++) {
+            if(expanded) parent.getButtons()[0][i].getPos().y += 26 * getButtons()[0].length;
+            else parent.getButtons()[0][i].getPos().y -= 26 * getButtons()[0].length;
+        }
     }
 
     private static class CallbackBlocker implements GUICallbackBlocking {

@@ -27,18 +27,12 @@ public class ImageUtils {
     private final static ConcurrentLinkedQueue<String> downloadingImages = new ConcurrentLinkedQueue<>();
 
     @Nullable
-    public static Sprite getImage(String url, String name) {
+    public static Sprite getImage(String url) {
         try {
-            Sprite sprite = ResourceManager.getSprite(name);
-            if(sprite != null) {
-                if(!sprite.getName().equals(name)) sprite.setName(name);
-                return scaleSprite(sprite, 200, 200);
-            } else {
-                fetchImage(url, name);
-                return scaleSprite(getDefaultLogo(), 200, 200);
-            }
+            fetchImage(url);
+            return scaleSprite(getDefaultLogo(), ResourceManager.SPRITE_WIDTH, ResourceManager.SPRITE_HEIGHT);
         } catch(Exception ignored) { }
-        return scaleSprite(getDefaultLogo(), 200, 200);
+        return scaleSprite(getDefaultLogo(), ResourceManager.SPRITE_WIDTH, ResourceManager.SPRITE_HEIGHT);
     }
 
     public static Sprite scaleSprite(Sprite sprite, int width, int height) {
@@ -47,7 +41,7 @@ public class ImageUtils {
         return sprite;
     }
 
-    private static void fetchImage(final String url, final String name) {
+    private static void fetchImage(final String url) {
         if (!downloadingImages.contains(url)) {
             new Thread() {
                 @Override
@@ -57,8 +51,9 @@ public class ImageUtils {
                     StarLoaderTexture.runOnGraphicsThread(new Runnable() {
                         @Override
                         public void run() {
-                            Sprite sprite = StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), name);
-                            sprite.setName(name);
+                            Sprite sprite = StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), url);
+                            sprite.setName(url);
+                            sprite.setPositionCenter(false);
                             ResourceManager.addSprite(sprite);
                         }
                     });
