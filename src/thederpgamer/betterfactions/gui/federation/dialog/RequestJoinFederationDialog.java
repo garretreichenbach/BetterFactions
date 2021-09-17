@@ -9,7 +9,7 @@ import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.input.KeyEventInterface;
 import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
 import thederpgamer.betterfactions.data.persistent.federation.FederationData;
-import thederpgamer.betterfactions.gui.elements.dialog.FactionMessagePanel;
+import thederpgamer.betterfactions.gui.elements.dialog.FactionMessagePanelOld;
 
 /**
  * RequestJoinFederationDialog.java
@@ -20,11 +20,11 @@ import thederpgamer.betterfactions.gui.elements.dialog.FactionMessagePanel;
  */
 public class RequestJoinFederationDialog extends PlayerInput {
 
-    private FactionMessagePanel messagePanel;
+    private FactionMessagePanelOld messagePanel;
 
     public RequestJoinFederationDialog(Faction from, Faction to, FederationData federationData) {
         super(GameClient.getClientState());
-        messagePanel = new FactionMessagePanel(GameClient.getClientState(), this, getDefaultTitle(from, federationData), from, to);
+        messagePanel = new FactionMessagePanelOld(GameClient.getClientState(), this, getDefaultTitle(from, federationData), from, to);
         messagePanel.setCallback(this);
     }
 

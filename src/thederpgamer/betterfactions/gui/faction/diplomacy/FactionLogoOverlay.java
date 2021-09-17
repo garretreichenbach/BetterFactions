@@ -53,7 +53,7 @@ public class FactionLogoOverlay extends GUIOverlay implements GUICallback {
                         if((s.startsWith("https://")) && (s.toLowerCase().endsWith(".png") || s.toLowerCase().endsWith(".jpg") || s.toLowerCase().endsWith(".jpeg"))) {
                             Sprite sprite = ResourceManager.getSprite(s);
                             FactionData factionData = FactionManager.getFactionData(faction);
-                            factionData.setFactionLogo(FactionManager.getFactionLogo(factionData));
+                            factionData.setFactionLogo(ResourceManager.getSprite(s));
                             infoPanel.updateLogo(sprite);
                             return true;
                         } else return false;

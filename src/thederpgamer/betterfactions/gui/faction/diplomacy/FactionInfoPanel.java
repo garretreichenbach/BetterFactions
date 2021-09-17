@@ -111,9 +111,8 @@ public class FactionInfoPanel extends GUIAncor {
 
     public void setNameText(String nameText, Color color) {
         nameOverlay.setFont(FontLibrary.FontSize.MEDIUM.getFont());
-        nameOverlay.setColor(color);
+        //nameOverlay.setColor(color);
         nameOverlay.setTextSimple(nameText);
-        nameOverlay.updateCacheForced();
     }
 
     public void setInfoText(String newText) {

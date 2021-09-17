@@ -4,13 +4,12 @@ import api.common.GameClient;
 import api.common.GameCommon;
 import org.newdawn.slick.Color;
 import org.schema.game.common.data.player.faction.Faction;
-import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIWindowInterface;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.persistent.faction.FactionData;
-import thederpgamer.betterfactions.manager.ResourceManager;
 import thederpgamer.betterfactions.manager.FactionManager;
+import thederpgamer.betterfactions.manager.ResourceManager;
 
 /**
  * <Description>
@@ -26,7 +25,7 @@ public class FactionDiplomacyTab extends GUIContentPane {
     private FactionDiplomacyList factionList;
 
     public FactionDiplomacyTab(InputState state, GUIWindowInterface window) {
-        super(state, window, Lng.str("DIPLOMACY"));
+        super(state, window, "DIPLOMACY");
         this.selectedFaction = null;
     }
 
@@ -47,14 +46,14 @@ public class FactionDiplomacyTab extends GUIContentPane {
 
         if(selectedFaction != null && FactionManager.inFaction(GameClient.getClientPlayerState()) && FactionManager.getFaction(GameClient.getClientPlayerState()).getIdFaction() != selectedFaction.getIdFaction()) {
             infoPanel.setFaction(selectedFaction);
-            String relation = Lng.str(FactionManager.getFactionData(selectedFaction).getRelationString());
-            if(relation.equals(Lng.str("Own Faction")) || relation.equals(Lng.str("Allied")) || relation.equals(Lng.str("In Federation"))) {
+            String relation = FactionManager.getFactionData(selectedFaction).getRelationString();
+            if(relation.equals("Own Faction") || relation.equals("Allied") || relation.equals("In Federation")) {
                 infoPanel.setNameText(selectedFaction.getName(), Color.green);
-            } else if(relation.equals(Lng.str("Neutral"))) {
+            } else if(relation.equals("Neutral")) {
                 infoPanel.setNameText(selectedFaction.getName(), Color.blue);
-            } else if(relation.equals(Lng.str("At War")) || relation.equals(Lng.str("Personal Enemy"))) {
+            } else if(relation.equals("At War") || relation.equals("Personal Enemy")) {
                 infoPanel.setNameText(selectedFaction.getName(), Color.red);
-            } else infoPanel.setNameText(selectedFaction.getName());
+            } else infoPanel.setNameText(selectedFaction.getName(), Color.white);
             FactionData factionData = FactionManager.getFactionData(selectedFaction);
             if(factionData != null) {
                 infoPanel.setInfoText(factionData.getInfoString());

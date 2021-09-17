@@ -27,8 +27,8 @@ import java.util.Set;
  */
 public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
 
-    private FactionDiplomacyTab diplomacyTab;
-    private String[] relationValues = {
+    private final FactionDiplomacyTab diplomacyTab;
+    private final String[] relationValues = {
             "All",
             "Neutral",
             "Allied",

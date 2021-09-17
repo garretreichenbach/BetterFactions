@@ -41,7 +41,6 @@ public class FactionData implements PersistentData, FactionScore {
         federationId = -1;
         factionName = faction.getName();
         factionDescription = faction.getDescription();
-        if(factionLogo == null) factionLogo = "default-logo";
         queueUpdate(true);
     }
 

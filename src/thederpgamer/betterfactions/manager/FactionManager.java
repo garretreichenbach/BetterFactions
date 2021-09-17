@@ -6,7 +6,6 @@ import api.mod.config.PersistentObjectUtil;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionPermission;
-import org.schema.schine.graphicsengine.forms.Sprite;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.persistent.faction.FactionData;
 import thederpgamer.betterfactions.data.persistent.faction.FactionMember;
@@ -117,10 +116,5 @@ public class FactionManager {
             BetterFactions.getInstance().updateClientData();
             return fData;
         } else return null;
-    }
-
-    public static Sprite getFactionLogo(FactionData factionData) {
-        String spriteName = factionData.getFactionName().replace(" ", "-") + "-logo";
-        return ResourceManager.getSprite(spriteName);
     }
 }

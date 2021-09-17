@@ -14,7 +14,7 @@ import java.util.Date;
  */
 public class FactionMessage implements Serializable {
 
-    public enum MessageType {NONE, FEDERATION_INVITE, FEDERATION_REQUEST}
+    public enum MessageType {NONE, ALLIANCE_OFFER, FEDERATION_INVITE, FEDERATION_REQUEST}
 
     public int fromId;
     public int toId;
