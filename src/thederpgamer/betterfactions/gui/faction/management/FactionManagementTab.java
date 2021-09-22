@@ -15,6 +15,7 @@ import thederpgamer.betterfactions.gui.NewFactionPanel;
 public class FactionManagementTab extends GUIContentPane {
 
     private NewFactionPanel guiPanel;
+    private FactionMessageScrollableList messageList;
     private FactionMembersList membersList;
 
     public FactionManagementTab(InputState state, GUIWindowInterface window, NewFactionPanel guiPanel) {
@@ -31,10 +32,12 @@ public class FactionManagementTab extends GUIContentPane {
         addNewTextBox(1, 100);
         setTextBoxHeight(1, 0, 300);
 
+        (messageList = new FactionMessageScrollableList(getState(), getContent(0, 0))).onInit();
         (membersList = new FactionMembersList(getState(), getContent(1, 0), this)).onInit();
     }
 
     public void updateTab() {
+        messageList.redrawList();
         membersList.redrawList();
     }
 }

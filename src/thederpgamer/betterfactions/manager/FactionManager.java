@@ -49,9 +49,8 @@ public class FactionManager {
     }
 
     public static FactionData getPlayerFactionData(String playerName) {
-        if(GameCommon.getPlayerFromName(playerName) != null) {
-            return getFactionData(Objects.requireNonNull(getFaction(GameCommon.getPlayerFromName(playerName))));
-        } else return null;
+        if(GameCommon.getPlayerFromName(playerName) != null) return getFactionData(Objects.requireNonNull(getFaction(GameCommon.getPlayerFromName(playerName))));
+        else return null;
     }
 
     public static FactionMember getPlayerFactionMember(String playerName) {

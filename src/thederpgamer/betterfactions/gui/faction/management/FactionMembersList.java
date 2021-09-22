@@ -172,12 +172,13 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
     }
 
     private GUIHorizontalButtonTablePane redrawButtonPane(final FactionMember factionMember, FactionMember playerFactionMember, GUIAncor anchor) {
-        GUIHorizontalButtonTablePane buttonPane = new GUIHorizontalButtonTablePane(getState(), 1, 1, anchor);
+        GUIHorizontalButtonTablePane buttonPane = new GUIHorizontalButtonTablePane(getState(), 0, 1, anchor);
         buttonPane.onInit();
         final FactionData factionData = playerFactionMember.getFactionData();
         int buttonIndex = 0;
         if(playerFactionMember.getRank().getRankLevel() >= factionMember.getRank().getRankLevel()) {
             if(playerFactionMember.hasPermission("manage.members.kick") && factionMember != playerFactionMember) {
+                buttonPane.addColumn();
                 buttonPane.addButton(buttonIndex, 0, "KICK", GUIHorizontalArea.HButtonColor.RED, new GUICallback() {
                     @Override
                     public void callback(GUIElement guiElement, MouseEvent mouseEvent) {

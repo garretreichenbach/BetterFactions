@@ -2,7 +2,6 @@ package thederpgamer.betterfactions.gui.faction.diplomacy;
 
 import api.common.GameClient;
 import api.common.GameCommon;
-import org.hsqldb.lib.StringComparator;
 import org.schema.common.util.CompareTools;
 import org.schema.game.client.data.GameClientState;
 import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
@@ -13,6 +12,7 @@ import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.persistent.faction.FactionData;
 import thederpgamer.betterfactions.manager.FactionManager;
 import thederpgamer.betterfactions.manager.FederationManager;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -46,8 +46,6 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
 
     @Override
     public void initColumns() {
-        new StringComparator();
-
         this.addColumn("Name", 15.0F, new Comparator<FactionData>() {
             public int compare(FactionData o1, FactionData o2) {
                 return o1.getFactionName().compareTo(o2.getFactionName());

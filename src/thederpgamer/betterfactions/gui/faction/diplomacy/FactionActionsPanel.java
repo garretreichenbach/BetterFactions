@@ -1,27 +1,25 @@
 package thederpgamer.betterfactions.gui.faction.diplomacy;
 
 import api.common.GameClient;
-import api.common.GameCommon;
 import org.schema.game.client.controller.PlayerGameOkCancelInput;
 import org.schema.game.client.controller.manager.ingame.faction.FactionDialogNew;
 import org.schema.game.client.view.gui.faction.newfaction.FactionIncomingInvitesPlayerInputNew;
 import org.schema.game.common.data.player.faction.Faction;
-import org.schema.game.common.data.player.faction.FactionRelation;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
-import org.schema.schine.graphicsengine.forms.gui.*;
+import org.schema.schine.graphicsengine.forms.gui.GUIActivationHighlightCallback;
+import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
+import org.schema.schine.graphicsengine.forms.gui.GUICallback;
+import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalButtonTablePane;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.persistent.faction.FactionData;
 import thederpgamer.betterfactions.data.persistent.faction.FactionMember;
 import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
-import thederpgamer.betterfactions.gui.elements.dialog.FactionMessagePanelOld;
 import thederpgamer.betterfactions.manager.FactionManager;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 /**
  * <Description>
@@ -69,7 +67,7 @@ public class FactionActionsPanel extends GUIAncor {
 
             @Override
             public boolean isOccluded() {
-                return false;
+                return !checkActive();
             }
         }, new GUIActivationHighlightCallback() {
             @Override
@@ -79,7 +77,7 @@ public class FactionActionsPanel extends GUIAncor {
 
             @Override
             public boolean isActive(InputState inputState) {
-                return true;
+                return checkActive();
             }
 
             @Override
@@ -101,7 +99,7 @@ public class FactionActionsPanel extends GUIAncor {
 
                 @Override
                 public boolean isOccluded() {
-                    return false;
+                    return !checkActive();
                 }
             }, new GUIActivationHighlightCallback() {
                 @Override
@@ -111,7 +109,7 @@ public class FactionActionsPanel extends GUIAncor {
 
                 @Override
                 public boolean isActive(InputState inputState) {
-                    return true;
+                    return checkActive();
                 }
 
                 @Override
@@ -144,7 +142,7 @@ public class FactionActionsPanel extends GUIAncor {
 
                 @Override
                 public boolean isOccluded() {
-                    return false;
+                    return !checkActive();
                 }
             }, new GUIActivationHighlightCallback() {
                 @Override
@@ -154,7 +152,7 @@ public class FactionActionsPanel extends GUIAncor {
 
                 @Override
                 public boolean isActive(InputState inputState) {
-                    return true;
+                    return checkActive();
                 }
 
                 @Override
@@ -168,6 +166,7 @@ public class FactionActionsPanel extends GUIAncor {
         if(GameClient.getClientPlayerState().getFactionId() != 0) {
             final FactionMember player = FactionManager.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
             if(player != null && faction.getIdFaction() != player.getFactionId()) {
+                final Faction playerFaction = player.getFactionData().getFaction();
                 if(player.hasPermission("diplomacy.[ANY]")) {
                     if(player.hasPermission("diplomacy.ally")) {
                         if(faction.getFriends().contains(player.getFactionData().getFaction())) {
@@ -177,6 +176,8 @@ public class FactionActionsPanel extends GUIAncor {
                                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                                     if(mouseEvent.pressedLeftMouse()) {
                                         getState().getController().queueUIAudio("0022_menu_ui - select 2");
+                                        (new FactionMessageSendDialog("REMOVE ALLY", playerFaction, faction, FactionMessage.MessageType.ALLIANCE_BREAK)).activate();
+                                        /*
                                         (new PlayerGameOkCancelInput("CONFIRM", GameClient.getClientState(), "Confirm", "Do you really want to leave this faction?\n" + "You'll be unable to access any ship/structure that belongs to this\n" + "faction except for your ships that use the Personal Permission Rank.\n\n" + "If you are the last member, the faction will also automatically disband!") {
                                             public void onDeactivate() {
 
@@ -189,12 +190,13 @@ public class FactionActionsPanel extends GUIAncor {
                                                 deactivate();
                                             }
                                         }).activate();
+                                         */
                                     }
                                 }
 
                                 @Override
                                 public boolean isOccluded() {
-                                    return false;
+                                    return !checkActive();
                                 }
                             }, new GUIActivationHighlightCallback() {
                                 @Override
@@ -204,7 +206,7 @@ public class FactionActionsPanel extends GUIAncor {
 
                                 @Override
                                 public boolean isActive(InputState inputState) {
-                                    return true;
+                                    return checkActive();
                                 }
 
                                 @Override
@@ -213,48 +215,20 @@ public class FactionActionsPanel extends GUIAncor {
                                 }
                             });
                             pos ++;
-                        } else if(!faction.getEnemies().contains(player.getFactionData().getFaction())) {
+                        } else if(!faction.getEnemies().contains(playerFaction)) {
                             buttonPane.addRow();
                             buttonPane.addButton(0, pos, "OFFER ALLIANCE", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
                                 @Override
                                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                                     if(mouseEvent.pressedLeftMouse()) {
                                         getState().getController().queueUIAudio("0022_menu_ui - select 2");
-                                        final FactionMessagePanelOld alliancePanel = new FactionMessagePanelOld(getState(), new GUICallback() {
-                                            @Override
-                                            public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
-                                                if(mouseEvent.pressedLeftMouse()) {
-                                                    if(guiElement.getUserPointer() != null) {
-                                                        String pointer = ((String) guiElement.getUserPointer()).toUpperCase();
-                                                        switch(pointer) {
-                                                            case "OK":
-                                                                alliancePanel.sendMessage(FactionMessage.MessageType.ALLIANCE_OFFER);
-                                                                alliancePanel.cleanUp();
-                                                                break;
-                                                            case "X":
-                                                                alliancePanel.cleanUp();
-                                                                break;
-                                                            case "CANCEL":
-                                                                alliancePanel.cleanUp();
-                                                                break;
-                                                        }
-                                                    }
-                                                }
-                                            }
-
-                                            @Override
-                                            public boolean isOccluded() {
-                                                return false;
-                                            }
-                                        }, "Offer Alliance", player.getFactionData().getFaction(), faction);
-                                        alliancePanel.draw();
-                                        //Todo: Faction alliance offer message panel
+                                        (new FactionMessageSendDialog("OFFER ALLIANCE", playerFaction, faction, FactionMessage.MessageType.ALLIANCE_OFFER)).activate();
                                     }
                                 }
 
                                 @Override
                                 public boolean isOccluded() {
-                                    return false;
+                                    return !checkActive();
                                 }
                             }, new GUIActivationHighlightCallback() {
                                 @Override
@@ -264,7 +238,7 @@ public class FactionActionsPanel extends GUIAncor {
 
                                 @Override
                                 public boolean isActive(InputState inputState) {
-                                    return true;
+                                    return checkActive();
                                 }
 
                                 @Override
@@ -292,7 +266,7 @@ public class FactionActionsPanel extends GUIAncor {
 
                                     @Override
                                     public boolean isOccluded() {
-                                        return false;
+                                        return !checkActive();
                                     }
                                 }, new GUIActivationHighlightCallback() {
                                     @Override
@@ -302,7 +276,7 @@ public class FactionActionsPanel extends GUIAncor {
 
                                     @Override
                                     public boolean isActive(InputState inputState) {
-                                        return true;
+                                        return checkActive();
                                     }
 
                                     @Override
@@ -324,7 +298,7 @@ public class FactionActionsPanel extends GUIAncor {
 
                                     @Override
                                     public boolean isOccluded() {
-                                        return false;
+                                        return !checkActive();
                                     }
                                 }, new GUIActivationHighlightCallback() {
                                     @Override
@@ -334,7 +308,7 @@ public class FactionActionsPanel extends GUIAncor {
 
                                     @Override
                                     public boolean isActive(InputState inputState) {
-                                        return true;
+                                        return checkActive();
                                     }
 
                                     @Override
@@ -357,6 +331,10 @@ public class FactionActionsPanel extends GUIAncor {
 
             }
         }
+    }
+
+    private boolean checkActive() {
+        return getState().getController().getPlayerInputs().isEmpty();
     }
 
     public Faction getFaction() {
