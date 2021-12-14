@@ -12,26 +12,21 @@ import org.schema.game.common.data.player.faction.Faction;
  */
 public class FactionMessage {
 
-    public static final int GENERAL = 0;
-    public static final int ALLIANCE = 1;
-    public static final int FEDERATION = 2;
-    public static final int DIPLOMATIC = 3;
-    public static final int WAR = 4;
-    public static final int TRADE = 5;
+    public enum MessageCategory {ALL, GENERAL, ALLIANCE, FEDERATION, DIPLOMATIC, WAR, TRADE}
 
     public enum MessageType {
-        ALL(GENERAL, "ALL"), UNREAD(GENERAL, "UNREAD"), MESSAGE(GENERAL, "MESSAGE"), REPLY(GENERAL, "REPLY"),
-        ALLIANCE_OFFER(ALLIANCE, "ALLIANCE OFFER"), ALLIANCE_BREAK(ALLIANCE, "ALLIANCE BREAK"),
-        FEDERATION_INVITE(FEDERATION, "FEDERATION INVITE"), FEDERATION_REQUEST(FEDERATION, "FEDERATION JOIN REQUEST"),
-        NON_AGGRESSION_PACT(DIPLOMATIC, "NON-AGGRESSION PACT OFFER"), CANCEL_NON_AGGRESSION_PACT(DIPLOMATIC, "CANCEL NON-AGGRESSION PACT"),
-        GUARANTEE_INDEPENDENCE(DIPLOMATIC, "GUARANTEE INDEPENDENCE"), CANCEL_GUARANTEE(DIPLOMATIC, "CANCEL GUARANTEE"),
-        DEMAND_CONCESSION(WAR, "DEMAND CONCESSION"), DECLARE_WAR(WAR, "WAR DECLARATION"), OFFER_PEACE(WAR, "PEACE OFFER"),
-        OFFER_TRADE(TRADE, "TRADE OFFER"), CANCEL_TRADE(TRADE, "TRADE CANCELLATION");
+        ALL(MessageCategory.ALL, "ALL"), UNREAD(MessageCategory.GENERAL, "UNREAD"), MESSAGE(MessageCategory.GENERAL, "MESSAGE"), REPLY(MessageCategory.GENERAL, "REPLY"),
+        ALLIANCE_OFFER(MessageCategory.ALLIANCE, "ALLIANCE OFFER"), ALLIANCE_BREAK(MessageCategory.ALLIANCE, "ALLIANCE BREAK"),
+        FEDERATION_INVITE(MessageCategory.FEDERATION, "FEDERATION INVITE"), FEDERATION_REQUEST(MessageCategory.FEDERATION, "FEDERATION JOIN REQUEST"),
+        NON_AGGRESSION_PACT(MessageCategory.DIPLOMATIC, "NON-AGGRESSION PACT OFFER"), CANCEL_NON_AGGRESSION_PACT(MessageCategory.DIPLOMATIC, "CANCEL NON-AGGRESSION PACT"),
+        GUARANTEE_INDEPENDENCE(MessageCategory.DIPLOMATIC, "GUARANTEE INDEPENDENCE"), CANCEL_GUARANTEE(MessageCategory.DIPLOMATIC, "CANCEL GUARANTEE"),
+        DEMAND_CONCESSION(MessageCategory.WAR, "DEMAND CONCESSION"), DECLARE_WAR(MessageCategory.WAR, "WAR DECLARATION"), OFFER_PEACE(MessageCategory.WAR, "PEACE OFFER"),
+        OFFER_TRADE(MessageCategory.TRADE, "TRADE OFFER"), CANCEL_TRADE(MessageCategory.TRADE, "TRADE CANCELLATION");
 
-        public int category;
+        public MessageCategory category;
         public String display;
 
-        MessageType(int category, String display) {
+        MessageType(MessageCategory category, String display) {
             this.category = category;
             this.display = display;
         }
@@ -48,6 +43,8 @@ public class FactionMessage {
     public MessageType messageType;
     public long date;
     public boolean read;
+    public String acceptButtonText;
+    public String denyButtonText;
 
     public FactionMessage(Faction from, Faction to, String title, String message) {
         this(from, to, title, message, MessageType.MESSAGE);
@@ -60,6 +57,22 @@ public class FactionMessage {
         this.message = message;
         this.messageType = messageType;
         this.date = System.currentTimeMillis();
+        switch(messageType) {
+            case OFFER_PEACE:
+            case OFFER_TRADE:
+            case ALLIANCE_OFFER:
+            case DEMAND_CONCESSION:
+            case FEDERATION_INVITE:
+            case FEDERATION_REQUEST:
+            case NON_AGGRESSION_PACT:
+                acceptButtonText = "ACCEPT";
+                denyButtonText = "DENY";
+                break;
+            default:
+                acceptButtonText = "";
+                denyButtonText = "";
+                break;
+        }
     }
 
     public Faction getSender() {

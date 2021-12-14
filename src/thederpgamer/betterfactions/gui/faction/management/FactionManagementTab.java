@@ -1,15 +1,15 @@
 package thederpgamer.betterfactions.gui.faction.management;
 
+import org.schema.schine.graphicsengine.core.GLFrame;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIWindowInterface;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.gui.NewFactionPanel;
 
 /**
- * FactionManagementTab.java
  * <Description>
  *
- * @since  01/30/2021
+ * @version 1.0 - [01/30/2021]
  * @author TheDerpGamer
  */
 public class FactionManagementTab extends GUIContentPane {
@@ -26,10 +26,10 @@ public class FactionManagementTab extends GUIContentPane {
     @Override
     public void onInit() {
         super.onInit();
-        setTextBoxHeightLast(300);
-        addNewTextBox(0, 130);
-        addDivider(300);
-        addNewTextBox(1, 100);
+        setTextBoxHeightLast((int) (GLFrame.getHeight() / 2.5));
+        addNewTextBox(0, (int) (GLFrame.getHeight() / 2.5));
+        addDivider((int) (GLFrame.getWidth() / 2.5));
+        addNewTextBox(1, (int) (GLFrame.getHeight() / 2.5));
         setTextBoxHeight(1, 0, 300);
 
         (messageList = new FactionMessageScrollableList(getState(), getContent(0, 0))).onInit();

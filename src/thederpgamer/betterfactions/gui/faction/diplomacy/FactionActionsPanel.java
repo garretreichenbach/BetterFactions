@@ -16,6 +16,7 @@ import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalButtonTabl
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.persistent.faction.FactionData;
 import thederpgamer.betterfactions.data.persistent.faction.FactionMember;
+import thederpgamer.betterfactions.data.persistent.faction.FactionRank;
 import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
 import thederpgamer.betterfactions.manager.FactionManager;
 
@@ -167,6 +168,11 @@ public class FactionActionsPanel extends GUIAncor {
             final FactionMember player = FactionManager.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
             if(player != null && faction.getIdFaction() != player.getFactionId()) {
                 final Faction playerFaction = player.getFactionData().getFaction();
+                if(playerFaction.getMembersUID().size() == 1) { //Todo: Temp fix for events not firing
+                    FactionRank founderRank = new FactionRank("Founder", 4, "*");
+                    player.getFactionData().addRank(founderRank);
+                    player.setRank(founderRank);
+                }
                 if(player.hasPermission("diplomacy.[ANY]")) {
                     if(player.hasPermission("diplomacy.ally")) {
                         if(faction.getFriends().contains(player.getFactionData().getFaction())) {
@@ -176,7 +182,10 @@ public class FactionActionsPanel extends GUIAncor {
                                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                                     if(mouseEvent.pressedLeftMouse()) {
                                         getState().getController().queueUIAudio("0022_menu_ui - select 2");
-                                        (new FactionMessageSendDialog("REMOVE ALLY", playerFaction, faction, FactionMessage.MessageType.ALLIANCE_BREAK)).activate();
+                                        FactionMessageSendDialog dialog = new FactionMessageSendDialog();
+                                        dialog.getInputPanel().createPanel(playerFaction, faction, FactionMessage.MessageType.ALLIANCE_BREAK);
+                                        dialog.activate();
+                                        //(new FactionMessageSendDialog("REMOVE ALLY", playerFaction, faction, FactionMessage.MessageType.ALLIANCE_BREAK)).activate();
                                         /*
                                         (new PlayerGameOkCancelInput("CONFIRM", GameClient.getClientState(), "Confirm", "Do you really want to leave this faction?\n" + "You'll be unable to access any ship/structure that belongs to this\n" + "faction except for your ships that use the Personal Permission Rank.\n\n" + "If you are the last member, the faction will also automatically disband!") {
                                             public void onDeactivate() {
@@ -222,7 +231,10 @@ public class FactionActionsPanel extends GUIAncor {
                                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                                     if(mouseEvent.pressedLeftMouse()) {
                                         getState().getController().queueUIAudio("0022_menu_ui - select 2");
-                                        (new FactionMessageSendDialog("OFFER ALLIANCE", playerFaction, faction, FactionMessage.MessageType.ALLIANCE_OFFER)).activate();
+                                        //(new FactionMessageSendDialog("OFFER ALLIANCE", playerFaction, faction, FactionMessage.MessageType.ALLIANCE_OFFER)).activate();
+                                        FactionMessageSendDialog dialog = new FactionMessageSendDialog();
+                                        dialog.getInputPanel().createPanel(playerFaction, faction, FactionMessage.MessageType.ALLIANCE_OFFER);
+                                        dialog.activate();
                                     }
                                 }
 
@@ -260,7 +272,10 @@ public class FactionActionsPanel extends GUIAncor {
                                     public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                                         if(mouseEvent.pressedLeftMouse()) {
                                             getState().getController().queueUIAudio("0022_menu_ui - select 2");
-                                            //Todo: Offer peace panel
+                                            //(new FactionMessageSendDialog("OFFER PEACE", playerFaction, faction, FactionMessage.MessageType.OFFER_PEACE)).activate();
+                                            FactionMessageSendDialog dialog = new FactionMessageSendDialog();
+                                            dialog.getInputPanel().createPanel(playerFaction, faction, FactionMessage.MessageType.OFFER_PEACE);
+                                            dialog.activate();
                                         }
                                     }
 

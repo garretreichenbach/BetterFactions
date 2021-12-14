@@ -28,4 +28,8 @@ public class DateUtils {
     public static String getTimeFormatted() {
         return getTimeFormatted("MM/dd/yyyy '-' hh:mm:ss z");
     }
+
+    public static String getDateFormatted(long age) {
+        return (new SimpleDateFormat("MM/dd/yyyy '-' hh:mm:ss z")).format(new Date(age));
+    }
 }

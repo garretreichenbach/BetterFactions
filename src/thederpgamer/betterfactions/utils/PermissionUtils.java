@@ -26,7 +26,7 @@ public class PermissionUtils {
         permission = permission.replace("\"", "");
         for(String perm : permissionDatabase) {
             perm = convertTags(perm, values.toArray(new String[0]));
-            if(permission.equals("*") || perm.contains(permission.substring(0, permission.indexOf('*') - 1))) {
+            if(permission.equals("*") || perm.contains(permission.substring(0, permission.indexOf('*')))) {
                 subPermissions.add(perm);
             }
         }

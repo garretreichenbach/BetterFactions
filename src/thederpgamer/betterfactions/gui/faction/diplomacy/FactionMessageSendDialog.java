@@ -1,12 +1,8 @@
 package thederpgamer.betterfactions.gui.faction.diplomacy;
 
-import api.network.packets.PacketUtil;
 import api.utils.gui.GUIInputDialog;
-import org.schema.game.common.data.player.faction.Faction;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
-import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
-import thederpgamer.betterfactions.network.client.SendFactionMessagePacket;
 
 /**
  * <Description>
@@ -16,21 +12,9 @@ import thederpgamer.betterfactions.network.client.SendFactionMessagePacket;
  */
 public class FactionMessageSendDialog extends GUIInputDialog {
 
-    private final String title;
-    private final Faction from;
-    private final Faction to;
-    private final FactionMessage.MessageType messageType;
-
-    public FactionMessageSendDialog(String title, Faction from, Faction to, FactionMessage.MessageType messageType) {
-        this.title = title;
-        this.from = from;
-        this.to = to;
-        this.messageType = messageType;
-    }
-
     @Override
     public FactionMessageSendPanel createPanel() {
-        return new FactionMessageSendPanel(getState(), title, from, to, messageType, this);
+        return new FactionMessageSendPanel(getState(), this);
     }
 
     @Override
@@ -48,7 +32,7 @@ public class FactionMessageSendDialog extends GUIInputDialog {
                     break;
                 case "OK":
                 case "SEND":
-                    sendMessage();
+                    getInputPanel().sendMessage();
                     deactivate();
                     break;
             }
@@ -61,10 +45,5 @@ public class FactionMessageSendDialog extends GUIInputDialog {
 
     public String getMessageText() {
         return getInputPanel().getMessageText();
-    }
-
-    public void sendMessage() {
-        FactionMessage message = new FactionMessage(from, to, getTitleText(), getMessageText(), messageType);
-        PacketUtil.sendPacketToServer(new SendFactionMessagePacket(message));
     }
 }

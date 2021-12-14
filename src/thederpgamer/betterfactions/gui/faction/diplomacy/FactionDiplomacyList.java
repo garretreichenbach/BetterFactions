@@ -92,9 +92,9 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
             public GUIElement create(String s) {
                 GUIAncor anchor = new GUIAncor(getState(), 10.0F, 24.0F);
                 GUITextOverlayTableDropDown dropDown;
-                (dropDown = new GUITextOverlayTableDropDown(10, 10, getState())).setTextSimple(s);
+                (dropDown = new GUITextOverlayTableDropDown(10, 10, getState())).setTextSimple(s.toUpperCase());
                 dropDown.setPos(4.0F, 4.0F, 0.0F);
-                anchor.setUserPointer(s);
+                anchor.setUserPointer(s.toUpperCase());
                 anchor.attach(dropDown);
                 return anchor;
             }
@@ -120,7 +120,9 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
         for(FactionData factionData : set) {
             if(factionData != null) {
                 GUITextOverlayTable nameTextElement;
-                (nameTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(factionData.getFactionName());
+                String factionName = factionData.getFactionName();
+                if(factionData.getFactionId() == org.schema.game.common.data.player.faction.FactionManager.TRAIDING_GUILD_ID) factionName = "Trading Guild";
+                (nameTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(factionName);
                 GUIClippedRow nameRowElement;
                 (nameRowElement = new GUIClippedRow(this.getState())).attach(nameTextElement);
 
@@ -130,8 +132,9 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
                 GUIClippedRow federationRowElement;
                 (federationRowElement = new GUIClippedRow(this.getState())).attach(federationTextElement);
 
+                int members = GameCommon.getGameState().getFactionManager().getFaction(factionData.getFactionId()).getMembersUID().size();
                 GUITextOverlayTable membersTextElement;
-                (membersTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(GameCommon.getGameState().getFactionManager().getFaction(factionData.getFactionId()).getMembersUID().size() + " members");
+                (membersTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple((members <= 0) ? "N/A" : members + " members");
                 GUIClippedRow membersRowElement;
                 (membersRowElement = new GUIClippedRow(this.getState())).attach(membersTextElement);
 
@@ -166,7 +169,10 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
         @Override
         public void clickedOnRow() {
             super.clickedOnRow();
-            diplomacyTab.setSelectedFaction(GameCommon.getGameState().getFactionManager().getFaction(f.getFactionId()));
+            if(!GameCommon.getGameState().getFactionManager().existsFaction(f.getFactionId())) {
+                FactionManager.removeFactionData(f);
+                diplomacyTab.updateTab();
+            } else diplomacyTab.setSelectedFaction(GameCommon.getGameState().getFactionManager().getFaction(f.getFactionId()));
         }
     }
 }

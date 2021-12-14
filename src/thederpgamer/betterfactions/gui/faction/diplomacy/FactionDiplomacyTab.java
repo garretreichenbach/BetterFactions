@@ -82,7 +82,9 @@ public class FactionDiplomacyTab extends GUIContentPane {
 
     @Override
     public void draw() {
-        super.draw();
+        try {
+            super.draw();
+        } catch(Exception ignored) { }
     }
 
     public void updateTab() {

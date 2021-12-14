@@ -57,6 +57,7 @@ public class FactionMember implements Serializable {
     public boolean hasPermission(String... permissions) {
         if(permissions != null) {
             for(String permission : permissions) {
+                if(rank.getPermissions().contains("*")) return true;
                 if(permission.contains("[ANY]")) permission = permission.replace("[ANY]", "");
                 if(rank.getPermissions().contains(permission) || rank.getPermissions().contains("*")) return true;
             }

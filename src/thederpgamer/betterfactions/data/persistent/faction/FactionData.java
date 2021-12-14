@@ -196,8 +196,15 @@ public class FactionData implements PersistentData, FactionScore {
     }
 
     public void addMember(String playerName) {
-        getFaction().addOrModifyMember(playerName, playerName, FactionRoles.INDEX_DEFAULT_ROLE, System.currentTimeMillis(), GameCommon.getGameState(), true);
-        members.add(new FactionMember(playerName, this, getLowestRank()));
+        if(members.size() > 1) {
+            getFaction().addOrModifyMember(playerName, playerName, FactionRoles.INDEX_DEFAULT_ROLE, System.currentTimeMillis(), GameCommon.getGameState(), true);
+            members.add(new FactionMember(playerName, this, getLowestRank()));
+        } else {
+            getFaction().addOrModifyMember(playerName, playerName, FactionRoles.INDEX_ADMIN_ROLE, System.currentTimeMillis(), GameCommon.getGameState(), true);
+            FactionRank founder = new FactionRank("Founder", FactionRoles.INDEX_ADMIN_ROLE, "*");
+            addRank(founder);
+            members.add(new FactionMember(playerName, this, founder));
+        }
         queueUpdate(true);
     }
 

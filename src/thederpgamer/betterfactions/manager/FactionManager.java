@@ -55,11 +55,17 @@ public class FactionManager {
 
     public static FactionMember getPlayerFactionMember(String playerName) {
         try {
-            return getFactionData(Objects.requireNonNull(getFaction(GameCommon.getPlayerFromName(playerName)))).getMember(playerName);
+            FactionMember member = getFactionData(Objects.requireNonNull(getFaction(GameCommon.getPlayerFromName(playerName)))).getMember(playerName);
+            if(member.getFactionData().getMembers().size() == 1 && member.getFactionData().getMembers().get(0).equals(member)) member.getRank().addPermission("*");
+            return member;
         } catch(Exception exception) {
             exception.printStackTrace();
         }
         return null;
+    }
+
+    public static void removeFactionData(FactionData factionData) {
+        PersistentObjectUtil.removeObject(instance, factionData);
     }
 
     public static FactionData getFactionData(int factionId) {

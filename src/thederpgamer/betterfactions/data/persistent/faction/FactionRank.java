@@ -46,12 +46,15 @@ public class FactionRank implements Serializable {
     }
 
     public void addPermission(String... permissions) {
-        if(permissions != null) this.permissions.addAll(Arrays.asList(permissions));
-        this.permissions = mergePermissions(this.permissions);
+        if(permissions != null) {
+            for(String permission : permissions) if(!this.permissions.contains(permission)) this.permissions.add(permission);
+            //this.permissions.addAll(Arrays.asList(permissions));
+        }
+        //this.permissions = mergePermissions(this.permissions);
     }
 
     public void removePermission(String... permissions) {
-        this.permissions = mergePermissions(this.permissions);
+        //this.permissions = mergePermissions(this.permissions);
         if(permissions != null) this.permissions.removeAll(Arrays.asList(permissions));
     }
 
@@ -61,7 +64,7 @@ public class FactionRank implements Serializable {
             String[] split = permission.split("\\.");
             StringBuilder builder = new StringBuilder();
             for(String s : split) {
-                builder.append(s);
+                builder.append(s).append(".");
                 if(s.equalsIgnoreCase("*")) {
                     mergedList.addAll(mergePermissions(PermissionUtils.getSubPermissions(builder.toString())));
                 }

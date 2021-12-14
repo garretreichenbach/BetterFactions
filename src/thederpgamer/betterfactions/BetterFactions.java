@@ -88,7 +88,7 @@ public class BetterFactions extends StarMod {
                 FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionCreateNews(FactionManager.getFactionData(event.getFaction()), event.getPlayer()));
                 FactionNewsUtils.saveData();
                 FactionData factionData = FactionManager.getFactionData(event.getFaction());
-                FactionRank founderRank = new FactionRank("Founder", 5, "*");
+                FactionRank founderRank = new FactionRank("Founder", 4, "*");
                 factionData.addRank(founderRank);
                 factionData.addMember(event.getPlayer().getName());
                 factionData.getMember(event.getPlayer().getName()).setRank(founderRank);
@@ -103,7 +103,14 @@ public class BetterFactions extends StarMod {
                 FactionManager.getFactionData(event.getFaction());
                 FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionJoinNews(FactionManager.getFactionData(event.getFaction()), event.getPlayer()));
                 FactionNewsUtils.saveData();
-                if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) FactionManager.getFactionData(event.getFaction()).addMember(event.getPlayer().getName());
+                if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
+                    FactionManager.getFactionData(event.getFaction()).addMember(event.getPlayer().getName());
+                    if(FactionManager.getFactionData(event.getFaction()).getMembers().size() <= 1) {
+                        FactionRank founderRank = new FactionRank("Founder", 4, "*");
+                        FactionManager.getFactionData(event.getFaction()).addRank(founderRank);
+                        FactionManager.getFactionData(event.getFaction()).getMembers().get(0).setRank(founderRank);
+                    }
+                }
                 PersistentObjectUtil.save(getSkeleton());
                 updateClientData();
             }
@@ -121,9 +128,15 @@ public class BetterFactions extends StarMod {
                     FactionManager.getFactionData(event.getFaction());
                 }
                 FactionNewsUtils.saveData();
-                if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) FactionManager.getFactionData(event.getFaction()).removeMember(event.getPlayer().getName());
-                PersistentObjectUtil.save(getSkeleton());
-                updateClientData();
+                if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
+                    FactionManager.getFactionData(event.getFaction()).removeMember(event.getPlayer().getName());
+                    PersistentObjectUtil.save(getSkeleton());
+                    updateClientData();
+                    newFactionPanel.recreateTabs();
+                } else {
+                    PersistentObjectUtil.save(getSkeleton());
+                    updateClientData();
+                }
             }
         }, this);
 
@@ -144,13 +157,16 @@ public class BetterFactions extends StarMod {
 
     private void startRunners() {
         if(NetworkSyncManager.onServer()) {
-            updateClientData();
             new StarRunnable() {
                 @Override
                 public void run() {
-                    updateClientData();
+                    try {
+                        updateClientData();
+                    } catch(Exception exception) {
+                        LogManager.logException("Encountered an exception while trying to sync client data!", exception);
+                    }
                 }
-            }.runTimer(this, 1000);
+            }.runTimer(this, 300);
         }
     }
 
