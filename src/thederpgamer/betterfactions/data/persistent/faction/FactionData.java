@@ -176,6 +176,17 @@ public class FactionData implements PersistentData, FactionScore {
         queueUpdate(true);
     }
 
+    public void removeMessage(FactionMessage message) {
+        boolean remove = false;
+        int i;
+        for(i = 0; i < inbox.size(); i ++) if(inbox.get(i).date == message.date) {
+            remove = true;
+            break;
+        }
+        if(remove) inbox.remove(i);
+        queueUpdate(true);
+    }
+
     public ArrayList<FactionMessage> getInbox() {
         return inbox;
     }

@@ -13,10 +13,10 @@ public class PermissionUtils {
 
     private static final String[] permissionDatabase = {
             "chat.channel.[CHANNEL_TAG]",
-            "entity.ship.[ENTITY_TAG].activate.[ELEMENT_TAG]", "entity.station[ENTITY_TAG].activate.[ELEMENT_TAG]",
+            "entity.ship.[ENTITY_TAG].activate.[ELEMENT_TAG]", "entity.station.[ENTITY_TAG].activate.[ELEMENT_TAG]",
             "entity.ship.[ENTITY_TAG].edit", "entity.station.[ENTITY_TAG].edit",
             "entity.ship.[ENTITY_TAG].dock", "entity.ship.[ENTITY_TAG].undock", "entity.ship.[ENTITY_TAG].pilot",
-            "manage.members.ranks", "manage.members.kick"
+            "manage.members.ranks", "manage.members.kick", "manage.members.invite", "manage.fp", "manage.info"
     };
 
     public static ArrayList<String> getSubPermissions(String permission) {

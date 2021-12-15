@@ -18,6 +18,7 @@ import thederpgamer.betterfactions.data.persistent.faction.FactionRank;
 import thederpgamer.betterfactions.gui.NewFactionPanel;
 import thederpgamer.betterfactions.manager.*;
 import thederpgamer.betterfactions.network.client.CreateNewFederationPacket;
+import thederpgamer.betterfactions.network.client.ModifyFactionMessagePacket;
 import thederpgamer.betterfactions.network.client.SendFactionMessagePacket;
 import thederpgamer.betterfactions.network.server.ServerSyncDataPacket;
 import thederpgamer.betterfactions.network.server.UpdateGUIsPacket;
@@ -153,6 +154,7 @@ public class BetterFactions extends StarMod {
         PacketUtil.registerPacket(UpdateGUIsPacket.class);
         PacketUtil.registerPacket(CreateNewFederationPacket.class);
         PacketUtil.registerPacket(SendFactionMessagePacket.class);
+        PacketUtil.registerPacket(ModifyFactionMessagePacket.class);
     }
 
     private void startRunners() {

@@ -9,6 +9,7 @@ import org.schema.game.common.data.player.faction.FactionPermission;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.persistent.faction.FactionData;
 import thederpgamer.betterfactions.data.persistent.faction.FactionMember;
+import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -82,6 +83,33 @@ public class FactionManager {
                 return createFactionData(faction.getIdFaction());
             }
         } else return null;
+    }
+
+    public static void updateData(Object data) {
+        if(data instanceof FactionMessage) {
+            FactionMessage message = (FactionMessage) data;
+            FactionMessage toDelete = null;
+            for(FactionMessage m : getFactionData(message.toId).getInbox()) {
+                if(m.date == message.date) {
+                    toDelete = m;
+                    break;
+                }
+            }
+            if(toDelete != null) getFactionData(message.toId).removeMessage(toDelete);
+            getFactionData(message.toId).addMessage(message);
+            updateData(getFactionData(message.toId));
+        } else if(data instanceof FactionData) {
+            FactionData factionData = (FactionData) data;
+            FactionData toDelete = null;
+            for(FactionData fData : getFactionDataMap().values()) {
+                if(fData.getFactionId() == factionData.getFactionId()) {
+                    toDelete = fData;
+                    break;
+                }
+            }
+            if(toDelete != null) removeFactionData(toDelete);
+            PersistentObjectUtil.addObject(instance, factionData);
+        }
     }
 
     public static void initializeFactions() {

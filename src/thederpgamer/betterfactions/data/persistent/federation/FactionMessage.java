@@ -12,7 +12,11 @@ import org.schema.game.common.data.player.faction.Faction;
  */
 public class FactionMessage {
 
-    public enum MessageCategory {ALL, GENERAL, ALLIANCE, FEDERATION, DIPLOMATIC, WAR, TRADE}
+    public static final int MARK_READ = 0;
+    public static final int MARK_UNREAD = 1;
+    public static final int DELETE = 2;
+
+    public enum MessageCategory {ALL, GENERAL, ALLIANCE, FEDERATION, DIPLOMATIC, WAR, TRADE, READ, UNREAD}
 
     public enum MessageType {
         ALL(MessageCategory.ALL, "ALL"), UNREAD(MessageCategory.GENERAL, "UNREAD"), MESSAGE(MessageCategory.GENERAL, "MESSAGE"), REPLY(MessageCategory.GENERAL, "REPLY"),

@@ -27,10 +27,12 @@ import java.util.Set;
  */
 public class FactionMembersList extends ScrollableTableList<FactionMember> {
 
+    private GUIAncor anchor;
     private FactionManagementTab managementTab;
 
     public FactionMembersList(InputState inputState, GUIAncor anchor, FactionManagementTab managementTab) {
         super(inputState, 300, 100, anchor);
+        this.anchor = anchor;
         this.managementTab = managementTab;
         anchor.attach(this);
         ((GameClientState) inputState).getFactionManager().addObserver(this);
@@ -154,7 +156,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
 
             FactionMembersListRow factionMembersListRow = new FactionMembersListRow(getState(), factionMember, nameRowElement, rankRowElement, statusRowElement, locationRowElement);
             if(playerFactionMember.hasPermission("manage.members.[ANY]")) {
-                GUIAncor anchor = new GUIAncor(getState(), 300, 28.0f);
+                GUIAncor anchor = new GUIAncor(getState(), this.anchor.getWidth() - 28.0f, 28.0f);
                 anchor.attach(redrawButtonPane(factionMember, playerFactionMember, anchor));
                 factionMembersListRow.expanded = new GUIElementList(getState());
                 factionMembersListRow.expanded.add(new GUIListElement(anchor, getState()));
@@ -189,7 +191,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
 
                     @Override
                     public boolean isOccluded() {
-                        return false;
+                        return !getState().getController().getPlayerInputs().isEmpty();
                     }
                 }, new GUIActivationCallback() {
                     @Override
@@ -199,7 +201,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
 
                     @Override
                     public boolean isActive(InputState inputState) {
-                        return true;
+                        return getState().getController().getPlayerInputs().isEmpty();
                     }
                 });
                 buttonIndex ++;
@@ -213,10 +215,9 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
                         getState().getController().queueUIAudio("0022_menu_ui - enter");
                         //Todo: Rank Editor
                     }
-
                     @Override
                     public boolean isOccluded() {
-                        return false;
+                        return !getState().getController().getPlayerInputs().isEmpty();
                     }
                 }, new GUIActivationCallback() {
                     @Override
@@ -226,7 +227,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
 
                     @Override
                     public boolean isActive(InputState inputState) {
-                        return true;
+                        return getState().getController().getPlayerInputs().isEmpty();
                     }
                 });
                 buttonIndex ++;

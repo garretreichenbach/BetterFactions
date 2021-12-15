@@ -1,6 +1,7 @@
 package thederpgamer.betterfactions.gui.faction.management;
 
 import api.common.GameCommon;
+import api.network.packets.PacketUtil;
 import api.utils.gui.GUIInputDialogPanel;
 import org.schema.game.common.data.player.faction.FactionManager;
 import org.schema.schine.common.OnInputChangedCallback;
@@ -15,6 +16,7 @@ import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActivatableTextBar;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIDialogWindow;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
+import thederpgamer.betterfactions.network.client.ModifyFactionMessagePacket;
 
 /**
  * <Description>
@@ -29,10 +31,17 @@ public class FactionMessageReceivePanel extends GUIInputDialogPanel {
     private GUIActivatableTextBar titleTextBar;
     private GUIActivatableTextBar messageTextBar;
 
-    public FactionMessageReceivePanel(InputState inputState,  FactionMessage message, GUICallback guiCallback) {
-        super(inputState, "FactionMessageReceivePanel", message.title, message.message, 500, 300, guiCallback);
-        this.message = message;
-        setOkButtonText("SEND");
+    public FactionMessageReceivePanel(InputState inputState, GUICallback guiCallback) {
+        super(inputState, "FactionMessageReceivePanel", "FACTION MESSAGE", "", 500, 300, guiCallback);
+        setOkButtonText("OK");
+        setCancelButton(false);
+    }
+
+    public void markRead() {
+        if(message != null) {
+            message.read = true;
+            PacketUtil.sendPacketToServer(new ModifyFactionMessagePacket(message, FactionMessage.MARK_READ));
+        }
     }
 
     public void createPanel(FactionMessage message) {

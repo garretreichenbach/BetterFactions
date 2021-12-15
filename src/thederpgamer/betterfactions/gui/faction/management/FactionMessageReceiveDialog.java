@@ -1,9 +1,11 @@
 package thederpgamer.betterfactions.gui.faction.management;
 
+import api.network.packets.PacketUtil;
 import api.utils.gui.GUIInputDialog;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
+import thederpgamer.betterfactions.network.client.ModifyFactionMessagePacket;
 
 /**
  * <Description>
@@ -21,7 +23,7 @@ public class FactionMessageReceiveDialog extends GUIInputDialog {
 
     @Override
     public FactionMessageReceivePanel createPanel() {
-        return new FactionMessageReceivePanel(getState(), message, this);
+        return new FactionMessageReceivePanel(getState(), this);
     }
 
     @Override
@@ -35,7 +37,10 @@ public class FactionMessageReceiveDialog extends GUIInputDialog {
             switch(((String) element.getUserPointer()).toUpperCase()) {
                 case "X":
                 case "CANCEL":
+                    deactivate();
+                    break;
                 case "OK":
+                    getInputPanel().markRead();
                     deactivate();
                     break;
             }

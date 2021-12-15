@@ -2,6 +2,7 @@ package thederpgamer.betterfactions.gui.faction.management;
 
 import api.common.GameClient;
 import api.common.GameCommon;
+import api.network.packets.PacketUtil;
 import org.apache.commons.lang3.text.WordUtils;
 import org.schema.game.client.data.GameClientState;
 import org.schema.schine.graphicsengine.core.MouseEvent;
@@ -14,6 +15,7 @@ import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
 import thederpgamer.betterfactions.gui.faction.diplomacy.FactionMessageSendDialog;
 import thederpgamer.betterfactions.manager.FactionManager;
 import thederpgamer.betterfactions.manager.LogManager;
+import thederpgamer.betterfactions.network.client.ModifyFactionMessagePacket;
 import thederpgamer.betterfactions.utils.DateUtils;
 
 import java.util.ArrayList;
@@ -28,14 +30,19 @@ import java.util.Set;
  */
 public class FactionMessageScrollableList extends ScrollableTableList<FactionMessage> {
 
-    public FactionMessageScrollableList(InputState inputState, GUIAncor anchor) {
+    private GUIAncor anchor;
+    private FactionManagementTab managementTab;
+
+    public FactionMessageScrollableList(InputState inputState, GUIAncor anchor, FactionManagementTab managementTab) {
         super(inputState, 100, 100, anchor);
+        this.anchor = anchor;
+        this.managementTab = managementTab;
         anchor.attach(this);
         ((GameClientState) inputState).getFactionManager().addObserver(this);
     }
 
     public void redrawList() {
-        flagDirty();
+        clear();
         handleDirty();
     }
 
@@ -58,13 +65,13 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
             }
         });
 
-        addColumn("Type", 12.0f, new Comparator<FactionMessage>() {
+        addColumn("Type", 10.0f, new Comparator<FactionMessage>() {
             public int compare(FactionMessage o1, FactionMessage o2) {
                 return o1.messageType.compareTo(o2.messageType);
             }
         });
 
-        addColumn("From", 10.0f, new Comparator<FactionMessage>() {
+        addColumn("From", 12.0f, new Comparator<FactionMessage>() {
             public int compare(FactionMessage o1, FactionMessage o2) {
                 String o1Name = GameCommon.getGameState().getFactionManager().getFactionName(o1.fromId);
                 String o2Name = GameCommon.getGameState().getFactionManager().getFactionName(o2.fromId);
@@ -90,6 +97,8 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
             @Override
             public boolean isOk(FactionMessage.MessageCategory messageType, FactionMessage factionMessage) {
                 if(messageType == FactionMessage.MessageCategory.ALL) return true;
+                else if(messageType == FactionMessage.MessageCategory.READ) return factionMessage.read;
+                else if(messageType == FactionMessage.MessageCategory.UNREAD) return !factionMessage.read;
                 else return factionMessage.messageType.category == messageType;
             }
         }, new CreateGUIElementInterface<FactionMessage.MessageCategory>() {
@@ -110,7 +119,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
             }
         }, ControllerElement.FilterRowStyle.RIGHT);
 
-        activeSortColumnIndex = 2;
+        activeSortColumnIndex = 3;
     }
 
     @Override
@@ -144,7 +153,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
 
                     FactionMessageListRow row = new FactionMessageListRow(getState(), message, titleRowElement, typeRowElement, fromRowElement, dateRowElement);
                     if(playerFactionMember.hasPermission("manage.messages.[ANY]")) {
-                        GUIAncor anchor = new GUIAncor(getState(), guiElementList.getWidth(), 28.0f);
+                        GUIAncor anchor = new GUIAncor(getState(), this.anchor.getWidth() - 28.0f, 28.0f);
                         anchor.attach(redrawButtonPane(message, playerFactionMember, anchor));
                         row.expanded = new GUIElementList(getState());
                         row.expanded.add(new GUIListElement(anchor, getState()));
@@ -180,7 +189,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
 
                 @Override
                 public boolean isOccluded() {
-                    return false;
+                    return !getState().getController().getPlayerInputs().isEmpty();
                 }
             }, new GUIActivationCallback() {
                 @Override
@@ -190,7 +199,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
 
                 @Override
                 public boolean isActive(InputState inputState) {
-                    return true;
+                    return getState().getController().getPlayerInputs().isEmpty();
                 }
             });
             buttonIndex ++;
@@ -198,19 +207,21 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
 
         if(playerFactionMember.hasPermission("manage.messages.mark_read")) {
             buttonPane.addColumn();
-            buttonPane.addButton(buttonIndex, 0, "MARK AS READ", GUIHorizontalArea.HButtonColor.PINK, new GUICallback() {
+            String buttonName = (message.read) ? "MARK AS UNREAD" : "MARK AS READ";
+            buttonPane.addButton(buttonIndex, 0, buttonName, GUIHorizontalArea.HButtonColor.PINK, new GUICallback() {
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                     if(mouseEvent.pressedLeftMouse()) {
-                        message.read = true;
-                        //Todo: Send packet to mark message as read
+                        message.read = !message.read;
+                        if(message.read) PacketUtil.sendPacketToServer(new ModifyFactionMessagePacket(message, FactionMessage.MARK_READ));
+                        else PacketUtil.sendPacketToServer(new ModifyFactionMessagePacket(message, FactionMessage.MARK_UNREAD));
                         redrawList();
                     }
                 }
 
                 @Override
                 public boolean isOccluded() {
-                    return message.read;
+                    return !getState().getController().getPlayerInputs().isEmpty();
                 }
             }, new GUIActivationCallback() {
                 @Override
@@ -220,7 +231,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
 
                 @Override
                 public boolean isActive(InputState inputState) {
-                    return !message.read;
+                    return getState().getController().getPlayerInputs().isEmpty();
                 }
             });
             buttonIndex ++;
@@ -232,14 +243,14 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                     if(mouseEvent.pressedLeftMouse()) {
-                        //Todo: Send packet to delete message
+                        PacketUtil.sendPacketToServer(new ModifyFactionMessagePacket(message, FactionMessage.DELETE));
                         redrawList();
                     }
                 }
 
                 @Override
                 public boolean isOccluded() {
-                    return false;
+                    return !getState().getController().getPlayerInputs().isEmpty();
                 }
             }, new GUIActivationCallback() {
                 @Override
@@ -249,7 +260,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
 
                 @Override
                 public boolean isActive(InputState inputState) {
-                    return true;
+                    return getState().getController().getPlayerInputs().isEmpty();
                 }
             });
             buttonIndex ++;
@@ -270,7 +281,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
 
                 @Override
                 public boolean isOccluded() {
-                    return false;
+                    return !getState().getController().getPlayerInputs().isEmpty();
                 }
             }, new GUIActivationCallback() {
                 @Override
@@ -280,7 +291,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
 
                 @Override
                 public boolean isActive(InputState inputState) {
-                    return true;
+                    return getState().getController().getPlayerInputs().isEmpty();
                 }
             });
             buttonIndex ++;
@@ -298,7 +309,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
 
                     @Override
                     public boolean isOccluded() {
-                        return false;
+                        return !getState().getController().getPlayerInputs().isEmpty();
                     }
                 }, new GUIActivationCallback() {
                     @Override
@@ -308,7 +319,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
 
                     @Override
                     public boolean isActive(InputState inputState) {
-                        return true;
+                        return getState().getController().getPlayerInputs().isEmpty();
                     }
                 });
                 buttonIndex ++;
@@ -328,7 +339,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
 
                 @Override
                 public boolean isOccluded() {
-                    return false;
+                    return !getState().getController().getPlayerInputs().isEmpty();
                 }
             }, new GUIActivationCallback() {
                 @Override
@@ -338,7 +349,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
 
                 @Override
                 public boolean isActive(InputState inputState) {
-                    return true;
+                    return getState().getController().getPlayerInputs().isEmpty();
                 }
             });
             buttonIndex ++;
