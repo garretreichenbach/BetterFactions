@@ -1,5 +1,6 @@
 package thederpgamer.betterfactions;
 
+import api.common.GameServer;
 import api.listener.Listener;
 import api.listener.events.faction.FactionCreateEvent;
 import api.listener.events.gui.PlayerGUICreateEvent;
@@ -12,8 +13,11 @@ import api.mod.config.PersistentObjectUtil;
 import api.network.packets.PacketUtil;
 import api.utils.StarRunnable;
 import org.schema.game.client.view.gui.PlayerPanel;
+import org.schema.game.common.controller.SegmentController;
+import org.schema.game.common.data.player.PlayerState;
 import org.schema.schine.resource.ResourceLoader;
 import thederpgamer.betterfactions.data.persistent.faction.FactionData;
+import thederpgamer.betterfactions.data.serializeable.FactionEntityData;
 import thederpgamer.betterfactions.data.persistent.faction.FactionRank;
 import thederpgamer.betterfactions.gui.NewFactionPanel;
 import thederpgamer.betterfactions.manager.*;
@@ -21,10 +25,12 @@ import thederpgamer.betterfactions.network.client.CreateNewFederationPacket;
 import thederpgamer.betterfactions.network.client.ModifyFactionMessagePacket;
 import thederpgamer.betterfactions.network.client.SendFactionMessagePacket;
 import thederpgamer.betterfactions.network.server.ServerSyncDataPacket;
+import thederpgamer.betterfactions.network.server.UpdateClientCachePacket;
 import thederpgamer.betterfactions.network.server.UpdateGUIsPacket;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 
 /**
  * BetterFactions mod main class.
@@ -150,6 +156,7 @@ public class BetterFactions extends StarMod {
     }
 
     private void registerPackets() {
+        PacketUtil.registerPacket(UpdateClientCachePacket.class);
         PacketUtil.registerPacket(ServerSyncDataPacket.class);
         PacketUtil.registerPacket(UpdateGUIsPacket.class);
         PacketUtil.registerPacket(CreateNewFederationPacket.class);
@@ -168,11 +175,20 @@ public class BetterFactions extends StarMod {
                         LogManager.logException("Encountered an exception while trying to sync client data!", exception);
                     }
                 }
-            }.runTimer(this, 300);
+            }.runTimer(this, 500);
         }
     }
 
     public void updateClientData() {
+        for(PlayerState playerState : GameServer.getServerState().getPlayerStatesByName().values()) {
+            ArrayList<FactionEntityData> assetList = new ArrayList<>(); //Todo: This is probably really slow
+            for(SegmentController segmentController : GameServer.getServerState().getSegmentControllersByName().values()) {
+                if(segmentController.getFactionId() == playerState.getFactionId() && playerState.getFactionId() > 0) assetList.add(new FactionEntityData(segmentController));
+            }
+            PacketUtil.sendPacket(playerState, new UpdateClientCachePacket(assetList));
+        }
+
+        //Todo: Rework below to match new networking system
         if(NetworkSyncManager.onServer()) NetworkSyncManager.sendServerModifications();
         else newFactionPanel.updateTabs();
     }

@@ -2,6 +2,8 @@ package thederpgamer.betterfactions.data.persistent.faction;
 
 import api.common.GameClient;
 import api.common.GameCommon;
+import api.network.PacketReadBuffer;
+import api.network.PacketWriteBuffer;
 import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionRelation;
@@ -11,11 +13,13 @@ import org.schema.schine.graphicsengine.forms.Sprite;
 import thederpgamer.betterfactions.data.persistent.PersistentData;
 import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
 import thederpgamer.betterfactions.data.persistent.federation.FederationData;
+import thederpgamer.betterfactions.data.serializeable.SerializeableData;
 import thederpgamer.betterfactions.manager.FactionManager;
 import thederpgamer.betterfactions.manager.FederationManager;
 import thederpgamer.betterfactions.manager.NetworkSyncManager;
 import thederpgamer.betterfactions.manager.ResourceManager;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 /**
@@ -24,9 +28,9 @@ import java.util.ArrayList;
  * @version 2.0 - [09/15/2021]
  * @author TheDerpGamer
  */
-public class FactionData implements PersistentData, FactionScore {
+public class FactionData implements PersistentData, SerializeableData, FactionScore {
 
-    private final int factionId;
+    private int factionId;
     private int federationId;
     private String factionName;
     private String factionDescription;
@@ -42,6 +46,41 @@ public class FactionData implements PersistentData, FactionScore {
         factionName = faction.getName();
         factionDescription = faction.getDescription();
         queueUpdate(true);
+    }
+
+    public FactionData(PacketReadBuffer readBuffer) throws IOException {
+        deserialize(readBuffer);
+    }
+
+
+    @Override
+    public void deserialize(PacketReadBuffer readBuffer) throws IOException {
+        factionId = readBuffer.readInt();
+        federationId = readBuffer.readInt();
+        factionName = readBuffer.readString();
+        factionDescription = readBuffer.readString();
+        factionLogo = readBuffer.readString();
+        int size = readBuffer.readInt();
+        for(int i = 0; i < size; i ++) members.add(readBuffer.readObject(FactionMember.class)); //Todo: Convert to serialization interface
+        size = readBuffer.readInt();
+        for(int i = 0; i < size; i ++) ranks.add(readBuffer.readObject(FactionRank.class)); //Todo: Convert to serialization interface
+        size = readBuffer.readInt();
+        for(int i = 0; i < size; i ++) inbox.add(readBuffer.readObject(FactionMessage.class)); //Todo: Convert to serialization interface
+    }
+
+    @Override
+    public void serialize(PacketWriteBuffer writeBuffer) throws IOException {
+        writeBuffer.writeInt(factionId);
+        writeBuffer.writeInt(federationId);
+        writeBuffer.writeString(factionName);
+        writeBuffer.writeString(factionDescription);
+        writeBuffer.writeString(factionLogo);
+        writeBuffer.writeInt(members.size());
+        for(FactionMember member : members) writeBuffer.writeObject(member); //Todo: Convert to serialization interface
+        writeBuffer.writeInt(ranks.size());
+        for(FactionRank rank : ranks) writeBuffer.writeObject(rank); //Todo: Convert to serialization interface
+        writeBuffer.writeInt(inbox.size());
+        for(FactionMessage message : inbox) writeBuffer.writeObject(message); //Todo: Convert to serialization interface
     }
 
     public Faction getFaction() {

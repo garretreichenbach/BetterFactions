@@ -32,7 +32,7 @@ public class FactionOptionsPane extends GUIAncor {
     private GUIHorizontalButtonTablePane buttonPane;
 
     public FactionOptionsPane(InputState inputState, FactionManagementTab managementTab) {
-        super(inputState);
+        super(inputState, managementTab.getWidth(), 28 * 3);
         this.managementTab = managementTab;
     }
 

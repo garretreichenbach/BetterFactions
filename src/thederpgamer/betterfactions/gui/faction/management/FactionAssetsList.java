@@ -12,8 +12,9 @@ import org.schema.schine.graphicsengine.forms.gui.GUIListElement;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.persistent.faction.FactionData;
-import thederpgamer.betterfactions.data.persistent.faction.FactionEntityData;
+import thederpgamer.betterfactions.data.serializeable.FactionEntityData;
 import thederpgamer.betterfactions.data.persistent.faction.FactionMember;
+import thederpgamer.betterfactions.manager.ClientCacheManager;
 import thederpgamer.betterfactions.manager.FactionManager;
 import thederpgamer.betterfactions.manager.LogManager;
 
@@ -42,17 +43,6 @@ public class FactionAssetsList extends ScrollableTableList<FactionEntityData> {
     public void redrawList() {
         clear();
         handleDirty();
-    }
-
-    @Override
-    public ArrayList<FactionEntityData> getElementList() {
-        ArrayList<FactionEntityData> entityDataList = new ArrayList<>();
-        try {
-
-        } catch(Exception exception) {
-            LogManager.logException("Encountered an exception while trying to fetch faction message inbox", exception);
-        }
-        return entityDataList;
     }
 
     @Override
@@ -122,6 +112,17 @@ public class FactionAssetsList extends ScrollableTableList<FactionEntityData> {
     }
 
     @Override
+    public ArrayList<FactionEntityData> getElementList() {
+        ArrayList<FactionEntityData> entityDataList = new ArrayList<>();
+        try {
+            entityDataList.addAll(ClientCacheManager.factionAssets.values());
+        } catch(Exception exception) {
+            LogManager.logException("Encountered an exception while trying to fetch faction message inbox", exception);
+        }
+        return entityDataList;
+    }
+
+    @Override
     public void updateListEntries(GUIElementList guiElementList, Set<FactionEntityData> set) {
         guiElementList.deleteObservers();
         guiElementList.addObserver(this);
@@ -129,38 +130,36 @@ public class FactionAssetsList extends ScrollableTableList<FactionEntityData> {
         assert playerFactionMember != null;
         for(FactionEntityData entityData : set) {
             try {
-                if(entityData.isValid()) {
-                    GUITextOverlayTable nameTextElement;
-                    (nameTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(entityData.name);
-                    GUIClippedRow nameRowElement;
-                    (nameRowElement = new GUIClippedRow(this.getState())).attach(nameTextElement);
+                GUITextOverlayTable nameTextElement;
+                (nameTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(entityData.name);
+                GUIClippedRow nameRowElement;
+                (nameRowElement = new GUIClippedRow(this.getState())).attach(nameTextElement);
 
-                    GUITextOverlayTable typeTextElement;
-                    (typeTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(WordUtils.capitalize(entityData.entityType.name().toLowerCase()));
-                    GUIClippedRow typeRowElement;
-                    (typeRowElement = new GUIClippedRow(this.getState())).attach(typeTextElement);
+                GUITextOverlayTable typeTextElement;
+                (typeTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(WordUtils.capitalize(entityData.entityType.name().toLowerCase()));
+                GUIClippedRow typeRowElement;
+                (typeRowElement = new GUIClippedRow(this.getState())).attach(typeTextElement);
 
-                    GUITextOverlayTable locationTextElement;
-                    (locationTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(entityData.getSector().toString());
-                    GUIClippedRow locationRowElement;
-                    (locationRowElement = new GUIClippedRow(this.getState())).attach(locationTextElement);
+                GUITextOverlayTable locationTextElement;
+                (locationTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(entityData.getSector().toString());
+                GUIClippedRow locationRowElement;
+                (locationRowElement = new GUIClippedRow(this.getState())).attach(locationTextElement);
 
-                    GUITextOverlayTable statusTextElement;
-                    (statusTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(entityData.getStatus() + "%");
-                    GUIClippedRow statusRowElement;
-                    (statusRowElement = new GUIClippedRow(this.getState())).attach(statusTextElement);
+                GUITextOverlayTable statusTextElement;
+                (statusTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(entityData.getStatus() + "%");
+                GUIClippedRow statusRowElement;
+                (statusRowElement = new GUIClippedRow(this.getState())).attach(statusTextElement);
 
-                    FactionAssetsListRow row = new FactionAssetsListRow(getState(), entityData, nameRowElement, typeRowElement, locationRowElement, statusRowElement);
-                    if(playerFactionMember.hasPermission("manage.assets.[ANY]")) {
-                        GUIAncor anchor = new GUIAncor(getState(), this.anchor.getWidth() - 28.0f, 28.0f);
-                        anchor.attach(redrawButtonPane(entityData, playerFactionMember, anchor));
-                        row.expanded = new GUIElementList(getState());
-                        row.expanded.add(new GUIListElement(anchor, getState()));
-                        row.expanded.attach(anchor);
-                    }
-                    row.onInit();
-                    guiElementList.addWithoutUpdate(row);
+                FactionAssetsListRow row = new FactionAssetsListRow(getState(), entityData, nameRowElement, typeRowElement, locationRowElement, statusRowElement);
+                if(playerFactionMember.hasPermission("manage.assets.[ANY]")) {
+                    GUIAncor anchor = new GUIAncor(getState(), this.anchor.getWidth() - 28.0f, 28.0f);
+                    anchor.attach(redrawButtonPane(entityData, playerFactionMember, anchor));
+                    row.expanded = new GUIElementList(getState());
+                    row.expanded.add(new GUIListElement(anchor, getState()));
+                    row.expanded.attach(anchor);
                 }
+                row.onInit();
+                guiElementList.addWithoutUpdate(row);
             } catch(Exception exception) {
                 exception.printStackTrace();
             }
@@ -173,7 +172,6 @@ public class FactionAssetsList extends ScrollableTableList<FactionEntityData> {
         buttonPane.onInit();
         final FactionData factionData = playerFactionMember.getFactionData();
         int buttonIndex = 0;
-
 
         return buttonPane;
     }

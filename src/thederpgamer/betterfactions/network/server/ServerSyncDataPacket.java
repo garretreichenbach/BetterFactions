@@ -5,7 +5,7 @@ import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
 import org.schema.game.common.data.player.PlayerState;
 import thederpgamer.betterfactions.data.persistent.PersistentData;
-import thederpgamer.betterfactions.data.persistent.diplomacy.DiplomaticData;
+import thederpgamer.betterfactions.data.persistent.diplomacy.DiplomaticDataOld;
 import thederpgamer.betterfactions.data.persistent.faction.FactionData;
 import thederpgamer.betterfactions.data.persistent.federation.FederationData;
 import thederpgamer.betterfactions.manager.LogManager;
@@ -48,7 +48,7 @@ public class ServerSyncDataPacket extends Packet {
                     data[i] = packetReadBuffer.readObject(FederationData.class);
                     break;
                 case NetworkSyncManager.DIPLOMATIC_DATA:
-                    data[i] = packetReadBuffer.readObject(DiplomaticData.class);
+                    data[i] = packetReadBuffer.readObject(DiplomaticDataOld.class);
                     break;
                 default:
                     data[i] = packetReadBuffer.readObject(PersistentData.class);

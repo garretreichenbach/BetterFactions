@@ -5,7 +5,7 @@ import api.common.GameServer;
 import api.network.packets.PacketUtil;
 import org.schema.game.common.data.player.PlayerState;
 import thederpgamer.betterfactions.data.persistent.PersistentData;
-import thederpgamer.betterfactions.data.persistent.diplomacy.DiplomaticData;
+import thederpgamer.betterfactions.data.persistent.diplomacy.DiplomaticDataOld;
 import thederpgamer.betterfactions.data.persistent.faction.FactionData;
 import thederpgamer.betterfactions.data.persistent.federation.FederationData;
 import thederpgamer.betterfactions.network.server.ServerSyncDataPacket;
@@ -110,12 +110,12 @@ public class NetworkSyncManager {
      * Returns a map of all the Diplomatic Data currently stored in the client data cache.
      * @return A map of all stored Diplomatic Data
      */
-    public static HashMap<Integer, DiplomaticData> getDiplomaticDataCache() {
+    public static HashMap<Integer, DiplomaticDataOld> getDiplomaticDataCache() {
         assert onClient() : "Server cannot be here.";
-        HashMap<Integer, DiplomaticData> dataCache = new HashMap<>();
+        HashMap<Integer, DiplomaticDataOld> dataCache = new HashMap<>();
         for(Map.Entry<Integer, PersistentData> entry : clientDataCache.entrySet()) {
-            if(entry.getValue().getDataType() == DIPLOMATIC_DATA && entry.getValue() instanceof DiplomaticData) {
-                dataCache.put(entry.getKey(), (DiplomaticData) entry.getValue());
+            if(entry.getValue().getDataType() == DIPLOMATIC_DATA && entry.getValue() instanceof DiplomaticDataOld) {
+                dataCache.put(entry.getKey(), (DiplomaticDataOld) entry.getValue());
             }
         }
         return dataCache;

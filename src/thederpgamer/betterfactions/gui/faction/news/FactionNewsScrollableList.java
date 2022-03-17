@@ -25,11 +25,13 @@ import java.util.*;
 public class FactionNewsScrollableList extends ScrollableTableList<FactionNewsEntry> {
 
     private FactionNewsTab newsTab;
+    private GUIAncor anchor;
 
     public FactionNewsScrollableList(InputState inputState, GUIAncor anchor, FactionNewsTab newsTab) {
         super(inputState, 100, 100, anchor);
         this.newsTab = newsTab;
-        anchor.attach(this);
+        this.anchor = anchor;
+        this.anchor.attach(this);
     }
 
     private boolean getFilterValue(FactionNewsEntry newsEntry, FactionNewsEntry.FactionNewsType newsType) {

@@ -31,7 +31,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
     private FactionManagementTab managementTab;
 
     public FactionMembersList(InputState inputState, GUIAncor anchor, FactionManagementTab managementTab) {
-        super(inputState, 300, 100, anchor);
+        super(inputState, anchor.getWidth(), anchor.getHeight(), anchor);
         this.anchor = anchor;
         this.managementTab = managementTab;
         anchor.attach(this);

@@ -18,6 +18,7 @@ import thederpgamer.betterfactions.data.persistent.faction.FactionData;
 import thederpgamer.betterfactions.data.persistent.faction.FactionMember;
 import thederpgamer.betterfactions.data.persistent.faction.FactionRank;
 import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
+import thederpgamer.betterfactions.gui.faction.diplomacy.war.PeaceDealDialog;
 import thederpgamer.betterfactions.manager.FactionManager;
 
 import javax.annotation.Nullable;
@@ -272,9 +273,8 @@ public class FactionActionsPanel extends GUIAncor {
                                     public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                                         if(mouseEvent.pressedLeftMouse()) {
                                             getState().getController().queueUIAudio("0022_menu_ui - select 2");
-                                            //(new FactionMessageSendDialog("OFFER PEACE", playerFaction, faction, FactionMessage.MessageType.OFFER_PEACE)).activate();
-                                            FactionMessageSendDialog dialog = new FactionMessageSendDialog();
-                                            dialog.getInputPanel().createPanel(playerFaction, faction, FactionMessage.MessageType.OFFER_PEACE);
+                                            PeaceDealDialog dialog = new PeaceDealDialog();
+                                            dialog.getInputPanel().createPanel(FactionManager.getFactionData(faction));
                                             dialog.activate();
                                         }
                                     }

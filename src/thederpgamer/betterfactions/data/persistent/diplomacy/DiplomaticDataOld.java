@@ -9,7 +9,7 @@ import thederpgamer.betterfactions.manager.NetworkSyncManager;
  * @author TheDerpGamer
  * @version 1.0 - [09/16/2021]
  */
-public class DiplomaticData implements PersistentData {
+public class DiplomaticDataOld implements PersistentData {
 
     private transient boolean needsUpdate = true;
 
