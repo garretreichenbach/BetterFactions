@@ -1,7 +1,7 @@
-package thederpgamer.betterfactions.data.persistent.federation;
+package thederpgamer.betterfactions.data.old.federation;
 
 import org.schema.game.common.data.player.faction.Faction;
-import thederpgamer.betterfactions.data.serializeable.PeaceOfferData;
+import thederpgamer.betterfactions.data.old.diplomacy.peace.PeaceOfferData;
 
 /**
  * <Description>

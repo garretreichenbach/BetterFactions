@@ -1,9 +1,9 @@
-package thederpgamer.betterfactions.data.persistent.faction;
+package thederpgamer.betterfactions.data.old.faction;
 
 import api.common.GameCommon;
 import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.common.data.player.PlayerState;
-import thederpgamer.betterfactions.manager.FactionManager;
+import thederpgamer.betterfactions.manager.FactionManagerOld;
 
 import java.io.Serializable;
 
@@ -20,17 +20,17 @@ public class FactionMember implements Serializable {
     public int factionId;
     public FactionRank rank;
 
-    public FactionMember(String name, FactionData factionData, FactionRank rank) {
+    public FactionMember(String name, FactionDataOld factionData, FactionRank rank) {
         this.name = name;
         this.factionId = factionData.getFactionId();
         this.rank = rank;
     }
 
-    public FactionMember(String name, FactionData factionData) {
+    public FactionMember(String name, FactionDataOld factionData) {
         this(name, factionData, FactionRank.getDefaultRank());
     }
 
-    public FactionMember(PlayerState playerState, FactionData factionData) {
+    public FactionMember(PlayerState playerState, FactionDataOld factionData) {
         this(playerState.getName(), factionData);
     }
 
@@ -74,7 +74,7 @@ public class FactionMember implements Serializable {
         else return null;
     }
 
-    public FactionData getFactionData() {
-        return FactionManager.getFactionData(factionId);
+    public FactionDataOld getFactionData() {
+        return FactionManagerOld.getFactionData(factionId);
     }
 }

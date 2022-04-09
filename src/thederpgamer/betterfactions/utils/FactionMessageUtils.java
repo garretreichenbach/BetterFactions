@@ -4,7 +4,7 @@ import api.common.GameCommon;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionManager;
 import org.schema.game.common.data.player.faction.FactionRelation;
-import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
+import thederpgamer.betterfactions.data.old.federation.FactionMessage;
 
 /**
  * <Description>

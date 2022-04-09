@@ -5,8 +5,8 @@ import api.network.Packet;
 import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
 import org.schema.game.common.data.player.PlayerState;
-import thederpgamer.betterfactions.data.persistent.faction.FactionData;
-import thederpgamer.betterfactions.manager.FactionManager;
+import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
+import thederpgamer.betterfactions.manager.FactionManagerOld;
 import thederpgamer.betterfactions.manager.FederationManager;
 
 import java.io.IOException;
@@ -29,7 +29,7 @@ public class CreateNewFederationPacket extends Packet {
 
     }
 
-    public CreateNewFederationPacket(String federationName, FactionData fromFaction, FactionData toFaction) {
+    public CreateNewFederationPacket(String federationName, FactionDataOld fromFaction, FactionDataOld toFaction) {
         this.federationName = federationName;
         this.fromFactionId = fromFaction.getFactionId();
         this.toFactionId = toFaction.getFactionId();
@@ -60,8 +60,8 @@ public class CreateNewFederationPacket extends Packet {
 
     @Override
     public void processPacketOnServer(PlayerState playerState) {
-        FactionData fromFaction = FactionManager.getFactionData(fromFactionId);
-        FactionData toFaction = FactionManager.getFactionData(toFactionId);
+        FactionDataOld fromFaction = FactionManagerOld.getFactionData(fromFactionId);
+        FactionDataOld toFaction = FactionManagerOld.getFactionData(toFactionId);
         FederationManager.createNewFederation(federationName, fromFaction, toFaction);
     }
 }

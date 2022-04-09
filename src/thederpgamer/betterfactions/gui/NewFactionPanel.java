@@ -5,12 +5,12 @@ import api.common.GameCommon;
 import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.persistent.federation.FederationData;
+import thederpgamer.betterfactions.data.old.federation.FederationData;
 import thederpgamer.betterfactions.gui.faction.diplomacy.FactionDiplomacyTab;
 import thederpgamer.betterfactions.gui.faction.management.FactionManagementTab;
 import thederpgamer.betterfactions.gui.faction.news.FactionNewsTab;
 import thederpgamer.betterfactions.gui.federation.FederationManagementTab;
-import thederpgamer.betterfactions.manager.FactionManager;
+import thederpgamer.betterfactions.manager.FactionManagerOld;
 import thederpgamer.betterfactions.manager.FederationManager;
 
 import java.util.Objects;
@@ -36,12 +36,12 @@ public class NewFactionPanel extends FactionPanelNew {
     }
 
     public FederationData getFederation() {
-        if(isInFaction()) return FederationManager.getFederation(FactionManager.getFactionData(getOwnFaction()));
+        if(isInFaction()) return FederationManager.getFederation(FactionManagerOld.getFactionData(getOwnFaction()));
         else return null;
     }
 
     public boolean isInFederation() {
-        return isInFaction() && FactionManager.getFactionData(getOwnFaction()).getFederationId() != -1;
+        return isInFaction() && FactionManagerOld.getFactionData(getOwnFaction()).getFederationId() != -1;
     }
 
     public boolean isInFaction() {

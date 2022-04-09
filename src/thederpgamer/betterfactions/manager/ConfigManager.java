@@ -20,12 +20,26 @@ public class ConfigManager {
             "log-queue-size: 3"
     };
 
+    //Diplomacy Config
+    private static FileConfiguration diploConfig;
+    public static final String[] defaultDiploConfig = {
+            "white-peace-base-cost: 15.0",
+            "white-peace-opposing-side-progress-limit: 60.0"
+    };
+
     public static void initialize(BetterFactions instance) {
         mainConfig = instance.getConfig("config");
         mainConfig.saveDefault(defaultMainConfig);
+
+        diploConfig = instance.getConfig("diplo-config");
+        diploConfig.saveDefault(defaultDiploConfig);
     }
 
     public static FileConfiguration getMainConfig() {
         return mainConfig;
+    }
+
+    public static FileConfiguration getDiploConfig() {
+        return diploConfig;
     }
 }

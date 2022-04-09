@@ -6,8 +6,8 @@ import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
-import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
-import thederpgamer.betterfactions.manager.FactionManager;
+import thederpgamer.betterfactions.data.old.federation.FactionMessage;
+import thederpgamer.betterfactions.manager.FactionManagerOld;
 import thederpgamer.betterfactions.utils.FactionMessageUtils;
 
 import java.io.IOException;
@@ -69,10 +69,10 @@ public class SendFactionMessagePacket extends Packet {
         if(org.schema.game.common.data.player.faction.FactionManager.isNPCFactionOrPirateOrTrader(toId)) {
             String response = FactionMessageUtils.getResponseMessage(FactionMessage.MessageType.valueOf(messageType), to, from);
             FactionMessage factionMessage = new FactionMessage(to, from, "Reply from " + to.getName(), response, FactionMessage.MessageType.REPLY);
-            FactionManager.getFactionData(from).addMessage(factionMessage);
+            FactionManagerOld.getFactionData(from).addMessage(factionMessage);
         } else {
             FactionMessage factionMessage = new FactionMessage(from, to, title, message, FactionMessage.MessageType.valueOf(messageType));
-            FactionManager.getFactionData(to).addMessage(factionMessage);
+            FactionManagerOld.getFactionData(to).addMessage(factionMessage);
         }
     }
 }

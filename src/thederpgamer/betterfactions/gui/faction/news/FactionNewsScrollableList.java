@@ -9,10 +9,11 @@ import org.schema.schine.graphicsengine.forms.font.FontLibrary;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.persistent.faction.FactionData;
-import thederpgamer.betterfactions.data.persistent.federation.FederationData;
+import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
+import thederpgamer.betterfactions.data.old.federation.FederationData;
+import thederpgamer.betterfactions.manager.FactionManagerOld;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
-import thederpgamer.betterfactions.manager.FactionManager;
+
 import java.util.*;
 
 /**
@@ -41,13 +42,13 @@ public class FactionNewsScrollableList extends ScrollableTableList<FactionNewsEn
         } else if(newsType.equals(FactionNewsEntry.FactionNewsType.RELEVANT)) {
             if(newsEntry.hasSubject() && playerState.getFactionId() != 0) {
                 Object subject = newsEntry.getSubject();
-                if(subject instanceof FactionData) {
-                    FactionData factionData = (FactionData) subject;
+                if(subject instanceof FactionDataOld) {
+                    FactionDataOld factionData = (FactionDataOld) subject;
                     return playerState.getFactionId() == factionData.getFactionId();
                 } else if(subject instanceof FederationData) {
-                    if(Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getFederationId() != -1) {
+                    if(Objects.requireNonNull(FactionManagerOld.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getFederationId() != -1) {
                         FederationData federationData = (FederationData) subject;
-                        return federationData.getId() == Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getFederationId();
+                        return federationData.getId() == Objects.requireNonNull(FactionManagerOld.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getFederationId();
                     }
                 }
             }

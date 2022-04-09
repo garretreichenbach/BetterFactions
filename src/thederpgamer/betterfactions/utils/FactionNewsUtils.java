@@ -5,8 +5,8 @@ import api.mod.config.PersistentObjectUtil;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.schine.common.language.Lng;
 import thederpgamer.betterfactions.BetterFactions;
-import thederpgamer.betterfactions.data.persistent.faction.FactionData;
-import thederpgamer.betterfactions.data.persistent.federation.FederationData;
+import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
+import thederpgamer.betterfactions.data.old.federation.FederationData;
 import thederpgamer.betterfactions.gui.faction.news.FactionNewsEntry;
 import thederpgamer.betterfactions.manager.ConfigManager;
 
@@ -52,7 +52,7 @@ public class FactionNewsUtils {
         PersistentObjectUtil.save(instance);
     }
 
-    public static FactionNewsEntry getFactionCreateNews(FactionData faction, PlayerState player) {
+    public static FactionNewsEntry getFactionCreateNews(FactionDataOld faction, PlayerState player) {
         String factionName = faction.getFactionName();
         String playerName = player.getName();
         String title = Lng.str("Creation of the " + factionName + ".");
@@ -61,7 +61,7 @@ public class FactionNewsUtils {
         return new FactionNewsEntry(FactionNewsEntry.FactionNewsType.FACTION, faction, title, text);
     }
 
-    public static FactionNewsEntry getFactionDisbandNews(FactionData faction) {
+    public static FactionNewsEntry getFactionDisbandNews(FactionDataOld faction) {
         String factionName = faction.getFactionName();
         String title = Lng.str(factionName + " has been disbanded.");
         String text = Lng.str("With the last member of " + factionName + " leaving, the faction been officially disbanded.\n" +
@@ -69,7 +69,7 @@ public class FactionNewsUtils {
         return new FactionNewsEntry(FactionNewsEntry.FactionNewsType.FACTION, faction, title, text);
     }
 
-    public static FactionNewsEntry getFactionJoinNews(FactionData faction, PlayerState player) {
+    public static FactionNewsEntry getFactionJoinNews(FactionDataOld faction, PlayerState player) {
         String factionName = faction.getFactionName();
         String playerName = player.getName();
         String title = Lng.str(playerName + " has joined the " + factionName + ".");
@@ -78,7 +78,7 @@ public class FactionNewsUtils {
         return new FactionNewsEntry(FactionNewsEntry.FactionNewsType.FACTION, faction, title, text);
     }
 
-    public static FactionNewsEntry getFactionLeaveNews(FactionData faction, PlayerState player) {
+    public static FactionNewsEntry getFactionLeaveNews(FactionDataOld faction, PlayerState player) {
         String factionName = faction.getFactionName();
         String playerName = player.getName();
         String title = Lng.str(playerName + " has left the " + factionName + ".");
@@ -104,14 +104,14 @@ public class FactionNewsUtils {
         return new FactionNewsEntry(FactionNewsEntry.FactionNewsType.FEDERATION, federationData, title, text);
     }
 
-    public static FactionNewsEntry getFederationJoinNews(FederationData federationData, FactionData faction) {
+    public static FactionNewsEntry getFederationJoinNews(FederationData federationData, FactionDataOld faction) {
         String title = Lng.str(faction.getFactionName() + " has joined the " + federationData.getName());
         String text = Lng.str(faction.getFactionName() + " has officially been accepted as a new member of the " + federationData.getName() + ".\n" +
                               "They will now join forces with their new allies and work together for their mutual interests.");
         return new FactionNewsEntry(FactionNewsEntry.FactionNewsType.FEDERATION, federationData, title, text);
     }
 
-    public static FactionNewsEntry getFederationLeaveNews(FederationData federationData, FactionData faction) {
+    public static FactionNewsEntry getFederationLeaveNews(FederationData federationData, FactionDataOld faction) {
         String title = Lng.str(faction.getFactionName() + " has left the " + federationData.getName());
         String text = Lng.str(faction.getFactionName() + " has officially severed ties with the " + federationData.getName() + ".\n" +
                               "They shall now stand alone.");

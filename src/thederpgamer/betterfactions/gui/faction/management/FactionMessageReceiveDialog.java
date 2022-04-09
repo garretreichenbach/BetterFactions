@@ -1,11 +1,9 @@
 package thederpgamer.betterfactions.gui.faction.management;
 
-import api.network.packets.PacketUtil;
 import api.utils.gui.GUIInputDialog;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
-import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
-import thederpgamer.betterfactions.network.client.ModifyFactionMessagePacket;
+import thederpgamer.betterfactions.data.old.federation.FactionMessage;
 
 /**
  * <Description>

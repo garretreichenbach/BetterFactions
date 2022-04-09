@@ -1,30 +1,11 @@
 package thederpgamer.betterfactions.gui.faction.diplomacy.war;
 
-import api.common.GameClient;
-import api.network.packets.PacketUtil;
 import api.utils.gui.GUIInputDialogPanel;
-import org.schema.schine.common.OnInputChangedCallback;
-import org.schema.schine.common.TextCallback;
-import org.schema.schine.graphicsengine.core.MouseEvent;
-import org.schema.schine.graphicsengine.core.settings.PrefixNotFoundException;
-import org.schema.schine.graphicsengine.forms.font.FontLibrary;
-import org.schema.schine.graphicsengine.forms.gui.*;
+import org.schema.schine.graphicsengine.forms.gui.GUICallback;
+import org.schema.schine.graphicsengine.forms.gui.GUIElementList;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActivatableTextBar;
-import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
-import org.schema.schine.graphicsengine.forms.gui.newgui.GUIDialogWindow;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.persistent.faction.FactionData;
-import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
-import thederpgamer.betterfactions.data.persistent.federation.PeaceOfferMessage;
-import thederpgamer.betterfactions.data.serializeable.DiplomaticData;
-import thederpgamer.betterfactions.data.serializeable.PeaceOfferData;
-import thederpgamer.betterfactions.data.serializeable.war.WarData;
-import thederpgamer.betterfactions.data.serializeable.war.WarParticipantData;
-import thederpgamer.betterfactions.manager.FactionManager;
-import thederpgamer.betterfactions.network.client.SendFactionMessagePacket;
-import thederpgamer.betterfactions.utils.FactionDiplomacyUtils;
-
-import java.util.ArrayList;
+import thederpgamer.betterfactions.data.old.diplomacy.peace.PeaceOfferData;
 
 /**
  * <Description>
@@ -34,8 +15,8 @@ import java.util.ArrayList;
  */
 public class PeaceDealPanel extends GUIInputDialogPanel {
 
-    private WarData warData;
-    private final ArrayList<DiplomaticData> dataList = new ArrayList<>();
+    //private WarData warData;
+    private PeaceOfferData peaceOfferData;
 
     private GUIActivatableTextBar messageBar;
     private GUIElementList leftSide;
@@ -47,9 +28,10 @@ public class PeaceDealPanel extends GUIInputDialogPanel {
         setOkButtonText("SEND");
     }
 
+    /*
     public void createPanel(WarData warData) {
         this.warData = warData;
-        FactionData playerFactionData = FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName());
+        FactionData playerFactionData = FactionManagerOld.getPlayerFactionData(GameClient.getClientPlayerState().getName());
         if(playerFactionData != null && warData.isInvolved(playerFactionData)) {
             GUIContentPane contentPane = ((GUIDialogWindow) background).getMainContentPane();
 
@@ -125,7 +107,7 @@ public class PeaceDealPanel extends GUIInputDialogPanel {
         (messageOverlay = new GUITextOverlay(30, 30, getState())).onInit();
         messageOverlay.setFont(FontLibrary.FontSize.MEDIUM.getFont());
         String name = to.getName();
-        if(to.getIdFaction() == FactionManager.TRAIDING_GUILD_ID) name = "Trading Guild";
+        if(to.getIdFaction() == FactionManagerOld.TRAIDING_GUILD_ID) name = "Trading Guild";
         messageOverlay.setTextSimple("Peace offer to " + name);
         ((GUIDialogWindow) background).getMainContentPane().getContent(0).attach(messageOverlay);
         ((GUIDialogWindow) background).getMainContentPane().setTextBoxHeightLast(30);
@@ -134,14 +116,14 @@ public class PeaceDealPanel extends GUIInputDialogPanel {
         (titleTextBar = new GUIActivatableTextBar(getState(), FontLibrary.FontSize.MEDIUM, 80, 1, "Title", ((GUIDialogWindow) background).getMainContentPane().getContent(1), new FactionMessageTextCallback(), new FactionMessageTextChangedCallback())).onInit();
         ((GUIDialogWindow) background).getMainContentPane().getContent(0, 1).attach(titleTextBar);
         ((GUIDialogWindow) background).getMainContentPane().setTextBoxHeightLast(28);
-         */
+
     }
 
     private GUIListElement createOverlay(DiplomaticData diplomaticData, GUICallback callback) {
         GUITextOverlay textOverlay = new GUITextOverlay(50, 12, getState());
         textOverlay.onInit();
         textOverlay.setFont(FontLibrary.FontSize.MEDIUM.getFont());
-        textOverlay.setTextSimple(diplomaticData.display);
+        //textOverlay.setTextSimple(diplomaticData.display);
         textOverlay.setUserPointer(diplomaticData.toString());
         textOverlay.setMouseUpdateEnabled(true);
         GUIListElement element = new GUIListElement(textOverlay, getState());
@@ -153,13 +135,13 @@ public class PeaceDealPanel extends GUIInputDialogPanel {
     }
 
     public void sendMessage() {
-        FactionMessage message = new PeaceOfferMessage(from.getFaction(), to.getFaction(), getTitleText(), new PeaceOfferData(from, to, dataList));
-        PacketUtil.sendPacketToServer(new SendFactionMessagePacket(message));
+       // FactionMessage message = new PeaceOfferMessage(from.getFaction(), to.getFaction(), getTitleText(), new PeaceOfferData(from, to, dataList));
+        //PacketUtil.sendPacketToServer(new SendFactionMessagePacket(message));
     }
 
-    public String getTitleText() {
-        return titleTextBar.getText();
-    }
+    //public String getTitleText() {
+        //return titleTextBar.getText();
+  //  }
 
     private class MessageTextChangedCallback implements OnInputChangedCallback {
 
@@ -192,4 +174,5 @@ public class PeaceDealPanel extends GUIInputDialogPanel {
         public void newLine() {
         }
     }
+    */
 }

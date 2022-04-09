@@ -4,9 +4,9 @@ import api.network.Packet;
 import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
 import org.schema.game.common.data.player.PlayerState;
-import thederpgamer.betterfactions.data.persistent.faction.FactionData;
-import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
-import thederpgamer.betterfactions.manager.FactionManager;
+import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
+import thederpgamer.betterfactions.data.old.federation.FactionMessage;
+import thederpgamer.betterfactions.manager.FactionManagerOld;
 
 import java.io.IOException;
 
@@ -49,19 +49,19 @@ public class ModifyFactionMessagePacket extends Packet {
 
     @Override
     public void processPacketOnServer(PlayerState playerState) {
-        FactionData factionData = FactionManager.getFactionData(message.toId);
+        FactionDataOld factionData = FactionManagerOld.getFactionData(message.toId);
         switch(mode) {
             case FactionMessage.MARK_READ:
                 message.read = true;
-                FactionManager.updateData(message);
+                FactionManagerOld.updateData(message);
                 break;
             case FactionMessage.MARK_UNREAD:
                 message.read = false;
-                FactionManager.updateData(message);
+                FactionManagerOld.updateData(message);
                 break;
             case FactionMessage.DELETE:
                 factionData.removeMessage(message);
-                FactionManager.updateData(factionData);
+                FactionManagerOld.updateData(factionData);
                 break;
         }
     }

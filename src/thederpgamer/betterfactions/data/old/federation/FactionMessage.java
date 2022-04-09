@@ -1,4 +1,4 @@
-package thederpgamer.betterfactions.data.persistent.federation;
+package thederpgamer.betterfactions.data.old.federation;
 
 import api.common.GameCommon;
 import org.apache.commons.lang3.text.WordUtils;

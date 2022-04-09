@@ -1,15 +1,14 @@
 package thederpgamer.betterfactions.data.persistent;
 
 /**
- * Interface for persistent data.
+ * <Description>
  *
  * @author TheDerpGamer
- * @version 1.0 - [09/15/2021]
+ * @version 1.0 - [04/08/2022]
  */
 public interface PersistentData {
 
-    int getDataType();
-    int getDataId();
-    boolean needsUpdate();
-    void queueUpdate(boolean update);
+	int getId();
+	String getName();
+	boolean equals(PersistentData persistentData);
 }

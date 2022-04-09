@@ -15,7 +15,7 @@ import org.schema.schine.graphicsengine.forms.gui.GUITextOverlay;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActivatableTextBar;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIDialogWindow;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
+import thederpgamer.betterfactions.data.old.federation.FactionMessage;
 import thederpgamer.betterfactions.network.client.ModifyFactionMessagePacket;
 
 /**

@@ -1,35 +1,15 @@
 package thederpgamer.betterfactions.gui.faction.management;
 
-import api.common.GameClient;
-import org.apache.commons.lang3.text.WordUtils;
-import org.schema.common.util.linAlg.Vector3fTools;
-import org.schema.common.util.linAlg.Vector3i;
-import org.schema.game.server.data.ServerConfig;
-import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
-import org.schema.schine.graphicsengine.forms.gui.GUIElement;
-import org.schema.schine.graphicsengine.forms.gui.GUIElementList;
-import org.schema.schine.graphicsengine.forms.gui.GUIListElement;
-import org.schema.schine.graphicsengine.forms.gui.newgui.*;
-import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.persistent.faction.FactionData;
-import thederpgamer.betterfactions.data.serializeable.FactionEntityData;
-import thederpgamer.betterfactions.data.persistent.faction.FactionMember;
-import thederpgamer.betterfactions.manager.ClientCacheManager;
-import thederpgamer.betterfactions.manager.FactionManager;
-import thederpgamer.betterfactions.manager.LogManager;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Set;
-
 /**
  * <Description>
  *
  * @author TheDerpGamer
  * @version 1.0 - [12/14/2021]
  */
-public class FactionAssetsList extends ScrollableTableList<FactionEntityData> {
+public class FactionAssetsList
+ {//public class FactionAssetsList extends ScrollableTableList<String> {
 
+     /*
     private GUIAncor anchor;
     private FactionManagementTab managementTab;
 
@@ -126,7 +106,7 @@ public class FactionAssetsList extends ScrollableTableList<FactionEntityData> {
     public void updateListEntries(GUIElementList guiElementList, Set<FactionEntityData> set) {
         guiElementList.deleteObservers();
         guiElementList.addObserver(this);
-        FactionMember playerFactionMember = FactionManager.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
+        FactionMember playerFactionMember = FactionManagerOld.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
         assert playerFactionMember != null;
         for(FactionEntityData entityData : set) {
             try {
@@ -185,4 +165,6 @@ public class FactionAssetsList extends ScrollableTableList<FactionEntityData> {
             this.setAllwaysOneSelected(true);
         }
     }
+
+      */
 }

@@ -14,12 +14,12 @@ import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalButtonTablePane;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.persistent.faction.FactionData;
-import thederpgamer.betterfactions.data.persistent.faction.FactionMember;
-import thederpgamer.betterfactions.data.persistent.faction.FactionRank;
-import thederpgamer.betterfactions.data.persistent.federation.FactionMessage;
+import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
+import thederpgamer.betterfactions.data.old.faction.FactionMember;
+import thederpgamer.betterfactions.data.old.faction.FactionRank;
+import thederpgamer.betterfactions.data.old.federation.FactionMessage;
 import thederpgamer.betterfactions.gui.faction.diplomacy.war.PeaceDealDialog;
-import thederpgamer.betterfactions.manager.FactionManager;
+import thederpgamer.betterfactions.manager.FactionManagerOld;
 
 import javax.annotation.Nullable;
 
@@ -166,7 +166,7 @@ public class FactionActionsPanel extends GUIAncor {
         }
 
         if(GameClient.getClientPlayerState().getFactionId() != 0) {
-            final FactionMember player = FactionManager.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
+            final FactionMember player = FactionManagerOld.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
             if(player != null && faction.getIdFaction() != player.getFactionId()) {
                 final Faction playerFaction = player.getFactionData().getFaction();
                 if(playerFaction.getMembersUID().size() == 1) { //Todo: Temp fix for events not firing
@@ -274,7 +274,7 @@ public class FactionActionsPanel extends GUIAncor {
                                         if(mouseEvent.pressedLeftMouse()) {
                                             getState().getController().queueUIAudio("0022_menu_ui - select 2");
                                             PeaceDealDialog dialog = new PeaceDealDialog();
-                                            dialog.getInputPanel().createPanel(FactionManager.getFactionData(faction));
+                                            //dialog.getInputPanel().createPanel(FactionManagerOld.getFactionData(faction));
                                             dialog.activate();
                                         }
                                     }
@@ -362,14 +362,14 @@ public class FactionActionsPanel extends GUIAncor {
 
     /*
     private void addActions(final PlayerState playerState) {
-        if (faction != null && playerState.getFactionId() != 0 && faction.getIdFaction() != FactionManager.getFaction(playerState).getIdFaction()) {
+        if (faction != null && playerState.getFactionId() != 0 && faction.getIdFaction() != FactionManagerOld.getFaction(playerState).getIdFaction()) {
             final GUIElementList diplomacyButtonList = new GUIElementList(getState());
             diplomacyButtonList.onInit();
             diplomacyButtonList.getPos().x += 2;
             diplomacyButtonList.getPos().y += 2;
 
-            final FactionData fromFaction = FactionManager.getPlayerFactionData();
-            final FactionData toFaction = FactionManager.getFactionData(faction);
+            final FactionData fromFaction = FactionManagerOld.getPlayerFactionData();
+            final FactionData toFaction = FactionManagerOld.getFactionData(faction);
             String relation = Lng.str(toFaction.getRelationString());
 
             //Todo: Permissions check
@@ -736,7 +736,7 @@ public class FactionActionsPanel extends GUIAncor {
         factionButtonList.getPos().x += 2;
         factionButtonList.getPos().y += 2;
 
-        if (FactionManager.inFaction(playerState)) {
+        if (FactionManagerOld.inFaction(playerState)) {
             GUIButtonListElement leaveFactionButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.ORANGE, Lng.str("Leave Faction"), new GUICallback() {
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
@@ -762,7 +762,7 @@ public class FactionActionsPanel extends GUIAncor {
             leaveFactionButton.onInit();
             factionButtonList.add(leaveFactionButton);
 
-            if (FactionManager.getPlayerFactionData().getFederationId() != -1) {
+            if (FactionManagerOld.getPlayerFactionData().getFederationId() != -1) {
                 GUIButtonListElement leaveFederationButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonColor.ORANGE, Lng.str("Leave Federation"), new GUICallback() {
                     @Override
                     public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
@@ -773,7 +773,7 @@ public class FactionActionsPanel extends GUIAncor {
                                 }
 
                                 public void pressedOK() {
-                                    FactionData playerFaction = FactionManager.getPlayerFactionData();
+                                    FactionData playerFaction = FactionManagerOld.getPlayerFactionData();
                                     if(playerFaction.getFederation().getMembers().size() <= 1) {
                                         FederationManager.disbandFederation(playerFaction.getFederation());
                                     } else {
@@ -816,7 +816,7 @@ public class FactionActionsPanel extends GUIAncor {
         factionInvitesButton.onInit();
         factionButtonList.add(factionInvitesButton);
 
-        if (FactionManager.inFaction(GameClient.getClientPlayerState())) {
+        if (FactionManagerOld.inFaction(GameClient.getClientPlayerState())) {
             GUIButtonListElement federationInvitesButton = new GUIButtonListElement(getState(), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new Object() {
                 @Override
                 public String toString() {
@@ -872,7 +872,7 @@ public class FactionActionsPanel extends GUIAncor {
     }
      */
 
-    private String getFedDialogString(FactionData fromFaction, FactionData toFaction) {
+    private String getFedDialogString(FactionDataOld fromFaction, FactionDataOld toFaction) {
         return "Form a new Federation between " + fromFaction.getFactionName() + " and " + toFaction.getFactionName() + ".\nIf both factions accept the proposal, they will become members of the new Federation and will be able to closely collaborate with each other.";
     }
 }

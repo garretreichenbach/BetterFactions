@@ -1,11 +1,9 @@
-package thederpgamer.betterfactions.data.persistent.federation;
+package thederpgamer.betterfactions.data.old.federation;
 
-import thederpgamer.betterfactions.data.persistent.PersistentData;
-import thederpgamer.betterfactions.data.persistent.faction.FactionData;
-import thederpgamer.betterfactions.data.persistent.faction.FactionScore;
+import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
+import thederpgamer.betterfactions.data.old.faction.FactionScore;
 import thederpgamer.betterfactions.manager.FederationManager;
 import thederpgamer.betterfactions.manager.GUIManager;
-import thederpgamer.betterfactions.manager.NetworkSyncManager;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
 
 import java.util.ArrayList;
@@ -17,20 +15,19 @@ import java.util.ArrayList;
  * @since 01/30/2021
  * @author TheDerpGamer
  */
-public class FederationData implements PersistentData, FactionScore {
+public class FederationData implements FactionScore {
 
     private final int id;
     private String name;
-    private final ArrayList<FactionData> members;
+    private final ArrayList<FactionDataOld> members;
     private transient boolean needsUpdate = true;
 
-    public FederationData(String name, FactionData fromFaction, FactionData toFaction) {
+    public FederationData(String name, FactionDataOld fromFaction, FactionDataOld toFaction) {
         this.name = name;
         this.members = new ArrayList<>();
         this.members.add(fromFaction);
         this.members.add(toFaction);
         this.id = FederationManager.getNewId();
-        queueUpdate(true);
     }
 
     public int getId() {
@@ -43,35 +40,31 @@ public class FederationData implements PersistentData, FactionScore {
 
     public void setName(String name) {
         this.name = name;
-        queueUpdate(true);
     }
 
-    public ArrayList<FactionData> getMembers() {
+    public ArrayList<FactionDataOld> getMembers() {
         return members;
     }
 
-    public void addMember(FactionData factionData) {
+    public void addMember(FactionDataOld factionData) {
         members.add(factionData);
         factionData.setFederationId(id);
         FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationJoinNews(this, factionData));
         GUIManager.updateTabs();
-        queueUpdate(true);
     }
 
-    public void removeMember(FactionData factionData) {
+    public void removeMember(FactionDataOld factionData) {
         FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationLeaveNews(this, factionData));
         members.remove(factionData);
         factionData.setFederationId(-1);
         if(members.isEmpty()) disband();
         GUIManager.updateTabs();
-        queueUpdate(true);
     }
 
     public void disband() {
         FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationDisbandNews(this));
-        for(FactionData factionData : members) factionData.setFederationId(-1);
+        for(FactionDataOld factionData : members) factionData.setFederationId(-1);
         FederationManager.removeFederation(this);
-        queueUpdate(true);
     }
 
     public String[] getDataArray() {
@@ -107,25 +100,5 @@ public class FederationData implements PersistentData, FactionScore {
         System.arraycopy(dataArray, 0, infoArray, 0, dataArray.length);
         System.arraycopy(scoreArray, 0, infoArray, dataArray.length, scoreArray.length);
         return infoArray;
-    }
-
-    @Override
-    public int getDataType() {
-        return NetworkSyncManager.FEDERATION_DATA;
-    }
-
-    @Override
-    public int getDataId() {
-        return getId();
-    }
-
-    @Override
-    public boolean needsUpdate() {
-        return needsUpdate;
-    }
-
-    @Override
-    public void queueUpdate(boolean update) {
-        needsUpdate = update;
     }
 }
