@@ -7,7 +7,7 @@ import api.network.PacketWriteBuffer;
 import org.schema.game.common.data.player.PlayerState;
 import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
 import thederpgamer.betterfactions.manager.FactionManagerOld;
-import thederpgamer.betterfactions.manager.FederationManager;
+import thederpgamer.betterfactions.manager.data.FederationManager;
 
 import java.io.IOException;
 

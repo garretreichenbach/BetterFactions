@@ -1,18 +1,16 @@
-package thederpgamer.betterfactions.manager;
+package thederpgamer.betterfactions.manager.data;
 
-import api.mod.ModSkeleton;
-import api.mod.config.PersistentObjectUtil;
 import api.network.packets.PacketUtil;
 import com.google.common.cache.LoadingCache;
 import org.schema.game.common.data.player.PlayerState;
-import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.SerializationInterface;
 import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.data.PersistentData;
+import thederpgamer.betterfactions.manager.LogManager;
 import thederpgamer.betterfactions.network.client.RequestDataPacket;
 import thederpgamer.betterfactions.network.server.SendDataPacket;
 import thederpgamer.betterfactions.utils.NetworkUtils;
 
+import java.io.File;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -25,8 +23,6 @@ public abstract class DataManager<E extends SerializationInterface> {
 
 	public static final long CACHE_MAX_SIZE = 50;
 	public static final long CACHE_EXPIRE_TIME = 300000;
-
-	protected final ModSkeleton modInstance = BetterFactions.getInstance().getSkeleton();
 
 	/**
 	 * Sends a packet to the server requesting data matching the provided id.
@@ -51,27 +47,31 @@ public abstract class DataManager<E extends SerializationInterface> {
 	public abstract Class<E> getType();
 
 	/**
-	 * Loads the data from persistent storage.
+	 * Loads the data from storage.
 	 * (Server only)
 	 * @param id The id of the data to load
-	 * @return The data from persistent storage
+	 * @return The data from storage
 	 */
 	public abstract E loadData(int id);
 
 	/**
-	 * Creates a new instance of the data type using the provided parameters and adds it to persistent storage.
+	 * Creates a new instance of the data type using the provided parameters and adds it to data storage.
 	 * (Server only)
 	 * @param from Parameters for making the data object
 	 * @return The new data object
 	 */
 	public abstract E createNewData(Object... from);
 
-	public abstract void putIntoClientCache(PersistentData data);
+	public abstract void putIntoClientCache(SerializationInterface data);
 
-	public int generateNewId() {
-		if(NetworkUtils.onServer()) return PersistentObjectUtil.getObjects(modInstance, getType()).size();
-		else throw new IllegalStateException("Clients are not allowed to generate new ids!");
-	}
+	public abstract int generateNewId();
+
+	/**
+	 * Returns the directory used to store data of this type and creates it if it doesn't exit.
+	 * (Server only)
+	 * @return The data storage directory
+	 */
+	public abstract File getDataStorageDirectory();
 
 	public void sendDataToClient(int id, PlayerState playerState) {
 		try {

@@ -11,7 +11,7 @@ import thederpgamer.betterfactions.gui.faction.management.FactionManagementTab;
 import thederpgamer.betterfactions.gui.faction.news.FactionNewsTab;
 import thederpgamer.betterfactions.gui.federation.FederationManagementTab;
 import thederpgamer.betterfactions.manager.FactionManagerOld;
-import thederpgamer.betterfactions.manager.FederationManager;
+import thederpgamer.betterfactions.manager.data.FederationManager;
 
 import java.util.Objects;
 

@@ -12,7 +12,7 @@ import thederpgamer.betterfactions.data.old.federation.FactionMessage;
 import thederpgamer.betterfactions.data.faction.FactionScore;
 import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.manager.FactionManagerOld;
-import thederpgamer.betterfactions.manager.FederationManager;
+import thederpgamer.betterfactions.manager.data.FederationManager;
 import thederpgamer.betterfactions.manager.ResourceManager;
 
 import java.util.ArrayList;

@@ -7,7 +7,7 @@ import org.schema.schine.common.TextCallback;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.settings.PrefixNotFoundException;
 import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
-import thederpgamer.betterfactions.manager.FederationManager;
+import thederpgamer.betterfactions.manager.data.FederationManager;
 import java.util.regex.Pattern;
 
 /**

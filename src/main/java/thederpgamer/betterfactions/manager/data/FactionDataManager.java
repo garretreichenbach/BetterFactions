@@ -1,17 +1,21 @@
-package thederpgamer.betterfactions.manager;
+package thederpgamer.betterfactions.manager.data;
 
 import api.common.GameCommon;
-import api.mod.config.PersistentObjectUtil;
+import api.network.PacketReadBuffer;
+import api.network.PacketWriteBuffer;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
+import thederpgamer.betterfactions.data.SerializationInterface;
 import thederpgamer.betterfactions.data.faction.FactionData;
-import thederpgamer.betterfactions.data.PersistentData;
+import thederpgamer.betterfactions.manager.LogManager;
+import thederpgamer.betterfactions.utils.DataUtils;
 import thederpgamer.betterfactions.utils.NetworkUtils;
 
-import java.util.ArrayList;
+import java.io.*;
+import java.nio.file.Files;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -56,9 +60,15 @@ public class FactionDataManager extends DataManager<FactionData> {
 	@Override
 	public FactionData loadData(int id) {
 		if(NetworkUtils.onServer()) {
-			ArrayList<Object> dataList = PersistentObjectUtil.getObjects(modInstance, FactionData.class);
-			for(Object obj : dataList) if(((FactionData) obj).getId() == id) return (FactionData) obj;
-			return createNewData(id);
+			File storageDir = getDataStorageDirectory();
+			File dataFile = new File(storageDir.getPath() + "/" + id + ".smdat");
+			if(dataFile.exists()) {
+				try {
+					return new FactionData(new PacketReadBuffer(new DataInputStream(Files.newInputStream(dataFile.toPath()))));
+				} catch(IOException e) {
+					throw new RuntimeException(e);
+				}
+			} else return createNewData(id);
 		}
 		return null;
 	}
@@ -75,8 +85,16 @@ public class FactionDataManager extends DataManager<FactionData> {
 		} catch(Exception exception) {
 			LogManager.logException("Failed to create new FactionData", exception);
 		}
-		if(factionData != null) PersistentObjectUtil.addObject(modInstance, factionData);
-		PersistentObjectUtil.save(modInstance);
+		if(factionData != null) {
+			File storageDir = getDataStorageDirectory();
+			File dataFile = new File(storageDir.getPath() + "/" + factionData.getId() + ".smdat");
+			try {
+				dataFile.createNewFile();
+				factionData.serialize(new PacketWriteBuffer(new DataOutputStream(Files.newOutputStream(dataFile.toPath()))));
+			} catch(IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
 		return factionData;
 	}
 
@@ -87,9 +105,27 @@ public class FactionDataManager extends DataManager<FactionData> {
 	}
 
 	@Override
-	public void putIntoClientCache(PersistentData data) {
+	public File getDataStorageDirectory() {
+		if(NetworkUtils.onServer()) {
+			File dir = new File(DataUtils.getWorldDataPath() + "/data/faction");
+			if(!dir.exists()) dir.mkdirs();
+			return dir;
+		} else return null;
+	}
+
+	@Override
+	public void putIntoClientCache(SerializationInterface data) {
 		cache.invalidate(data.getId());
 		cache.put(data.getId(), (FactionData) data);
+	}
+
+	public FactionData getFactionData(int id) {
+		try {
+			return cache.get(id);
+		} catch(ExecutionException exception) {
+			exception.printStackTrace();
+			return null;
+		}
 	}
 
 	public FactionData getPlayerFaction(PlayerState playerState) {

@@ -13,7 +13,7 @@ import org.schema.schine.network.client.ClientState;
 import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
 import thederpgamer.betterfactions.data.old.federation.FactionMessage;
 import thederpgamer.betterfactions.manager.FactionManagerOld;
-import thederpgamer.betterfactions.manager.FederationManager;
+import thederpgamer.betterfactions.manager.data.FederationManager;
 
 import javax.vecmath.Vector4f;
 

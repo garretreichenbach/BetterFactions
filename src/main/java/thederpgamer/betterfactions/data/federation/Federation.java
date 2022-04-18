@@ -1,11 +1,16 @@
 package thederpgamer.betterfactions.data.federation;
 
-import thederpgamer.betterfactions.data.PersistentData;
+import api.network.PacketReadBuffer;
+import api.network.PacketWriteBuffer;
 import thederpgamer.betterfactions.data.SerializationInterface;
-import thederpgamer.betterfactions.data.faction.FactionScore;
+import thederpgamer.betterfactions.data.faction.FactionData;
+import thederpgamer.betterfactions.manager.data.FactionDataManager;
+import thederpgamer.betterfactions.manager.LogManager;
 
-import java.io.Serializable;
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 /**
  * <Description>
@@ -13,15 +18,25 @@ import java.util.HashMap;
  * @version 2.0 [04/09/2022]
  * @author TheDerpGamer
  */
-public abstract class Federation implements SerializationInterface, FactionScore {
+public class Federation implements SerializationInterface {
 
-    protected final int id;
-    protected String name;
+    private int id;
+    private String name;
+    private String description;
+    private String logo;
+    //Todo: Policy fields?
+
     protected final HashMap<Integer, FederationMember> members = new HashMap<>();
 
-    public Federation(int id, String name) {
+    public Federation(int id, String name, FactionData founder1, FactionData founder2) {
         this.id = id;
         this.name = name;
+        this.description = "A federation between " + founder1.getName() + " and " + founder2.getName() + ".";
+        this.logo = DEFAULT_LOGO;
+    }
+
+    public Federation(PacketReadBuffer readBuffer) throws IOException {
+        deserialize(readBuffer);
     }
 
     @Override
@@ -34,14 +49,66 @@ public abstract class Federation implements SerializationInterface, FactionScore
         return name;
     }
 
-    @Override
-    public boolean equals(PersistentData persistentData) {
-        return persistentData instanceof Federation && persistentData.getId() == getId() && persistentData.getName().equals(getName());
-    }
-
     public void setName(String name) {
         this.name = name;
     }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public HashMap<Integer, FactionData> getMembers() {
+        HashMap<Integer, FactionData> map = new HashMap<>();
+        for(int id : members.keySet()) {
+            try {
+                map.put(id, FactionDataManager.instance.getCache().get(id));
+            } catch(ExecutionException exception) {
+                LogManager.logFailure("Failed to execute fetch request for Federation data", false);
+            }
+        }
+        return map;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getLogo() {
+        return logo;
+    }
+
+    public void setLogo(String logo) {
+        this.logo = logo;
+    }
+
+    @Override
+    public boolean equals(SerializationInterface data) {
+        return false;
+    }
+
+    @Override
+    public void deserialize(PacketReadBuffer readBuffer) throws IOException {
+        id = readBuffer.readInt();
+        name = readBuffer.readString();
+        description = readBuffer.readString();
+        logo = readBuffer.readString();
+        int size = readBuffer.readInt();
+        for(int i = 0; i < size; i ++) members.put(readBuffer.readInt(), readBuffer.readObject(FederationMember.class));
+    }
+
+    @Override
+    public void serialize(PacketWriteBuffer writeBuffer) throws IOException {
+        writeBuffer.writeInt(id);
+        writeBuffer.writeString(name);
+        writeBuffer.writeString(description);
+        writeBuffer.writeString(logo);
+        writeBuffer.writeInt(members.size());
+        for(Map.Entry<Integer, FederationMember> entry : members.entrySet()) {
+            writeBuffer.writeInt(entry.getKey());
+            writeBuffer.writeObject(entry.getValue());
+        }
+    }
+
 
     /*
     public ArrayList<FactionDataOld> getMembers() {

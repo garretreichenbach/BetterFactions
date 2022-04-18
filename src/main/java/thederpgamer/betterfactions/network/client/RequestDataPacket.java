@@ -4,13 +4,10 @@ import api.network.Packet;
 import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
 import org.schema.game.common.data.player.PlayerState;
-import thederpgamer.betterfactions.data.PersistentData;
 import thederpgamer.betterfactions.data.SerializationInterface;
-import thederpgamer.betterfactions.manager.DataManager;
-import thederpgamer.betterfactions.manager.LogManager;
+import thederpgamer.betterfactions.manager.data.DataManager;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 
 /**
  * Requests data from the server by id.

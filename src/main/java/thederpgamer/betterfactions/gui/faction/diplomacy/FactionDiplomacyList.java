@@ -11,7 +11,7 @@ import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
 import thederpgamer.betterfactions.manager.FactionManagerOld;
-import thederpgamer.betterfactions.manager.FederationManager;
+import thederpgamer.betterfactions.manager.data.FederationManager;
 
 import java.util.ArrayList;
 import java.util.Collection;
