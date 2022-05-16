@@ -8,9 +8,10 @@ import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
+import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionMember;
 import thederpgamer.betterfactions.data.faction.FactionRank;
-import thederpgamer.betterfactions.manager.FactionManagerOld;
+import thederpgamer.betterfactions.manager.data.FactionDataManager;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -39,7 +40,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
 
     @Override
     public ArrayList<FactionMember> getElementList() {
-        return FactionManagerOld.getFactionData(FactionManagerOld.getFaction(GameClient.getClientPlayerState())).getMembers();
+        return FactionDataManager.instance.getFactionData(GameClient.getClientPlayerState().getFactionId()).getMembers();
     }
 
     @Override
@@ -70,7 +71,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
         addColumn("Location", 7.0f, new Comparator<FactionMember>() {
             @Override
             public int compare(FactionMember o1, FactionMember o2) {
-                Vector3i homebaseSector = o1.getFactionData().getHomebaseSector();
+                Vector3i homebaseSector = o1.getFactionData().getFaction().getHomeSector();
                 Vector3i o1Location = o1.getLocation();
                 Vector3i o2Location = o2.getLocation();
 
@@ -120,7 +121,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
     private String[] getFactionRanksString() {
         ArrayList<String> ranksStringList = new ArrayList<>();
         ranksStringList.add("ALL");
-        for(FactionRank rank : Objects.requireNonNull(FactionManagerOld.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getRanks()) {
+        for(FactionRank rank : FactionDataManager.instance.getPlayerFaction(GameClient.getClientPlayerState()).getAllRanks()) {
             ranksStringList.add(rank.getRankName().toUpperCase());
         }
         return ranksStringList.toArray(new String[0]);
@@ -130,7 +131,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
     public void updateListEntries(GUIElementList guiElementList, Set<FactionMember> set) {
         guiElementList.deleteObservers();
         guiElementList.addObserver(this);
-        FactionMember playerFactionMember = FactionManagerOld.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
+        FactionMember playerFactionMember = FactionDataManager.instance.getPlayerFaction(GameClient.getClientPlayerState()).getMember(GameClient.getClientPlayerState());
         assert playerFactionMember != null;
         for(FactionMember factionMember : set) {
             GUITextOverlayTable nameTextElement;
@@ -175,7 +176,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
     private GUIHorizontalButtonTablePane redrawButtonPane(final FactionMember factionMember, FactionMember playerFactionMember, GUIAncor anchor) {
         GUIHorizontalButtonTablePane buttonPane = new GUIHorizontalButtonTablePane(getState(), 0, 1, anchor);
         buttonPane.onInit();
-        final FactionDataOld factionData = playerFactionMember.getFactionData();
+        final FactionData factionData = playerFactionMember.getFactionData();
         int buttonIndex = 0;
         if(playerFactionMember.getRank().getRankLevel() >= factionMember.getRank().getRankLevel()) {
             if(playerFactionMember.hasPermission("manage.members.kick") && factionMember != playerFactionMember) {

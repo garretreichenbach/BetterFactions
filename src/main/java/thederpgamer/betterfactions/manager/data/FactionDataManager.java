@@ -8,6 +8,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
+import org.schema.game.common.data.player.faction.FactionManager;
 import thederpgamer.betterfactions.data.SerializationInterface;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.manager.LogManager;
@@ -137,5 +138,23 @@ public class FactionDataManager extends DataManager<FactionData> {
 			}
 		}
 		return null;
+	}
+
+	public void initializeFactions() {
+		if(!cache.asMap().containsKey(FactionManager.TRAIDING_GUILD_ID)) {
+			FactionData traders = new FactionData(GameCommon.getGameState().getFactionManager().getFaction(FactionManager.TRAIDING_GUILD_ID));
+			traders.setFactionLogo("traders-logo");
+			cache.put(FactionManager.TRAIDING_GUILD_ID, traders);
+		}
+
+		if(!cache.asMap().containsKey(FactionManager.PIRATES_ID)) {
+			FactionData pirates = new FactionData(GameCommon.getGameState().getFactionManager().getFaction(FactionManager.PIRATES_ID));
+			pirates.setFactionLogo("pirates-logo");
+			cache.put(FactionManager.PIRATES_ID, pirates);
+		}
+
+		for(Faction faction : GameCommon.getGameState().getFactionManager().getFactionCollection()) {
+			if(!cache.asMap().containsKey(faction.getIdFaction())) cache.put(faction.getIdFaction(), new FactionData(faction));
+		}
 	}
 }

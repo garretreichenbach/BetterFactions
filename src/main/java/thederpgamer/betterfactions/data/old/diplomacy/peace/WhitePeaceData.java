@@ -1,5 +1,6 @@
 package thederpgamer.betterfactions.data.old.diplomacy.peace;
 
+import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.manager.ConfigManager;
 
 /**
@@ -10,7 +11,7 @@ import thederpgamer.betterfactions.manager.ConfigManager;
  */
 public class WhitePeaceData extends PeaceTreatyData {
 
-	public WhitePeaceData(FactionDataOld from, FactionDataOld to) {
+	public WhitePeaceData(FactionData from, FactionData to) {
 		super(from, to);
 	}
 

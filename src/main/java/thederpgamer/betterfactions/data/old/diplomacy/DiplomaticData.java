@@ -1,5 +1,7 @@
 package thederpgamer.betterfactions.data.old.diplomacy;
 
+import thederpgamer.betterfactions.data.faction.FactionData;
+
 /**
  * <Description>
  *
@@ -8,10 +10,10 @@ package thederpgamer.betterfactions.data.old.diplomacy;
  */
 public abstract class DiplomaticData {
 
-	private FactionDataOld from;
-	private FactionDataOld to;
+	private FactionData from;
+	private FactionData to;
 
-	public DiplomaticData(FactionDataOld from, FactionDataOld to) {
+	public DiplomaticData(FactionData from, FactionData to) {
 		this.from = from;
 		this.to = to;
 	}

@@ -7,7 +7,6 @@ import org.schema.schine.graphicsengine.forms.gui.newgui.GUIWindowInterface;
 import org.schema.schine.input.InputState;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionRelationship;
-import thederpgamer.betterfactions.manager.FactionManagerOld;
 import thederpgamer.betterfactions.manager.data.FactionDataManager;
 import thederpgamer.betterfactions.manager.data.FactionRelationshipManager;
 

@@ -9,11 +9,12 @@ import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
+import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionMember;
 import thederpgamer.betterfactions.data.old.federation.FactionMessage;
 import thederpgamer.betterfactions.gui.faction.diplomacy.FactionMessageSendDialog;
-import thederpgamer.betterfactions.manager.FactionManagerOld;
 import thederpgamer.betterfactions.manager.LogManager;
+import thederpgamer.betterfactions.manager.data.FactionDataManager;
 import thederpgamer.betterfactions.network.client.ModifyFactionMessagePacket;
 import thederpgamer.betterfactions.utils.DateUtils;
 
@@ -49,7 +50,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
     public ArrayList<FactionMessage> getElementList() {
         ArrayList<FactionMessage> messageList = new ArrayList<>();
         try {
-            messageList.addAll(FactionManagerOld.getPlayerFactionData(GameClient.getClientPlayerState().getName()).getInbox());
+            messageList.addAll(FactionDataManager.instance.getPlayerFaction(GameClient.getClientPlayerState()).getInbox());
         } catch(Exception exception) {
             LogManager.logException("Encountered an exception while trying to fetch faction message inbox", exception);
         }
@@ -125,7 +126,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
     public void updateListEntries(GUIElementList guiElementList, Set<FactionMessage> set) {
         guiElementList.deleteObservers();
         guiElementList.addObserver(this);
-        FactionMember playerFactionMember = FactionManagerOld.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
+        FactionMember playerFactionMember = FactionDataManager.instance.getPlayerFaction(GameClient.getClientPlayerState()).getMember(GameClient.getClientPlayerState());
         assert playerFactionMember != null;
         for(FactionMessage message : set) {
             try {
@@ -171,7 +172,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
     private GUIHorizontalButtonTablePane redrawButtonPane(final FactionMessage message, final FactionMember playerFactionMember, GUIAncor anchor) {
         GUIHorizontalButtonTablePane buttonPane = new GUIHorizontalButtonTablePane(getState(), 0, 1, anchor);
         buttonPane.onInit();
-        final FactionDataOld factionData = FactionManagerOld.getFactionData(message.fromId);
+        final FactionData factionData = FactionDataManager.instance.getFactionData(message.fromId);
         int buttonIndex = 0;
         if(playerFactionMember.hasPermission("manage.messages.view")) {
             buttonPane.addColumn();

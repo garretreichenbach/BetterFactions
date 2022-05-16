@@ -1,5 +1,7 @@
 package thederpgamer.betterfactions.data.old.diplomacy.war;
 
+import thederpgamer.betterfactions.data.faction.FactionData;
+
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -17,7 +19,7 @@ public class WarData {
 
     }
 
-    public boolean isInvolved(FactionDataOld factionData) {
-        return defenders.containsKey(factionData.getFactionId()) || attackers.containsKey(factionData.getFactionId());
+    public boolean isInvolved(FactionData factionData) {
+        return defenders.containsKey(factionData.getId()) || attackers.containsKey(factionData.getId());
     }
 }

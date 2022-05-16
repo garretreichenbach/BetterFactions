@@ -17,8 +17,9 @@ import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalButtonTablePane;
 import org.schema.schine.input.InputState;
+import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionMember;
-import thederpgamer.betterfactions.manager.FactionManagerOld;
+import thederpgamer.betterfactions.manager.data.FactionDataManager;
 
 /**
  * <Description>
@@ -38,7 +39,7 @@ public class FactionOptionsPane extends GUIAncor {
 
     @Override
     public void onInit() {
-        final FactionMember playerFactionMember = FactionManagerOld.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
+        final FactionMember playerFactionMember = FactionDataManager.instance.getPlayerFaction(GameClient.getClientPlayerState()).getMember(GameClient.getClientPlayerState());
         (buttonPane = new GUIHorizontalButtonTablePane(getState(), 2, 3, this)).onInit();
         buttonPane.addButton(0, 0, "INVITE", GUIHorizontalArea.HButtonColor.BLUE, new GUICallback() {
             @Override

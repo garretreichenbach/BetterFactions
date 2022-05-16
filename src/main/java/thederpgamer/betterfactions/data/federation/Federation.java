@@ -110,7 +110,7 @@ public class Federation implements SerializationInterface {
 
 	public void addMember(FactionData factionData) {
         members.add(factionData.getId());
-        FederationManager.instance.saveData();
+        FederationManager.instance.saveData(this);
 	}
 
 

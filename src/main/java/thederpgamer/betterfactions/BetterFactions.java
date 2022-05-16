@@ -8,17 +8,17 @@ import api.listener.events.player.PlayerJoinFactionEvent;
 import api.listener.events.player.PlayerLeaveFactionEvent;
 import api.mod.StarLoader;
 import api.mod.StarMod;
-import api.mod.config.PersistentObjectUtil;
 import api.network.packets.PacketUtil;
 import org.schema.game.client.view.gui.PlayerPanel;
 import org.schema.schine.resource.ResourceLoader;
+import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionRank;
 import thederpgamer.betterfactions.gui.NewFactionPanel;
 import thederpgamer.betterfactions.manager.ConfigManager;
-import thederpgamer.betterfactions.manager.FactionManagerOld;
 import thederpgamer.betterfactions.manager.ResourceManager;
 import thederpgamer.betterfactions.manager.TradeGuildManager;
 import thederpgamer.betterfactions.manager.data.DataManager;
+import thederpgamer.betterfactions.manager.data.FactionDataManager;
 import thederpgamer.betterfactions.network.client.CreateNewFederationPacket;
 import thederpgamer.betterfactions.network.client.ModifyFactionMessagePacket;
 import thederpgamer.betterfactions.network.client.RequestDataPacket;
@@ -70,7 +70,7 @@ public class BetterFactions extends StarMod {
         StarLoader.registerListener(PlayerGUICreateEvent.class, new Listener<PlayerGUICreateEvent>() {
             @Override
             public void onEvent(PlayerGUICreateEvent event) {
-                FactionManagerOld.initializeFactions();
+                FactionDataManager.instance.initializeFactions();
                 try {
                     PlayerPanel playerPanel = event.getPlayerPanel();
                     Field factionPanelNewField = playerPanel.getClass().getDeclaredField("factionPanelNew");
@@ -88,35 +88,35 @@ public class BetterFactions extends StarMod {
         StarLoader.registerListener(FactionCreateEvent.class, new Listener<FactionCreateEvent>() {
             @Override
             public void onEvent(FactionCreateEvent event) {
-                FactionManagerOld.getFactionData(event.getFaction());
-                FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionCreateNews(FactionManagerOld.getFactionData(event.getFaction()), event.getPlayer()));
+                FactionDataManager.instance.getFactionData(event.getFaction().getIdFaction());
+                FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionCreateNews(FactionDataManager.instance.getFactionData(event.getFaction().getIdFaction()), event.getPlayer()));
                 FactionNewsUtils.saveData();
-                FactionDataOld factionData = FactionManagerOld.getFactionData(event.getFaction());
+                FactionData factionData = FactionDataManager.instance.getFactionData(event.getFaction().getIdFaction());
                 FactionRank founderRank = new FactionRank("Founder", 4, "*");
-                factionData.addRank(founderRank);
-                factionData.addMember(event.getPlayer().getName());
                 factionData.getMember(event.getPlayer().getName()).setRank(founderRank);
-                PersistentObjectUtil.save(getSkeleton());
-                updateClientData();
+                FactionNewsUtils.saveData();
+                FactionDataManager.instance.saveData(factionData);
+                if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) newFactionPanel.recreateTabs();
             }
         }, this);
 
         StarLoader.registerListener(PlayerJoinFactionEvent.class, new Listener<PlayerJoinFactionEvent>() {
             @Override
             public void onEvent(PlayerJoinFactionEvent event) {
-                FactionManagerOld.getFactionData(event.getFaction());
-                FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionJoinNews(FactionManagerOld.getFactionData(event.getFaction()), event.getPlayer()));
+                FactionDataManager.instance.getFactionData(event.getFaction().getIdFaction());
+                FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionJoinNews(FactionDataManager.instance.getFactionData(event.getFaction().getIdFaction()), event.getPlayer()));
                 FactionNewsUtils.saveData();
                 if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
-                    FactionManagerOld.getFactionData(event.getFaction()).addMember(event.getPlayer().getName());
-                    if(FactionManagerOld.getFactionData(event.getFaction()).getMembers().size() <= 1) {
+                    if(FactionDataManager.instance.getFactionData(event.getFaction().getIdFaction()).getMembers().size() <= 1) {
                         FactionRank founderRank = new FactionRank("Founder", 4, "*");
-                        FactionManagerOld.getFactionData(event.getFaction()).addRank(founderRank);
-                        FactionManagerOld.getFactionData(event.getFaction()).getMembers().get(0).setRank(founderRank);
+                        FactionDataManager.instance.getFactionData(event.getFaction().getIdFaction()).getMembers().get(0).setRank(founderRank);
                     }
                 }
-                PersistentObjectUtil.save(getSkeleton());
-                updateClientData();
+                FactionNewsUtils.saveData();
+                FactionData factionData = FactionDataManager.instance.getFactionData(event.getFaction().getIdFaction());
+                factionData.addMember(event.getPlayer().getName());
+                FactionDataManager.instance.saveData(factionData);
+                if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) newFactionPanel.recreateTabs();
             }
         }, this);
 
@@ -124,23 +124,17 @@ public class BetterFactions extends StarMod {
             @Override
             public void onEvent(PlayerLeaveFactionEvent event) {
                 if(event.getFaction() != null) {
-                    if(event.getFaction().getMembersUID().keySet().size() <= 1) {
-                        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionDisbandNews(FactionManagerOld.getFactionData(event.getFaction())));
-                    } else {
-                        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionLeaveNews(FactionManagerOld.getFactionData(event.getFaction()), event.getPlayer()));
-                    }
-                    FactionManagerOld.getFactionData(event.getFaction());
+                    if(event.getFaction().getMembersUID().keySet().size() <= 1) FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionDisbandNews(FactionDataManager.instance.getFactionData(event.getFaction().getIdFaction())));
+                    else FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFactionLeaveNews(FactionDataManager.instance.getFactionData(event.getFaction().getIdFaction()), event.getPlayer()));
+                    FactionDataManager.instance.getFactionData(event.getFaction().getIdFaction());
                 }
                 FactionNewsUtils.saveData();
-                if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) {
-                    FactionManagerOld.getFactionData(event.getFaction()).removeMember(event.getPlayer().getName());
-                    PersistentObjectUtil.save(getSkeleton());
-                    updateClientData();
-                    newFactionPanel.recreateTabs();
-                } else {
-                    PersistentObjectUtil.save(getSkeleton());
-                    updateClientData();
+                FactionData factionData = FactionDataManager.instance.getFactionData(event.getFaction().getIdFaction());
+                if(factionData != null) {
+                    factionData.removeMember(event.getPlayer().getName());
+                    FactionDataManager.instance.saveData(factionData);
                 }
+                if(newFactionPanel != null && newFactionPanel.getOwnPlayer().equals(event.getPlayer())) newFactionPanel.recreateTabs();
             }
         }, this);
 
@@ -159,9 +153,5 @@ public class BetterFactions extends StarMod {
         PacketUtil.registerPacket(CreateNewFederationPacket.class);
         PacketUtil.registerPacket(SendFactionMessagePacket.class);
         PacketUtil.registerPacket(ModifyFactionMessagePacket.class);
-    }
-
-    private void updateClientData() {
-
     }
 }

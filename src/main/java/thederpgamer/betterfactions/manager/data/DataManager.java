@@ -1,5 +1,8 @@
 package thederpgamer.betterfactions.manager.data;
 
+import api.common.GameClient;
+import api.common.GameCommon;
+import api.common.GameServer;
 import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
 import api.network.packets.PacketUtil;
@@ -11,6 +14,7 @@ import thederpgamer.betterfactions.data.faction.FactionMember;
 import thederpgamer.betterfactions.data.faction.FactionRank;
 import thederpgamer.betterfactions.data.faction.FactionRelationship;
 import thederpgamer.betterfactions.data.federation.Federation;
+import thederpgamer.betterfactions.data.old.federation.FactionMessage;
 import thederpgamer.betterfactions.manager.LogManager;
 import thederpgamer.betterfactions.network.client.RequestDataPacket;
 import thederpgamer.betterfactions.network.server.SendDataPacket;
@@ -88,6 +92,15 @@ public abstract class DataManager<E extends SerializationInterface> {
 		}
 	}
 
+	public void sendDataToClients(SerializationInterface data) {
+		if(!NetworkUtils.onServer()) return;
+		for(PlayerState playerState : GameServer.getServerState().getPlayerStatesByName().values()) PacketUtil.sendPacket(playerState, new SendDataPacket(data));
+	}
+
+	public void sendAllDataToClients() {
+		for(SerializationInterface data : getCache().asMap().values()) sendDataToClients(data);
+	}
+
 	public void saveData(SerializationInterface data) {
 		if(NetworkUtils.onServer()) {
 			File storageDir = getDataStorageDirectory();
@@ -103,10 +116,30 @@ public abstract class DataManager<E extends SerializationInterface> {
 		}
 	}
 
+	public void removeData(SerializationInterface data) {
+		if(NetworkUtils.onServer()) {
+			File storageDir = getDataStorageDirectory();
+			File dataFile = new File(storageDir.getPath() + "/" + data.getId() + ".smdat");
+			if(dataFile.exists()) dataFile.delete();
+			getCache().invalidate(data);
+		}
+	}
+
+	public void updateData(SerializationInterface data) {
+		if(NetworkUtils.onServer()) {
+			getCache().invalidate(data.getId());
+			getCache().put(data.getId(), (E) data);
+			sendDataToClients(data);
+		}
+	}
+
 	public static void initializeManagers() {
 		new FactionDataManager();
 		new FactionRelationshipManager();
 		new FederationManager();
+		new FactionMemberManager();
+		new FactionRankManager();
+		new FactionMessageManager();
 	}
 
 	public static DataManager<? extends SerializationInterface> getInstance(Class<? extends SerializationInterface> type) {
@@ -115,6 +148,7 @@ public abstract class DataManager<E extends SerializationInterface> {
 		else if(type.equals(Federation.class)) return FederationManager.instance;
 		else if(type.equals(FactionMember.class)) return FactionMemberManager.instance;
 		else if(type.equals(FactionRank.class)) return FactionRankManager.instance;
+		else if(type.equals(FactionMessage.class)) return FactionMessageManager.instance;
 		else return null;
 	}
 }

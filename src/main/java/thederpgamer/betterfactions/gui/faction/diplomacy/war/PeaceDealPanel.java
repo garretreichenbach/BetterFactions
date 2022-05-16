@@ -28,6 +28,10 @@ public class PeaceDealPanel extends GUIInputDialogPanel {
         setOkButtonText("SEND");
     }
 
+	public void sendMessage() {
+        //Todo:
+	}
+
     /*
     public void createPanel(WarData warData) {
         this.warData = warData;

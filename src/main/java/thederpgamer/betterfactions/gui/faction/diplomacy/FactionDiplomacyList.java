@@ -1,18 +1,17 @@
 package thederpgamer.betterfactions.gui.faction.diplomacy;
 
 import api.common.GameClient;
-import api.common.GameCommon;
 import org.schema.common.util.CompareTools;
 import org.schema.game.client.data.GameClientState;
-import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
-import org.schema.schine.graphicsengine.forms.gui.GUIElement;
-import org.schema.schine.graphicsengine.forms.gui.GUIElementList;
+import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.manager.FactionManagerOld;
+import thederpgamer.betterfactions.data.faction.FactionData;
+import thederpgamer.betterfactions.data.faction.FactionRelationship;
+import thederpgamer.betterfactions.manager.data.FactionDataManager;
+import thederpgamer.betterfactions.manager.data.FactionRelationshipManager;
 import thederpgamer.betterfactions.manager.data.FederationManager;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Set;
@@ -24,7 +23,7 @@ import java.util.Set;
  * Created 02/07/2021
  * @author TheDerpGamer
  */
-public class FactionDiplomacyList extends ScrollableTableList<FactionDataOld> {
+public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
 
     private final FactionDiplomacyTab diplomacyTab;
     private final String[] relationValues = {
@@ -45,47 +44,51 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionDataOld> {
 
     @Override
     public void initColumns() {
-        this.addColumn("Name", 15.0F, new Comparator<FactionDataOld>() {
-            public int compare(FactionDataOld o1, FactionDataOld o2) {
-                return o1.getFactionName().compareTo(o2.getFactionName());
+        this.addColumn("Name", 15.0F, new Comparator<FactionData>() {
+            public int compare(FactionData o1, FactionData o2) {
+                return o1.getName().compareTo(o2.getName());
             }
         });
 
-        this.addColumn("Federation", 15.0F, new Comparator<FactionDataOld>() {
-            public int compare(FactionDataOld o1, FactionDataOld o2) {
-                String federationName1 = (o1.getFederationId() != -1) ? FederationManager.getFederation(o1).getName() : "Non-Aligned";
-                String federationName2 = (o2.getFederationId() != -1) ? FederationManager.getFederation(o2).getName() : "Non-Aligned";
+        this.addColumn("Federation", 15.0F, new Comparator<FactionData>() {
+            public int compare(FactionData o1, FactionData o2) {
+                String federationName1 = (o1.getFederation() != null) ? FederationManager.instance.getFederation(o1).getName() : "Non-Aligned";
+                String federationName2 = (o2.getFederation() != null) ? FederationManager.instance.getFederation(o2).getName() : "Non-Aligned";
                 return federationName1.compareTo(federationName2);
             }
         });
 
-        this.addColumn("Members", 7.0F, new Comparator<FactionDataOld>() {
-            public int compare(FactionDataOld o1, FactionDataOld o2) {
-                return CompareTools.compare(GameCommon.getGameState().getFactionManager().getFaction(o1.getFactionId()).getMembersUID().size(), GameCommon.getGameState().getFactionManager().getFaction(o2.getFactionId()).getMembersUID().size());
+        this.addColumn("Members", 7.0F, new Comparator<FactionData>() {
+            public int compare(FactionData o1, FactionData o2) {
+                return CompareTools.compare(o1.getMembers().size(), o2.getMembers().size());
             }
         });
 
-        this.addColumn("Relation", 10.0F, new Comparator<FactionDataOld>() {
-            public int compare(FactionDataOld o1, FactionDataOld o2) {
-                return o1.getRelationString().compareTo(o2.getRelationString());
+        this.addColumn("Relation", 10.0F, new Comparator<FactionData>() {
+            public int compare(FactionData o1, FactionData o2) {
+                FactionRelationship relationshipA = FactionRelationshipManager.instance.getRelationship(o1, o2);
+                FactionRelationship relationshipB = FactionRelationshipManager.instance.getRelationship(o2, o1);
+                return Float.compare(relationshipA.getOpinion(), relationshipB.getOpinion());
             }
         });
 
-        this.addTextFilter(new GUIListFilterText<FactionDataOld>() {
-            public boolean isOk(String s, FactionDataOld faction) {
-                return faction.getFactionName().toLowerCase().contains(s.toLowerCase());
+        this.addTextFilter(new GUIListFilterText<FactionData>() {
+            public boolean isOk(String s, FactionData faction) {
+                return faction.getName().toLowerCase().contains(s.toLowerCase());
             }
         }, ControllerElement.FilterRowStyle.LEFT);
 
-        this.addDropdownFilter(new GUIListFilterDropdown<FactionDataOld, String>(relationValues) {
-            public boolean isOk(String s, FactionDataOld faction) {
-                if(s.equalsIgnoreCase("ALL")) {
-                    return true;
-                } else if(GameClient.getClientPlayerState().getFactionId() != 0 && faction.getFactionId() == GameClient.getClientPlayerState().getFactionId()) {
-                    return s.equalsIgnoreCase("ALLIED") || s.equalsIgnoreCase("IN FEDERATION") || s.equalsIgnoreCase("OWN FACTION");
-                } else return s.equalsIgnoreCase(faction.getRelationString());
+        this.addDropdownFilter(new GUIListFilterDropdown<FactionData, String>(FactionRelationship.RelationType.stringValues()) {
+            public boolean isOk(String relationType, FactionData faction) {
+                if(relationType.equals("ALL")) return true;
+                else {
+                    FactionRelationship relationship = FactionRelationshipManager.instance.getRelationship(FactionDataManager.instance.getPlayerFaction(GameClient.getClientPlayerState()), faction);
+                    for(FactionRelationship.Relationship relation : relationship.getRelations()) {
+                        if(relation.getRelationType().name.equals(relationType)) return true;
+                    }
+                    return false;
+                }
             }
-
         }, new CreateGUIElementInterface<String>() {
             @Override
             public GUIElement create(String s) {
@@ -100,7 +103,13 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionDataOld> {
 
             @Override
             public GUIElement createNeutral() {
-                return null;
+                GUIAncor anchor = new GUIAncor(getState(), 10.0F, 24.0F);
+                GUITextOverlayTableDropDown dropDown;
+                (dropDown = new GUITextOverlayTableDropDown(10, 10, getState())).setTextSimple("ALL");
+                dropDown.setPos(4.0F, 4.0F, 0.0F);
+                anchor.setUserPointer("ALL");
+                anchor.attach(dropDown);
+                return anchor;
             }
         }, ControllerElement.FilterRowStyle.RIGHT);
 
@@ -108,39 +117,40 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionDataOld> {
     }
 
     @Override
-    public Collection<FactionDataOld> getElementList() {
-        return new ArrayList<>(FactionManagerOld.getFactionDataMap().values());
+    public Collection<FactionData> getElementList() {
+        return FactionDataManager.instance.getCache().asMap().values();
     }
 
     @Override
-    public void updateListEntries(GUIElementList guiElementList, Set<FactionDataOld> set) {
+    public void updateListEntries(GUIElementList guiElementList, Set<FactionData> set) {
         guiElementList.deleteObservers();
         guiElementList.addObserver(this);
-        for(FactionDataOld factionData : set) {
+        for(FactionData factionData : set) {
             if(factionData != null) {
                 GUITextOverlayTable nameTextElement;
-                String factionName = factionData.getFactionName();
-                if(factionData.getFactionId() == org.schema.game.common.data.player.faction.FactionManager.TRAIDING_GUILD_ID) factionName = "Trading Guild";
+                String factionName = factionData.getName();
+                if(factionData.getId() == org.schema.game.common.data.player.faction.FactionManager.TRAIDING_GUILD_ID) factionName = "Trading Guild";
                 (nameTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(factionName);
                 GUIClippedRow nameRowElement;
                 (nameRowElement = new GUIClippedRow(this.getState())).attach(nameTextElement);
 
-                String federationName = (FederationManager.getFederation(factionData) != null) ? FederationManager.getFederation(factionData).getName() : "Non-Aligned";
+                String federationName = (FederationManager.instance.getFederation(factionData) != null) ? FederationManager.instance.getFederation(factionData).getName() : "Non-Aligned";
                 GUITextOverlayTable federationTextElement;
                 (federationTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(federationName);
                 GUIClippedRow federationRowElement;
                 (federationRowElement = new GUIClippedRow(this.getState())).attach(federationTextElement);
 
-                int members = GameCommon.getGameState().getFactionManager().getFaction(factionData.getFactionId()).getMembersUID().size();
+                int members = factionData.getMembers().size();
                 GUITextOverlayTable membersTextElement;
                 (membersTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple((members <= 0) ? "N/A" : members + " members");
                 GUIClippedRow membersRowElement;
                 (membersRowElement = new GUIClippedRow(this.getState())).attach(membersTextElement);
 
                 GUITextOverlayTable relationTextElement;
-                (relationTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(factionData.getRelationString());
+                FactionRelationship relationship = FactionRelationshipManager.instance.getRelationship(FactionDataManager.instance.getPlayerFaction(GameClient.getClientPlayerState()), factionData);
+                (relationTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple("Opinion: " + relationship.toString());
                 GUIClippedRow relationRowElement;
-                (relationRowElement = new GUIClippedRow(this.getState())).attach(relationTextElement);
+                (relationRowElement = new GUIClippedRowToolTip(this.getState(), relationship.getFullString())).attach(relationTextElement);
 
                 FactionDiplomacyListRow factionDiplomacyListRow = new FactionDiplomacyListRow(getState(), factionData, nameRowElement, federationRowElement, membersRowElement, relationRowElement);
                 factionDiplomacyListRow.onInit();
@@ -156,9 +166,32 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionDataOld> {
         ((GameClientState) getState()).getFactionManager().deleteObserver(this);
     }
 
-    public class FactionDiplomacyListRow extends ScrollableTableList<FactionDataOld>.Row {
+    public class GUIClippedRowToolTip extends GUIClippedRow implements TooltipProvider {
 
-        public FactionDiplomacyListRow(InputState inputState, FactionDataOld factionData, GUIElement... guiElements) {
+        private final String hoverText;
+        private GUIToolTip toolTip;
+
+        public GUIClippedRowToolTip(InputState inputState, String hoverText) {
+            super(inputState);
+            this.hoverText = hoverText;
+        }
+
+        @Override
+        public void onInit() {
+            super.onInit();
+            (toolTip = new GUIToolTip(getState(), hoverText, this)).onInit();
+        }
+
+        @Override
+        public void drawToolTip() {
+            checkMouseInside();
+            if(isInside() || toolTip.isDrawableTooltip()) toolTip.draw();
+        }
+    }
+
+    public class FactionDiplomacyListRow extends ScrollableTableList<FactionData>.Row {
+
+        public FactionDiplomacyListRow(InputState inputState, FactionData factionData, GUIElement... guiElements) {
             super(inputState, factionData, guiElements);
             this.highlightSelect = true;
             this.highlightSelectSimple = true;
@@ -168,10 +201,7 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionDataOld> {
         @Override
         public void clickedOnRow() {
             super.clickedOnRow();
-            if(!GameCommon.getGameState().getFactionManager().existsFaction(f.getFactionId())) {
-                FactionManagerOld.removeFactionData(f);
-                diplomacyTab.updateTab();
-            } else diplomacyTab.setSelectedFaction(GameCommon.getGameState().getFactionManager().getFaction(f.getFactionId()));
+            diplomacyTab.setSelectedFaction(f.getFaction());
         }
     }
 }

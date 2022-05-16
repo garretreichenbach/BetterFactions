@@ -8,6 +8,7 @@ import thederpgamer.betterfactions.data.SerializationInterface;
 import thederpgamer.betterfactions.manager.data.FactionDataManager;
 import thederpgamer.betterfactions.utils.NetworkUtils;
 
+import javax.management.relation.Relation;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -27,6 +28,7 @@ public class FactionRelationship implements SerializationInterface {
 	public FactionRelationship(FactionData self, FactionData other) {
 		this.self = self;
 		this.other = other;
+		this.relations.add(new Relationship(self, other, RelationType.NEUTRAL, 0));
 	}
 
 	public FactionRelationship(PacketReadBuffer readBuffer) throws IOException {
@@ -78,6 +80,110 @@ public class FactionRelationship implements SerializationInterface {
 		writeBuffer.writeInt(other.getId());
 		writeBuffer.writeInt(relations.size());
 		for(Relationship relation : relations) relation.serialize(writeBuffer);
+	}
+
+	@Override
+	public String toString() {
+		int opinion = (int) getOpinion();
+		if(opinion >= 300) return "TRUSTED [" + opinion + "]";
+		else if(opinion >= 200) return "EXCELLENT [" + opinion + "]";
+		else if(opinion >= 100) return "FRIENDLY [" + opinion + "]";
+		else if(opinion >= 30) return "NEUTRAL [" + opinion + "]";
+		else if(opinion >= -30) return "NEUTRAL [" + opinion + "]";
+		else if(opinion >= -100) return "WARY [" + opinion + "]";
+		else if(opinion >= -200) return "HOSTILE [" + opinion + "]";
+		else return "HATED [" + opinion + "]";
+	}
+
+	public void addRelation(RelationType type) {
+		int modifier;
+		switch(type) { //Todo: Make modifiers configurable
+			default:
+			case NEUTRAL:
+				modifier = 0;
+				removeRelation(RelationType.AT_WAR);
+				removeRelation(RelationType.ENEMY);
+				removeRelation(RelationType.FEDERATION_MEMBERS);
+				removeRelation(RelationType.FEDERATION_ALLY);
+				removeRelation(RelationType.ALLIANCE);
+				break;
+			case NON_AGGRESSION_PACT:
+				removeRelation(RelationType.AT_WAR);
+				removeRelation(RelationType.ENEMY);
+				modifier = 15;
+				break;
+			case LEND_LEASE:
+				removeRelation(RelationType.AT_WAR);
+				removeRelation(RelationType.ENEMY);
+				modifier = 20;
+				break;
+			case GUARANTEED_INDEPENDENCE:
+				removeRelation(RelationType.AT_WAR);
+				removeRelation(RelationType.ENEMY);
+				removeRelation(RelationType.FEDERATION_MEMBERS);
+				removeRelation(RelationType.FEDERATION_ALLY);
+				removeRelation(RelationType.ALLIANCE);
+				modifier = 20;
+				break;
+			case ALLIANCE:
+				removeRelation(RelationType.NEUTRAL);
+				removeRelation(RelationType.GUARANTEED_INDEPENDENCE);
+				modifier = 50;
+				break;
+			case FEDERATION_MEMBERS:
+				removeRelation(RelationType.NEUTRAL);
+				removeRelation(RelationType.GUARANTEED_INDEPENDENCE);
+				removeRelation(RelationType.ALLIANCE);
+				modifier = 70;
+				break;
+			case FEDERATION_ALLY:
+				removeRelation(RelationType.NEUTRAL);
+				removeRelation(RelationType.GUARANTEED_INDEPENDENCE);
+				removeRelation(RelationType.ALLIANCE);
+				removeRelation(RelationType.FEDERATION_MEMBERS);
+				modifier = 50;
+				break;
+			case ENEMY:
+				removeRelation(RelationType.NEUTRAL);
+				removeRelation(RelationType.GUARANTEED_INDEPENDENCE);
+				removeRelation(RelationType.NON_AGGRESSION_PACT);
+				removeRelation(RelationType.LEND_LEASE);
+				removeRelation(RelationType.TRIBUTARY);
+				removeRelation(RelationType.SUBJECT);
+				modifier = -100;
+				break;
+			case AT_WAR:
+				removeRelation(RelationType.NEUTRAL);
+				removeRelation(RelationType.GUARANTEED_INDEPENDENCE);
+				removeRelation(RelationType.NON_AGGRESSION_PACT);
+				removeRelation(RelationType.LEND_LEASE);
+				removeRelation(RelationType.TRIBUTARY);
+				removeRelation(RelationType.SUBJECT);
+				modifier = -200;
+				break;
+		}
+		relations.add(new Relationship(getSelf(), getOther(), type, modifier));
+	}
+
+	public void removeRelation(RelationType relationType) {
+		Relationship toRemove = null;
+		for(Relationship relation : getRelations()) if(relation.getRelationType().equals(relationType)) {
+			toRemove = relation;
+			break;
+		}
+		if(toRemove != null) relations.remove(toRemove);
+	}
+
+	public float getOpinion() {
+		float opinion = 0;
+		for(Relationship relationship : relations) opinion += relationship.getOpinionModifier();
+		return opinion;
+	}
+
+	public String getFullString() {
+		StringBuilder builder = new StringBuilder();
+		for(Relationship relationship : relations) builder.append(relationship.getRelationType().getRelation(RelationType.RELATION_TO_SELF, getOther())).append("\n");
+		return builder.toString().trim();
 	}
 
 	public static class Relationship implements SerializationInterface {
@@ -171,6 +277,12 @@ public class FactionRelationship implements SerializationInterface {
 		RelationType(String name, String otherToSelf, String selfToOther, String otherToOther) {
 			this.name = name;
 			this.relations = new String[] {otherToSelf, selfToOther, otherToOther};
+		}
+
+		public static String[] stringValues() {
+			String[] v = new String[values().length];
+			for(int i = 0; i < v.length; i ++) v[i] = values()[i].name.toUpperCase();
+			return v;
 		}
 
 		/**

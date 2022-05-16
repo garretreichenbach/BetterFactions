@@ -10,8 +10,9 @@ import org.schema.schine.graphicsengine.forms.gui.GUICallback;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.GUIOverlay;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.manager.FactionManagerOld;
+import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.manager.ResourceManager;
+import thederpgamer.betterfactions.manager.data.FactionDataManager;
 
 /**
  * FactionLogoOverlay.java
@@ -51,8 +52,8 @@ public class FactionLogoOverlay extends GUIOverlay implements GUICallback {
                     public boolean onInput(String s) {
                         if((s.startsWith("https://")) && (s.toLowerCase().endsWith(".png") || s.toLowerCase().endsWith(".jpg") || s.toLowerCase().endsWith(".jpeg"))) {
                             Sprite sprite = ResourceManager.getSprite(s);
-                            FactionDataOld factionData = FactionManagerOld.getFactionData(faction);
-                            factionData.setFactionLogo(ResourceManager.getSprite(s));
+                            FactionData factionData = FactionDataManager.instance.getFactionData(faction.getIdFaction());
+                            factionData.setFactionLogo(s);
                             infoPanel.updateLogo(sprite);
                             return true;
                         } else return false;

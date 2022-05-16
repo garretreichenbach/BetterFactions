@@ -7,7 +7,7 @@ import api.network.PacketWriteBuffer;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
 import thederpgamer.betterfactions.data.old.federation.FactionMessage;
-import thederpgamer.betterfactions.manager.FactionManagerOld;
+import thederpgamer.betterfactions.manager.data.FactionDataManager;
 import thederpgamer.betterfactions.utils.FactionMessageUtils;
 
 import java.io.IOException;
@@ -66,13 +66,7 @@ public class SendFactionMessagePacket extends Packet {
     public void processPacketOnServer(PlayerState playerState) {
         Faction from = GameCommon.getGameState().getFactionManager().getFaction(fromId);
         Faction to = GameCommon.getGameState().getFactionManager().getFaction(toId);
-        if(org.schema.game.common.data.player.faction.FactionManager.isNPCFactionOrPirateOrTrader(toId)) {
-            String response = FactionMessageUtils.getResponseMessage(FactionMessage.MessageType.valueOf(messageType), to, from);
-            FactionMessage factionMessage = new FactionMessage(to, from, "Reply from " + to.getName(), response, FactionMessage.MessageType.REPLY);
-            FactionManagerOld.getFactionData(from).addMessage(factionMessage);
-        } else {
-            FactionMessage factionMessage = new FactionMessage(from, to, title, message, FactionMessage.MessageType.valueOf(messageType));
-            FactionManagerOld.getFactionData(to).addMessage(factionMessage);
-        }
+        if(org.schema.game.common.data.player.faction.FactionManager.isNPCFactionOrPirateOrTrader(toId)) (new FactionMessage(to, from, "Reply from " + to.getName(), FactionMessageUtils.getResponseMessage(FactionMessage.MessageType.valueOf(messageType), to, from), FactionMessage.MessageType.REPLY)).sendMessage();
+        else (new FactionMessage(from, to, title, message, FactionMessage.MessageType.valueOf(messageType))).sendMessage();
     }
 }

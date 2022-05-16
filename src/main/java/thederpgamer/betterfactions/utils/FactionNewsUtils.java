@@ -5,6 +5,7 @@ import api.mod.config.PersistentObjectUtil;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.schine.common.language.Lng;
 import thederpgamer.betterfactions.BetterFactions;
+import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.gui.faction.news.FactionNewsEntry;
 import thederpgamer.betterfactions.manager.ConfigManager;
@@ -51,8 +52,8 @@ public class FactionNewsUtils {
         PersistentObjectUtil.save(instance);
     }
 
-    public static FactionNewsEntry getFactionCreateNews(FactionDataOld faction, PlayerState player) {
-        String factionName = faction.getFactionName();
+    public static FactionNewsEntry getFactionCreateNews(FactionData faction, PlayerState player) {
+        String factionName = faction.getName();
         String playerName = player.getName();
         String title = Lng.str("Creation of the " + factionName + ".");
         String text = Lng.str("A group led by an individual known as " + playerName + " has officially declared the creation of a new state known as " + factionName + ".\n" +
@@ -60,16 +61,16 @@ public class FactionNewsUtils {
         return new FactionNewsEntry(FactionNewsEntry.FactionNewsType.FACTION, faction, title, text);
     }
 
-    public static FactionNewsEntry getFactionDisbandNews(FactionDataOld faction) {
-        String factionName = faction.getFactionName();
+    public static FactionNewsEntry getFactionDisbandNews(FactionData faction) {
+        String factionName = faction.getName();
         String title = Lng.str(factionName + " has been disbanded.");
         String text = Lng.str("With the last member of " + factionName + " leaving, the faction been officially disbanded.\n" +
                 "There is now one less force in the galaxy.");
         return new FactionNewsEntry(FactionNewsEntry.FactionNewsType.FACTION, faction, title, text);
     }
 
-    public static FactionNewsEntry getFactionJoinNews(FactionDataOld faction, PlayerState player) {
-        String factionName = faction.getFactionName();
+    public static FactionNewsEntry getFactionJoinNews(FactionData faction, PlayerState player) {
+        String factionName = faction.getName();
         String playerName = player.getName();
         String title = Lng.str(playerName + " has joined the " + factionName + ".");
         String text = Lng.str(playerName + " has officially been accepted as a new member of the " + factionName + ".\n" +
@@ -77,8 +78,8 @@ public class FactionNewsUtils {
         return new FactionNewsEntry(FactionNewsEntry.FactionNewsType.FACTION, faction, title, text);
     }
 
-    public static FactionNewsEntry getFactionLeaveNews(FactionDataOld faction, PlayerState player) {
-        String factionName = faction.getFactionName();
+    public static FactionNewsEntry getFactionLeaveNews(FactionData faction, PlayerState player) {
+        String factionName = faction.getName();
         String playerName = player.getName();
         String title = Lng.str(playerName + " has left the " + factionName + ".");
         String text = Lng.str(playerName + " has officially cut ties with the " + factionName + " and is no longer considered a member.\n" +
@@ -87,8 +88,8 @@ public class FactionNewsUtils {
     }
 
     public static FactionNewsEntry getFederationCreateNews(Federation federationData) {
-        String faction1Name = federationData.getMembers().get(0).getFactionName();
-        String faction2Name = federationData.getMembers().get(0).getFactionName();
+        String faction1Name = federationData.getMembers().get(0).getName();
+        String faction2Name = federationData.getMembers().get(1).getName();
         String title = Lng.str("Formation of the " + federationData.getName() + ".");
         String text = Lng.str(
                 faction1Name + " has formed a new federation with " + faction2Name + " known as " + federationData.getName() + ".\n" +
@@ -103,16 +104,16 @@ public class FactionNewsUtils {
         return new FactionNewsEntry(FactionNewsEntry.FactionNewsType.FEDERATION, federationData, title, text);
     }
 
-    public static FactionNewsEntry getFederationJoinNews(Federation federationData, FactionDataOld faction) {
-        String title = Lng.str(faction.getFactionName() + " has joined the " + federationData.getName());
-        String text = Lng.str(faction.getFactionName() + " has officially been accepted as a new member of the " + federationData.getName() + ".\n" +
+    public static FactionNewsEntry getFederationJoinNews(Federation federationData, FactionData faction) {
+        String title = Lng.str(faction.getName() + " has joined the " + federationData.getName());
+        String text = Lng.str(faction.getName() + " has officially been accepted as a new member of the " + federationData.getName() + ".\n" +
                               "They will now join forces with their new allies and work together for their mutual interests.");
         return new FactionNewsEntry(FactionNewsEntry.FactionNewsType.FEDERATION, federationData, title, text);
     }
 
-    public static FactionNewsEntry getFederationLeaveNews(Federation federationData, FactionDataOld faction) {
-        String title = Lng.str(faction.getFactionName() + " has left the " + federationData.getName());
-        String text = Lng.str(faction.getFactionName() + " has officially severed ties with the " + federationData.getName() + ".\n" +
+    public static FactionNewsEntry getFederationLeaveNews(Federation federationData, FactionData faction) {
+        String title = Lng.str(faction.getName() + " has left the " + federationData.getName());
+        String text = Lng.str(faction.getName() + " has officially severed ties with the " + federationData.getName() + ".\n" +
                               "They shall now stand alone.");
         return new FactionNewsEntry(FactionNewsEntry.FactionNewsType.FEDERATION, federationData, title, text);
     }

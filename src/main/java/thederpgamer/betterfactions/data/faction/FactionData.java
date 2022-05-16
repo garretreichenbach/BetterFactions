@@ -6,13 +6,20 @@ import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
+import org.schema.schine.graphicsengine.forms.Sprite;
 import thederpgamer.betterfactions.data.SerializationInterface;
 import thederpgamer.betterfactions.data.federation.Federation;
+import thederpgamer.betterfactions.data.old.federation.FactionMessage;
+import thederpgamer.betterfactions.manager.ResourceManager;
+import thederpgamer.betterfactions.manager.data.FactionDataManager;
 import thederpgamer.betterfactions.manager.data.FactionMemberManager;
+import thederpgamer.betterfactions.manager.data.FactionMessageManager;
 import thederpgamer.betterfactions.manager.data.FederationManager;
 
+import java.awt.geom.RectangularShape;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  * <Description>
@@ -33,6 +40,8 @@ public class FactionData implements SerializationInterface {
 	private String name;
 	private final int[] score = new int[6];
 	private final ArrayList<String> members = new ArrayList<>();
+	private String logo = "default-logo";
+	private final ArrayList<Integer> inbox = new ArrayList<>();
 
 	public FactionData(int id, String name) {
 		this.id = id;
@@ -109,7 +118,51 @@ public class FactionData implements SerializationInterface {
 		return list;
 	}
 
+	public void addMember(String name) {
+		members.add(name);
+	}
+
+	public void removeMember(String name) {
+		members.remove(name);
+	}
+
 	public Faction getFaction() {
 		return GameCommon.getGameState().getFactionManager().getFaction(id);
+	}
+
+	public ArrayList<FactionRank> getAllRanks() {
+		ArrayList<FactionRank> ranks = new ArrayList<>();
+		for(FactionMember member : getMembers()) {
+			if(!ranks.contains(member.getRank())) ranks.add(member.getRank());
+		}
+		return ranks;
+	}
+
+	public void setFactionLogo(String logo) {
+		this.logo = logo;
+	}
+
+	public Sprite getFactionLogo() {
+		return ResourceManager.getSprite(logo);
+	}
+
+	public ArrayList<? extends FactionMessage> getInbox() {
+		ArrayList<FactionMessage> messages = new ArrayList<>();
+		for(int i : inbox) {
+			if(FactionMessageManager.instance.getCache().asMap().containsKey(i)) messages.add(FactionMessageManager.instance.getCache().asMap().get(i));
+		}
+		return messages;
+ 	}
+
+	public void addMessage(FactionMessage factionMessage) {
+		inbox.add(factionMessage.getId());
+		FactionMessageManager.instance.saveData(factionMessage);
+		FactionMessageManager.instance.sendDataToClients(factionMessage);
+	}
+
+	public void removeMessage(FactionMessage message) {
+		inbox.remove(message.getId());
+		FactionMessageManager.instance.getCache().asMap().remove(message.getId());
+		FactionMessageManager.instance.sendAllDataToClients();
 	}
 }

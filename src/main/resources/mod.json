@@ -3,7 +3,7 @@
   "author": "TheDerpGamer",
   "description": "Reworks faction interaction and diplomacy for a more immersive experience.",
   "version": "1.1.0",
-  "starmade_version": "0.203.113",
+  "starmade_version": "0.203.115",
   "client_mod": false,
   "server_mod": false,
   "main_class": "thederpgamer.betterfactions.BetterFactions",

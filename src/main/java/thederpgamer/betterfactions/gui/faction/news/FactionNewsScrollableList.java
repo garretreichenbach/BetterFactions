@@ -9,8 +9,9 @@ import org.schema.schine.graphicsengine.forms.font.FontLibrary;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
+import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.federation.Federation;
-import thederpgamer.betterfactions.manager.FactionManagerOld;
+import thederpgamer.betterfactions.manager.data.FactionDataManager;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;
 
 import java.util.*;
@@ -36,25 +37,22 @@ public class FactionNewsScrollableList extends ScrollableTableList<FactionNewsEn
 
     private boolean getFilterValue(FactionNewsEntry newsEntry, FactionNewsEntry.FactionNewsType newsType) {
         PlayerState playerState = GameClient.getClientPlayerState();
-        if(newsType.equals(FactionNewsEntry.FactionNewsType.ALL)) {
-            return true;
-        } else if(newsType.equals(FactionNewsEntry.FactionNewsType.RELEVANT)) {
+        if(newsType.equals(FactionNewsEntry.FactionNewsType.ALL)) return true;
+        else if(newsType.equals(FactionNewsEntry.FactionNewsType.RELEVANT)) {
             if(newsEntry.hasSubject() && playerState.getFactionId() != 0) {
                 Object subject = newsEntry.getSubject();
-                if(subject instanceof FactionDataOld) {
-                    FactionDataOld factionData = (FactionDataOld) subject;
-                    return playerState.getFactionId() == factionData.getFactionId();
+                if(subject instanceof FactionData) {
+                    FactionData factionData = (FactionData) subject;
+                    return playerState.getFactionId() == factionData.getId();
                 } else if(subject instanceof Federation) {
-                    if(Objects.requireNonNull(FactionManagerOld.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getFederationId() != -1) {
+                    if(Objects.requireNonNull(FactionDataManager.instance.getPlayerFaction(GameClient.getClientPlayerState())).getFederation() != null) {
                         Federation federationData = (Federation) subject;
-                        return federationData.getId() == Objects.requireNonNull(FactionManagerOld.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getFederationId();
+                        return federationData.getId() == Objects.requireNonNull(FactionDataManager.instance.getPlayerFaction(GameClient.getClientPlayerState())).getFederation().getId();
                     }
                 }
             }
             return false;
-        } else {
-            return newsEntry.type.equals(newsType);
-        }
+        } else return newsEntry.type.equals(newsType);
     }
 
     @Override

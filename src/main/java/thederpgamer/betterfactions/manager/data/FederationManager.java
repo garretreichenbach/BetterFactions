@@ -150,4 +150,11 @@ public class FederationManager extends DataManager<Federation> {
 		}
 		return false;
 	}
+
+	public boolean federationExists(String name) {
+		for(Federation federation : cache.asMap().values()) {
+			if(federation.getName().equals(name)) return true;
+		}
+		return false;
+	}
 }

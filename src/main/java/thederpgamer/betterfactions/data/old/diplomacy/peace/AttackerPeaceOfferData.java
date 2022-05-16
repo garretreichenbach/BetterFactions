@@ -1,5 +1,7 @@
 package thederpgamer.betterfactions.data.old.diplomacy.peace;
 
+import thederpgamer.betterfactions.data.faction.FactionData;
+
 /**
  * <Description>
  *
@@ -9,13 +11,13 @@ package thederpgamer.betterfactions.data.old.diplomacy.peace;
 public class AttackerPeaceOfferData extends PeaceOfferData {
 
 	@Override
-	public FactionDataOld[] getCurrentSide() {
-		return new FactionDataOld[0];
+	public FactionData[] getCurrentSide() {
+		return new FactionData[0];
 	}
 
 	@Override
-	public FactionDataOld[] getOpposingSide() {
-		return new FactionDataOld[0];
+	public FactionData[] getOpposingSide() {
+		return new FactionData[0];
 	}
 
 	@Override

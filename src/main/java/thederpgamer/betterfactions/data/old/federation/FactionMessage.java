@@ -1,8 +1,15 @@
 package thederpgamer.betterfactions.data.old.federation;
 
 import api.common.GameCommon;
+import api.network.PacketReadBuffer;
+import api.network.PacketWriteBuffer;
 import org.apache.commons.lang3.text.WordUtils;
 import org.schema.game.common.data.player.faction.Faction;
+import thederpgamer.betterfactions.data.SerializationInterface;
+import thederpgamer.betterfactions.data.faction.FactionData;
+import thederpgamer.betterfactions.manager.data.FactionDataManager;
+
+import java.io.IOException;
 
 /**
  * Faction diplomatic message persistent data.
@@ -10,7 +17,7 @@ import org.schema.game.common.data.player.faction.Faction;
  * @version 1.0 - [02/09/2021]
  * @author TheDerpGamer
  */
-public class FactionMessage {
+public class FactionMessage implements SerializationInterface {
 
     public static final int MARK_READ = 0;
     public static final int MARK_UNREAD = 1;
@@ -54,6 +61,10 @@ public class FactionMessage {
         this(from, to, title, message, MessageType.MESSAGE);
     }
 
+    public FactionMessage(PacketReadBuffer readBuffer) throws IOException {
+        deserialize(readBuffer);
+    }
+
     public FactionMessage(Faction from, Faction to, String title, String message, MessageType messageType) {
         this.fromId = from.getIdFaction();
         this.toId = to.getIdFaction();
@@ -79,6 +90,57 @@ public class FactionMessage {
         }
     }
 
+    @Override
+    public int getId() {
+        return (int) ((fromId | toId) + date);
+    }
+
+    @Override
+    public String getName() {
+        return title;
+    }
+
+    @Override
+    public boolean equals(SerializationInterface data) {
+        return data instanceof FactionMessage && data.getId() == getId();
+    }
+
+    @Override
+    public void deserialize(PacketReadBuffer readBuffer) throws IOException {
+        fromId = readBuffer.readInt();
+        toId = readBuffer.readInt();
+        title = readBuffer.readString();
+        message = readBuffer.readString();
+        messageType = MessageType.values()[readBuffer.readInt()];
+        date = readBuffer.readLong();
+        switch(messageType) {
+            case OFFER_PEACE:
+            case OFFER_TRADE:
+            case ALLIANCE_OFFER:
+            case DEMAND_CONCESSION:
+            case FEDERATION_INVITE:
+            case FEDERATION_REQUEST:
+            case NON_AGGRESSION_PACT:
+                acceptButtonText = "ACCEPT";
+                denyButtonText = "DENY";
+                break;
+            default:
+                acceptButtonText = "";
+                denyButtonText = "";
+                break;
+        }
+    }
+
+    @Override
+    public void serialize(PacketWriteBuffer writeBuffer) throws IOException {
+        writeBuffer.writeInt(fromId);
+        writeBuffer.writeInt(toId);
+        writeBuffer.writeString(title);
+        writeBuffer.writeString(message);
+        writeBuffer.writeInt(messageType.ordinal());
+        writeBuffer.writeLong(date);
+    }
+
     public Faction getSender() {
         return GameCommon.getGameState().getFactionManager().getFaction(fromId);
     }
@@ -86,4 +148,9 @@ public class FactionMessage {
     public Faction getRecipient() {
         return GameCommon.getGameState().getFactionManager().getFaction(toId);
     }
+
+    public void sendMessage() {
+        FactionDataManager.instance.getFactionData(toId).addMessage(this);
+    }
 }
+
