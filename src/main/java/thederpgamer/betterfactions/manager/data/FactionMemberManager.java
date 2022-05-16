@@ -9,6 +9,7 @@ import org.schema.game.common.data.player.PlayerState;
 import thederpgamer.betterfactions.data.SerializationInterface;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionMember;
+import thederpgamer.betterfactions.data.faction.FactionRank;
 import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.manager.LogManager;
 import thederpgamer.betterfactions.utils.DataUtils;
@@ -121,11 +122,29 @@ public class FactionMemberManager extends DataManager<FactionMember> {
 		} else return null;
 	}
 
+	@Override
+	public void initialize() {
+		for(FactionData factionData : FactionDataManager.instance.getCache().asMap().values()) {
+			for(String name : factionData.getFaction().getMembersUID().keySet()) {
+				if(getMember(factionData, name) == null) {
+					FactionMember member = new FactionMember(name, factionData);
+					cache.put(generateNewId(), member);
+					saveData(member);
+				}
+			}
+		}
+	}
+
 	public FactionMember getMember(FactionData factionData, String name) {
 		for(FactionMember member : cache.asMap().values()) {
 			if(member.getName().equals(name) && member.getFactionId() == factionData.getId()) return member;
 		}
-		return null;
+		FactionMember member;
+		if(factionData.members.size() == 1) member = new FactionMember(name, factionData, new FactionRank("Founder", 4 , "*"));
+		else member = new FactionMember(name, factionData);
+		factionData.addMember(name);
+		saveData(member);
+		return member;
 	}
 
 	public FactionMember getMember(FactionData factionData, PlayerState playerState) {

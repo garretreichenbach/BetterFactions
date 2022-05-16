@@ -164,8 +164,9 @@ public class FactionActionsPanel extends GUIAncor {
             pos ++;
         }
 
+        if(faction == null) return;
         if(GameClient.getClientPlayerState().getFactionId() != 0) {
-            final FactionMember player = FactionDataManager.instance.getPlayerFaction(GameClient.getClientPlayerState()).getMember(GameClient.getClientPlayerState());
+        final FactionMember player = FactionDataManager.instance.getFactionData(GameClient.getClientPlayerState().getFactionId()).getMember(GameClient.getClientPlayerState());
             if(player != null && faction.getIdFaction() != player.getFactionId()) {
                 final Faction playerFaction = player.getFactionData().getFaction();
                 if(playerFaction.getMembersUID().size() == 1) { //Todo: Temp fix for events not firing
@@ -337,12 +338,14 @@ public class FactionActionsPanel extends GUIAncor {
                 }
             }
 
-            if(player.hasPermission("federation.[ANY]") && faction.getIdFaction() != player.getFactionId() && player.getFactionData().getFederation() != null) {
+            if(player != null) {
+                if(player.hasPermission("federation.[ANY]") && faction.getIdFaction() != player.getFactionId() && player.getFactionData().getFederation() != null) {
 
-            }
+                }
 
-            if(player.hasPermission("trade.[ANY]") && faction.getIdFaction() != player.getFactionId()) {
+                if(player.hasPermission("trade.[ANY]") && faction.getIdFaction() != player.getFactionId()) {
 
+                }
             }
         }
     }

@@ -280,8 +280,11 @@ public class FactionRelationship implements SerializationInterface {
 		}
 
 		public static String[] stringValues() {
-			String[] v = new String[values().length];
-			for(int i = 0; i < v.length; i ++) v[i] = values()[i].name.toUpperCase();
+			String[] v = new String[values().length - 1];
+			for(int i = 0; i < v.length; i ++) {
+				if(values()[i] != SELF) v[i] = values()[i].name.toUpperCase();
+				else i --;
+			}
 			return v;
 		}
 

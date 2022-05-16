@@ -34,16 +34,6 @@ public class FactionLogoOverlay extends GUIOverlay implements GUICallback {
     }
 
     @Override
-    public void onInit() {
-        super.onInit();
-    }
-
-    @Override
-    public void draw() {
-        super.draw();
-    }
-
-    @Override
     public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
         if(mouseEvent.pressedLeftMouse()) {
             if (faction != null && getClientFaction() != null && faction.getIdFaction() == getClientFaction().getIdFaction()) { //Todo: Faction permissions check

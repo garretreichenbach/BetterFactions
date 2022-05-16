@@ -116,4 +116,9 @@ public class FactionRankManager extends DataManager<FactionRank> {
 			return dir;
 		} else return null;
 	}
+
+	@Override
+	public void initialize() {
+
+	}
 }

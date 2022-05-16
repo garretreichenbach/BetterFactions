@@ -39,9 +39,9 @@ public class FactionData implements SerializationInterface {
 	private int id;
 	private String name;
 	private final int[] score = new int[6];
-	private final ArrayList<String> members = new ArrayList<>();
+	public final ArrayList<String> members = new ArrayList<>();
 	private String logo = "default-logo";
-	private final ArrayList<Integer> inbox = new ArrayList<>();
+	public final ArrayList<Integer> inbox = new ArrayList<>();
 
 	public FactionData(int id, String name) {
 		this.id = id;
@@ -114,7 +114,8 @@ public class FactionData implements SerializationInterface {
 
 	public ArrayList<FactionMember> getMembers() {
 		ArrayList<FactionMember> list = new ArrayList<>();
-		for(String name : members) list.add(FactionMemberManager.instance.getMember(this, name));
+		ArrayList<String> temp = new ArrayList<>(members);
+		for(String name : temp) list.add(FactionMemberManager.instance.getMember(this, name));
 		return list;
 	}
 
@@ -132,8 +133,9 @@ public class FactionData implements SerializationInterface {
 
 	public ArrayList<FactionRank> getAllRanks() {
 		ArrayList<FactionRank> ranks = new ArrayList<>();
-		for(FactionMember member : getMembers()) {
-			if(!ranks.contains(member.getRank())) ranks.add(member.getRank());
+		ArrayList<FactionMember> list = getMembers();
+		for(FactionMember member : list) {
+			if(member != null && !ranks.contains(member.getRank())) ranks.add(member.getRank());
 		}
 		return ranks;
 	}

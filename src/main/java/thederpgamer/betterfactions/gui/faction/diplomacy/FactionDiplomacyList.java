@@ -147,10 +147,14 @@ public class FactionDiplomacyList extends ScrollableTableList<FactionData> {
                 (membersRowElement = new GUIClippedRow(this.getState())).attach(membersTextElement);
 
                 GUITextOverlayTable relationTextElement;
-                FactionRelationship relationship = FactionRelationshipManager.instance.getRelationship(FactionDataManager.instance.getPlayerFaction(GameClient.getClientPlayerState()), factionData);
-                (relationTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple("Opinion: " + relationship.toString());
+                FactionRelationship relationship;
+                if(GameClient.getClientPlayerState().getFactionId() == 0) relationship = null;
+                else relationship = FactionRelationshipManager.instance.getRelationship(FactionDataManager.instance.getPlayerFaction(GameClient.getClientPlayerState()), factionData);
+                String s = (relationship == null) ? "NEUTRAL [0]" : relationship.toString();
+                (relationTextElement = new GUITextOverlayTable(10, 10, this.getState())).setTextSimple(s);
                 GUIClippedRow relationRowElement;
-                (relationRowElement = new GUIClippedRowToolTip(this.getState(), relationship.getFullString())).attach(relationTextElement);
+                String full = (relationship == null) ? "" : relationship.getFullString();
+                (relationRowElement = new GUIClippedRowToolTip(this.getState(), full)).attach(relationTextElement);
 
                 FactionDiplomacyListRow factionDiplomacyListRow = new FactionDiplomacyListRow(getState(), factionData, nameRowElement, federationRowElement, membersRowElement, relationRowElement);
                 factionDiplomacyListRow.onInit();

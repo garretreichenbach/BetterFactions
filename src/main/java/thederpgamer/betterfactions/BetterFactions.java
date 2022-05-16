@@ -1,6 +1,10 @@
 package thederpgamer.betterfactions;
 
+import api.DebugFile;
+import api.common.GameClient;
+import api.common.GameCommon;
 import api.listener.Listener;
+import api.listener.events.controller.ServerInitializeEvent;
 import api.listener.events.faction.FactionCreateEvent;
 import api.listener.events.gui.PlayerGUICreateEvent;
 import api.listener.events.player.PlayerDeathEvent;
@@ -19,6 +23,7 @@ import thederpgamer.betterfactions.manager.ResourceManager;
 import thederpgamer.betterfactions.manager.TradeGuildManager;
 import thederpgamer.betterfactions.manager.data.DataManager;
 import thederpgamer.betterfactions.manager.data.FactionDataManager;
+import thederpgamer.betterfactions.manager.data.FactionMemberManager;
 import thederpgamer.betterfactions.network.client.CreateNewFederationPacket;
 import thederpgamer.betterfactions.network.client.ModifyFactionMessagePacket;
 import thederpgamer.betterfactions.network.client.RequestDataPacket;
@@ -62,6 +67,15 @@ public class BetterFactions extends StarMod {
     }
 
     @Override
+    public void onServerCreated(ServerInitializeEvent event) {
+        if(GameCommon.getGameState() != null) {
+            FactionDataManager.instance.initialize();
+            FactionMemberManager.instance.initialize();
+        }
+    }
+
+
+    @Override
     public void onResourceLoad(ResourceLoader resourceLoader) {
         ResourceManager.loadResources(resourceLoader);
     }
@@ -70,7 +84,7 @@ public class BetterFactions extends StarMod {
         StarLoader.registerListener(PlayerGUICreateEvent.class, new Listener<PlayerGUICreateEvent>() {
             @Override
             public void onEvent(PlayerGUICreateEvent event) {
-                FactionDataManager.instance.initializeFactions();
+                FactionDataManager.instance.initialize();
                 try {
                     PlayerPanel playerPanel = event.getPlayerPanel();
                     Field factionPanelNewField = playerPanel.getClass().getDeclaredField("factionPanelNew");
@@ -93,6 +107,7 @@ public class BetterFactions extends StarMod {
                 FactionNewsUtils.saveData();
                 FactionData factionData = FactionDataManager.instance.getFactionData(event.getFaction().getIdFaction());
                 FactionRank founderRank = new FactionRank("Founder", 4, "*");
+                factionData.addMember(event.getPlayer().getName());
                 factionData.getMember(event.getPlayer().getName()).setRank(founderRank);
                 FactionNewsUtils.saveData();
                 FactionDataManager.instance.saveData(factionData);

@@ -84,6 +84,8 @@ public abstract class DataManager<E extends SerializationInterface> {
 	 */
 	public abstract File getDataStorageDirectory();
 
+	public abstract void initialize();
+
 	public void sendDataToClient(int id, PlayerState playerState) {
 		try {
 			PacketUtil.sendPacket(playerState, new SendDataPacket(getCache().get(id)));

@@ -50,8 +50,8 @@ public class FactionDiplomacyTab extends GUIContentPane {
             FactionRelationship relationship = FactionRelationshipManager.instance.getRelationship(self, other);
             infoPanel.setRelationship(relationship);
             actionsPanel.setFaction(selectedFaction);
-            actionsPanel.recreateButtonPane();
         }
+        actionsPanel.recreateButtonPane();
         /*
         if(selectedFaction != null && FactionManagerOld.inFaction(GameClient.getClientPlayerState()) && FactionManagerOld.getFaction(GameClient.getClientPlayerState()).getIdFaction() != selectedFaction.getIdFaction()) {
             infoPanel.setFaction(selectedFaction);
@@ -100,13 +100,6 @@ public class FactionDiplomacyTab extends GUIContentPane {
          */
     }
 
-    @Override
-    public void draw() {
-        try {
-            super.draw();
-        } catch(Exception ignored) { }
-    }
-
     public void updateTab() {
         factionList.flagDirty();
         factionList.handleDirty();
@@ -118,6 +111,7 @@ public class FactionDiplomacyTab extends GUIContentPane {
         infoPanel.setFaction(selectedFaction);
         infoPanel.setNameText(selectedFaction.getName());
         FactionData factionData = FactionDataManager.instance.getFactionData(selectedFaction.getIdFaction());
+        infoPanel.updateLogo(factionData.getFactionLogo());
         /*
         if(factionData != null) {
             infoPanel.setInfoText(factionData.getInfoString());

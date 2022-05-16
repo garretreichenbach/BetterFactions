@@ -123,6 +123,11 @@ public class FederationManager extends DataManager<Federation> {
 		} else return null;
 	}
 
+	@Override
+	public void initialize() {
+
+	}
+
 	public boolean isInFederation(FactionData factionData) {
 		return getFederation(factionData) == null;
 	}

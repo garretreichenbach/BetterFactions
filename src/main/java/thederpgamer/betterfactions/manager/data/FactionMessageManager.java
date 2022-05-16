@@ -10,6 +10,7 @@ import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
 import thederpgamer.betterfactions.data.SerializationInterface;
 import thederpgamer.betterfactions.data.faction.FactionData;
+import thederpgamer.betterfactions.data.faction.FactionMember;
 import thederpgamer.betterfactions.data.old.federation.FactionMessage;
 import thederpgamer.betterfactions.manager.LogManager;
 import thederpgamer.betterfactions.utils.NetworkUtils;
@@ -111,5 +112,10 @@ public class FactionMessageManager extends DataManager<FactionMessage> {
 	@Override
 	public File getDataStorageDirectory() {
 		return null;
+	}
+
+	@Override
+	public void initialize() {
+
 	}
 }

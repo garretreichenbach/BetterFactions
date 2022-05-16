@@ -20,8 +20,8 @@ import java.util.HashMap;
  */
 public class ResourceManager {
 
-    public static final int SPRITE_WIDTH = 200;
-    public static final int SPRITE_HEIGHT = 200;
+    public static final int SPRITE_WIDTH = 256;
+    public static final int SPRITE_HEIGHT = 256;
 
     private static final BetterFactions instance = BetterFactions.getInstance();
 
@@ -48,7 +48,7 @@ public class ResourceManager {
                 //Load Sprites
                 for(String spriteName : spriteNames) {
                     try {
-                        Sprite sprite = StarLoaderTexture.newSprite(instance.getJarBufferedImage("thederpgamer/betterfactions/resources/sprites/" + spriteName + ".png"), instance, spriteName);
+                        Sprite sprite = StarLoaderTexture.newSprite(instance.getJarBufferedImage("sprites/" + spriteName + ".png"), instance, spriteName);
                         sprite.setPositionCenter(false);
                         sprite.setName(spriteName);
                         spriteMap.put(spriteName, sprite);
@@ -60,7 +60,7 @@ public class ResourceManager {
                 //Load fonts
                 for(String fontName : fontNames) {
                     try {
-                        fontMap.put(fontName, Font.createFont(Font.TRUETYPE_FONT, instance.getJarResource("thederpgamer/betterfactions/resources/fonts/" + fontName + ".ttf")));
+                        fontMap.put(fontName, Font.createFont(Font.TRUETYPE_FONT, instance.getJarResource("fonts/" + fontName + ".ttf")));
                     } catch(Exception exception) {
                         LogManager.logException("Failed to load font \"" + fontName + "\"", exception);
                     }
@@ -74,12 +74,18 @@ public class ResourceManager {
         if(sprite == null) {
             if((name.startsWith("https://")) && (name.toLowerCase().endsWith(".png") || name.toLowerCase().endsWith(".jpg") || name.toLowerCase().endsWith(".jpeg"))) {
                 sprite = ImageUtils.getImage(name);
-                if(sprite != null) spriteMap.put(sprite.getName(), sprite);
+                if(sprite != null) {
+                    spriteMap.put(sprite.getName(), sprite);
+                    sprite.setWidth(SPRITE_WIDTH);
+                    sprite.setHeight(SPRITE_HEIGHT);
+                }
             }
         }
-        if(sprite == null) sprite = getSprite("default-logo");
-        sprite.setWidth(SPRITE_WIDTH);
-        sprite.setHeight(SPRITE_HEIGHT);
+        if(sprite == null) sprite = spriteMap.get("default-logo");
+        if(sprite != null && !sprite.getName().startsWith("https://"))  {
+            sprite.setWidth(200);
+            sprite.setHeight(200);
+        }
         return sprite;
     }
 

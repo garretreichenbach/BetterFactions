@@ -123,6 +123,11 @@ public class FactionRelationshipManager extends DataManager<FactionRelationship>
 		} else return null;
 	}
 
+	@Override
+	public void initialize() {
+
+	}
+
 	public FactionRelationship getRelationship(int id) {
 		try {
 			return cache.get(id);

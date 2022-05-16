@@ -53,7 +53,7 @@ public class FactionInfoPanel extends GUIAncor {
         nameOverlay.setTextSimple("No Faction");
         nameOverlay.onInit();
         nameOverlay.getPos().x = 10;
-        nameOverlay.getPos().y = 160;
+        nameOverlay.getPos().y = 180;
         nameOverlay.setWidth((int) (nameOverlay.getWidth() - 4));
         attach(nameOverlay);
 
@@ -71,33 +71,7 @@ public class FactionInfoPanel extends GUIAncor {
     @Override
     public void draw() {
         super.draw();
-        factionLogoButton.setPos(20.0f, 20.0f, 0.0f);
-        if(ConfigManager.getMainConfig().getBoolean("debug-mode")) handleDebug();
-    }
-
-    private void handleDebug() {
-        /*
-        if(Keyboard.isKeyDown(Keyboard.KEY_LMENU)) {
-            float amount = Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) ? 1.0f : 0.1f;
-            if(Keyboard.isKeyDown(Keyboard.KEY_LEFT)) factionLogoButton.getPos().x -= amount;
-            if(Keyboard.isKeyDown(Keyboard.KEY_RIGHT)) factionLogoButton.getPos().x += amount;
-            if(Keyboard.isKeyDown(Keyboard.KEY_UP)) factionLogoButton.getPos().y -= amount;
-            if(Keyboard.isKeyDown(Keyboard.KEY_DOWN)) factionLogoButton.getPos().y += amount;
-
-            DecimalFormat format = new DecimalFormat("#.#");
-            factionLogoButton.getPos().x = Float.parseFloat(format.format(factionLogoButton.getPos().x));
-            factionLogoButton.getPos().y = Float.parseFloat(format.format(factionLogoButton.getPos().y));
-            factionLogoButton.getPos().z = Float.parseFloat(format.format(factionLogoButton.getPos().z));
-            String pos = factionLogoButton.getPos().toString();
-
-            enableOrthogonal();
-            if(debugText == null) (debugText = new GUITextOverlay(300, 300, getState())).onInit();
-            debugText.getPos().set((float) (Mouse.getX() + 10), (float) (GLFrame.getHeight() - Mouse.getY()), 0.0F);
-            debugText.setTextSimple(pos);
-            debugText.draw();
-            disableOrthogonal();
-        }
-         */
+        if(factionLogoButton != null) factionLogoButton.setPos(20.0f, 20.0f, 0.0f);
     }
 
     public void updateLogo(Sprite logo) {

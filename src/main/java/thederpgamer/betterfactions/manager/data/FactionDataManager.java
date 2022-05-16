@@ -81,7 +81,7 @@ public class FactionDataManager extends DataManager<FactionData> {
 			if(from.length == 1) {
 				if(from[0] instanceof Faction) factionData = new FactionData((Faction) from[0]);
 				else if(from[0] instanceof PlayerState) factionData = new FactionData(GameCommon.getGameState().getFactionManager().getFaction(((PlayerState) from[0]).getFactionId()));
-				else factionData = new FactionData(GameCommon.getGameState().getFactionManager().getFaction(Integer.parseInt((String) from[0])));
+				else factionData = new FactionData(GameCommon.getGameState().getFactionManager().getFaction((Integer) from[0]));
 			} else if(from.length == 2) factionData = new FactionData(Integer.parseInt((String) from[0]), (String) from[1]);
 		} catch(Exception exception) {
 			LogManager.logException("Failed to create new FactionData", exception);
@@ -120,6 +120,31 @@ public class FactionDataManager extends DataManager<FactionData> {
 		cache.put(data.getId(), (FactionData) data);
 	}
 
+	@Override
+	public void initialize() {
+		if(!cache.asMap().containsKey(FactionManager.TRAIDING_GUILD_ID)) {
+			FactionData traders = new FactionData(GameCommon.getGameState().getFactionManager().getFaction(FactionManager.TRAIDING_GUILD_ID));
+			traders.setFactionLogo("traders-logo");
+			cache.put(FactionManager.TRAIDING_GUILD_ID, traders);
+			saveData(traders);
+		}
+
+		if(!cache.asMap().containsKey(FactionManager.PIRATES_ID)) {
+			FactionData pirates = new FactionData(GameCommon.getGameState().getFactionManager().getFaction(FactionManager.PIRATES_ID));
+			pirates.setFactionLogo("pirates-logo");
+			cache.put(FactionManager.PIRATES_ID, pirates);
+			saveData(pirates);
+		}
+
+		for(Faction faction : GameCommon.getGameState().getFactionManager().getFactionCollection()) {
+			if(!cache.asMap().containsKey(faction.getIdFaction()) && faction.getIdFaction() > 0) {
+				FactionData data = new FactionData(faction);
+				cache.put(faction.getIdFaction(), data);
+				saveData(data);
+			}
+		}
+	}
+
 	public FactionData getFactionData(int id) {
 		try {
 			return cache.get(id);
@@ -132,29 +157,12 @@ public class FactionDataManager extends DataManager<FactionData> {
 	public FactionData getPlayerFaction(PlayerState playerState) {
 		if(playerState.getFactionId() > 0) {
 			try {
+				if(!cache.asMap().containsKey(playerState.getFactionId())) createNewData(GameCommon.getGameState().getFactionManager().getFaction(playerState.getFactionId()));
 				return cache.get(playerState.getFactionId());
 			} catch(ExecutionException e) {
 				e.printStackTrace();
 			}
 		}
 		return null;
-	}
-
-	public void initializeFactions() {
-		if(!cache.asMap().containsKey(FactionManager.TRAIDING_GUILD_ID)) {
-			FactionData traders = new FactionData(GameCommon.getGameState().getFactionManager().getFaction(FactionManager.TRAIDING_GUILD_ID));
-			traders.setFactionLogo("traders-logo");
-			cache.put(FactionManager.TRAIDING_GUILD_ID, traders);
-		}
-
-		if(!cache.asMap().containsKey(FactionManager.PIRATES_ID)) {
-			FactionData pirates = new FactionData(GameCommon.getGameState().getFactionManager().getFaction(FactionManager.PIRATES_ID));
-			pirates.setFactionLogo("pirates-logo");
-			cache.put(FactionManager.PIRATES_ID, pirates);
-		}
-
-		for(Faction faction : GameCommon.getGameState().getFactionManager().getFactionCollection()) {
-			if(!cache.asMap().containsKey(faction.getIdFaction())) cache.put(faction.getIdFaction(), new FactionData(faction));
-		}
 	}
 }
