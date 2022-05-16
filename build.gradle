@@ -1,0 +1,40 @@
+plugins {
+		id 'java'
+		id 'com.appland.appmap' version '1.1.0'
+}
+
+def starmadeDirectory = 'C:/Program Files (x86)/Steam/steamapps/common/StarMade/StarMade/'
+def jarName = 'BetterFactions'
+def mainClassName = 'thederpgamer.betterfactions.BetterFactions'
+group 'thederpgamer.betterfactions'
+version '1.0.0'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+	implementation(files(starmadeDirectory + "StarMade.jar"))
+	implementation(fileTree(dir: (starmadeDirectory + "lib"), include: "*.jar"))
+}
+
+compileJava.options.encoding = 'UTF-8'
+
+jar {
+	duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
+	destinationDirectory.set(file(starmadeDirectory + "mods"))
+	archiveFileName = jarName + '.jar'
+	manifest.attributes('Main-Class': mainClassName)
+	from {
+		configurations.runtimeClasspath.collect {
+			if(!it.getPath().contains("StarMade") && it.getName().endsWith(".jar")) it.isDirectory() ? it : zipTree(it)
+			else return null;
+		}
+	}
+}
+
+test {
+	useJUnitPlatform()
+}
