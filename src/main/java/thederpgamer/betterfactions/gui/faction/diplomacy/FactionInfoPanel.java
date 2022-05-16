@@ -9,6 +9,7 @@ import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
 import org.schema.schine.graphicsengine.forms.gui.GUIIconButton;
 import org.schema.schine.graphicsengine.forms.gui.GUITextOverlay;
 import org.schema.schine.input.InputState;
+import thederpgamer.betterfactions.data.faction.FactionRelationship;
 import thederpgamer.betterfactions.manager.ConfigManager;
 import thederpgamer.betterfactions.manager.ResourceManager;
 
@@ -123,4 +124,13 @@ public class FactionInfoPanel extends GUIAncor {
     public void setFaction(Faction faction) {
         factionLogo.setFaction(faction);
     }
+
+	public void setRelationship(FactionRelationship relationship) {
+        StringBuilder builder = new StringBuilder();
+        for(FactionRelationship.Relationship relation : relationship.getRelations()) {
+            if(relationship.isClientOwnFaction()) builder.append(relation.getRelationType().getRelation(FactionRelationship.RelationType.RELATION_TO_SELF, relation.getFaction2())).append(" [").append(relation.getOpinionModifier()).append("]\n");
+            else builder.append(relation.getRelationType().getRelationTo(FactionRelationship.RelationType.RELATION_TO_OTHER, relation.getFaction1(), relation.getFaction2())).append(" [").append(relation.getOpinionModifier()).append("]\n");
+        }
+        setInfoText(builder.toString().trim());
+	}
 }

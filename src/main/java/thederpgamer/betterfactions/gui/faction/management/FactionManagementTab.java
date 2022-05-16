@@ -44,12 +44,12 @@ public class FactionManagementTab extends GUIContentPane {
         optionsPane.setPos(new Vector3f(2.0f, 2.0f, 0.0f));
         setTextBoxHeight(1, 0, (int) (getHeight() - (28 * 3) - 106)); //Todo: This is dumb
         //addNewTextBox(1, (int) ((GLFrame.getHeight() / 2.5) - optionsPane.getHeight()));
-        (assetsList = new FactionAssetsList(getState(), getContent(0, 1), this)).onInit();
+        //(assetsList = new FactionAssetsList(getState(), getContent(0, 1), this)).onInit();
     }
 
     public void updateTab() {
         messageList.redrawList();
         membersList.redrawList();
-        assetsList.redrawList();
+        //assetsList.redrawList();
     }
 }

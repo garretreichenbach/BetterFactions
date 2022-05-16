@@ -9,7 +9,6 @@ import org.schema.schine.graphicsengine.forms.font.FontLibrary;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
 import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.manager.FactionManagerOld;
 import thederpgamer.betterfactions.utils.FactionNewsUtils;

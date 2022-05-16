@@ -1,6 +1,12 @@
-package thederpgamer.betterfactions.data.old.faction;
+package thederpgamer.betterfactions.data.faction;
 
+import api.network.PacketReadBuffer;
+import api.network.PacketWriteBuffer;
+import thederpgamer.betterfactions.data.SerializationInterface;
+import thederpgamer.betterfactions.manager.data.FactionRankManager;
 import thederpgamer.betterfactions.utils.PermissionUtils;
+
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,17 +18,22 @@ import java.util.Arrays;
  * @author TheDerpGamer
  * @since 04/15/2021
  */
-public class FactionRank implements Serializable {
+public class FactionRank implements SerializationInterface {
 
-    public String rankName;
-    public int rankLevel;
-    public ArrayList<String> permissions;
+    private int id;
+    private String rankName;
+    private int rankLevel;
+    private final ArrayList<String> permissions = new ArrayList<>();
 
     public FactionRank(String rankName, int rankLevel, String... permissions) {
+        this.id = FactionRankManager.instance.generateNewId();
         this.rankName = rankName;
         this.rankLevel = rankLevel;
-        this.permissions = new ArrayList<>();
         if(permissions != null) addPermission(permissions);
+    }
+
+    public FactionRank(PacketReadBuffer readBuffer) throws IOException {
+        deserialize(readBuffer);
     }
 
     public String getRankName() {
@@ -78,5 +89,38 @@ public class FactionRank implements Serializable {
                 "entity.station.%HOMEBASE%.use.storage.*", "entity.station.%HOMEBASE%.use.factory.*", "entity.station.%HOMEBASE%.use.undeathenator",
                 "entity.ship.%TYPE_MINER%, %TYPE_SALVAGER%, %TYPE_CARGO%, %TYPE_SUPPORT%.pilot",
                 "entity.station.%HOMEBASE%.dock.*", "entity.station.%HOMEBASE%.undock.%TYPE_MINER%, %TYPE_SALVAGER%, %TYPE_CARGO%, %TYPE_SUPPORT%");
+    }
+
+    @Override
+    public int getId() {
+        return id;
+    }
+
+    @Override
+    public String getName() {
+        return rankName;
+    }
+
+    @Override
+    public boolean equals(SerializationInterface data) {
+        return data instanceof FactionRank && data.getId() == id;
+    }
+
+    @Override
+    public void deserialize(PacketReadBuffer readBuffer) throws IOException {
+        id = readBuffer.readInt();
+        rankName = readBuffer.readString();
+        rankLevel = readBuffer.readInt();
+        int size = readBuffer.readInt();
+        for(int i = 0; i < size; i ++) permissions.add(readBuffer.readString());
+    }
+
+    @Override
+    public void serialize(PacketWriteBuffer writeBuffer) throws IOException {
+        writeBuffer.writeInt(id);
+        writeBuffer.writeString(rankName);
+        writeBuffer.writeInt(rankLevel);
+        writeBuffer.writeInt(permissions.size());
+        for(String permission : permissions) writeBuffer.writeString(permission);
     }
 }

@@ -1,7 +1,5 @@
 package thederpgamer.betterfactions.data.old.diplomacy.war;
 
-import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
-
 import java.util.concurrent.ConcurrentHashMap;
 
 /**

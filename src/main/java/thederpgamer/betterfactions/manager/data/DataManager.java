@@ -1,16 +1,23 @@
 package thederpgamer.betterfactions.manager.data;
 
+import api.network.PacketReadBuffer;
+import api.network.PacketWriteBuffer;
 import api.network.packets.PacketUtil;
 import com.google.common.cache.LoadingCache;
 import org.schema.game.common.data.player.PlayerState;
 import thederpgamer.betterfactions.data.SerializationInterface;
 import thederpgamer.betterfactions.data.faction.FactionData;
+import thederpgamer.betterfactions.data.faction.FactionMember;
+import thederpgamer.betterfactions.data.faction.FactionRank;
+import thederpgamer.betterfactions.data.faction.FactionRelationship;
+import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.manager.LogManager;
 import thederpgamer.betterfactions.network.client.RequestDataPacket;
 import thederpgamer.betterfactions.network.server.SendDataPacket;
 import thederpgamer.betterfactions.utils.NetworkUtils;
 
-import java.io.File;
+import java.io.*;
+import java.nio.file.Files;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -81,8 +88,33 @@ public abstract class DataManager<E extends SerializationInterface> {
 		}
 	}
 
+	public void saveData(SerializationInterface data) {
+		if(NetworkUtils.onServer()) {
+			File storageDir = getDataStorageDirectory();
+			File dataFile = new File(storageDir.getPath() + "/" + data.getId() + ".smdat");
+			try {
+				if(dataFile.exists()) dataFile.delete();
+				dataFile.createNewFile();
+				PacketWriteBuffer writeBuffer = new PacketWriteBuffer(new DataOutputStream(Files.newOutputStream(dataFile.toPath())));
+				data.serialize(writeBuffer);
+			} catch(IOException exception) {
+				throw new RuntimeException(exception);
+			}
+		}
+	}
+
+	public static void initializeManagers() {
+		new FactionDataManager();
+		new FactionRelationshipManager();
+		new FederationManager();
+	}
+
 	public static DataManager<? extends SerializationInterface> getInstance(Class<? extends SerializationInterface> type) {
 		if(type.equals(FactionData.class)) return FactionDataManager.instance;
+		else if(type.equals(FactionRelationship.class)) return FactionRelationshipManager.instance;
+		else if(type.equals(Federation.class)) return FederationManager.instance;
+		else if(type.equals(FactionMember.class)) return FactionMemberManager.instance;
+		else if(type.equals(FactionRank.class)) return FactionRankManager.instance;
 		else return null;
 	}
 }

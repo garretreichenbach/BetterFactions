@@ -14,12 +14,11 @@ import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalButtonTablePane;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
-import thederpgamer.betterfactions.data.old.faction.FactionMember;
-import thederpgamer.betterfactions.data.old.faction.FactionRank;
+import thederpgamer.betterfactions.data.faction.FactionMember;
+import thederpgamer.betterfactions.data.faction.FactionRank;
 import thederpgamer.betterfactions.data.old.federation.FactionMessage;
 import thederpgamer.betterfactions.gui.faction.diplomacy.war.PeaceDealDialog;
-import thederpgamer.betterfactions.manager.FactionManagerOld;
+import thederpgamer.betterfactions.manager.data.FactionDataManager;
 
 import javax.annotation.Nullable;
 
@@ -166,12 +165,12 @@ public class FactionActionsPanel extends GUIAncor {
         }
 
         if(GameClient.getClientPlayerState().getFactionId() != 0) {
-            final FactionMember player = FactionManagerOld.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
+            final FactionMember player = FactionDataManager.instance.getPlayerFaction(GameClient.getClientPlayerState()).getMember(GameClient.getClientPlayerState());
             if(player != null && faction.getIdFaction() != player.getFactionId()) {
                 final Faction playerFaction = player.getFactionData().getFaction();
                 if(playerFaction.getMembersUID().size() == 1) { //Todo: Temp fix for events not firing
                     FactionRank founderRank = new FactionRank("Founder", 4, "*");
-                    player.getFactionData().addRank(founderRank);
+                    //player.getFactionData().addRank(founderRank);
                     player.setRank(founderRank);
                 }
                 if(player.hasPermission("diplomacy.[ANY]")) {
@@ -338,7 +337,7 @@ public class FactionActionsPanel extends GUIAncor {
                 }
             }
 
-            if(player.hasPermission("federation.[ANY]") && faction.getIdFaction() != player.getFactionId() && player.getFactionData().getFederationId() != -1) {
+            if(player.hasPermission("federation.[ANY]") && faction.getIdFaction() != player.getFactionId() && player.getFactionData().getFederation() != null) {
 
             }
 
@@ -871,8 +870,4 @@ public class FactionActionsPanel extends GUIAncor {
         }
     }
      */
-
-    private String getFedDialogString(FactionDataOld fromFaction, FactionDataOld toFaction) {
-        return "Form a new Federation between " + fromFaction.getFactionName() + " and " + toFaction.getFactionName() + ".\nIf both factions accept the proposal, they will become members of the new Federation and will be able to closely collaborate with each other.";
-    }
 }

@@ -1,6 +1,5 @@
 package thederpgamer.betterfactions.data.old.diplomacy.peace;
 
-import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
 import thederpgamer.betterfactions.manager.ConfigManager;
 
 /**

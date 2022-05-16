@@ -17,7 +17,7 @@ import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalButtonTablePane;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.old.faction.FactionMember;
+import thederpgamer.betterfactions.data.faction.FactionMember;
 import thederpgamer.betterfactions.manager.FactionManagerOld;
 
 /**

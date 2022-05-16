@@ -1,6 +1,7 @@
 package thederpgamer.betterfactions.manager.data;
 
 import api.network.PacketReadBuffer;
+import api.network.PacketWriteBuffer;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -9,12 +10,17 @@ import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionRelationship;
 import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.manager.LogManager;
+import thederpgamer.betterfactions.utils.DataUtils;
 import thederpgamer.betterfactions.utils.NetworkUtils;
 
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.HashMap;
+import java.util.Objects;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -73,31 +79,68 @@ public class FactionRelationshipManager extends DataManager<FactionRelationship>
 	public FactionRelationship createNewData(Object... from) {
 		FactionRelationship relation = null;
 		try {
-			if(from.length == 3) {
-				String name = (String) from[0];
-				FactionData faction1 = (FactionData) ((from[1] instanceof FactionData) ? from[1] : FactionDataManager.instance.getCache().get(Integer.parseInt((String) from[1])));
-				FactionData faction2 = (FactionData) ((from[2] instanceof FactionData) ? from[2] : FactionDataManager.instance.getCache().get(Integer.parseInt((String) from[2])));
-				if(!canFormFederation(faction1, faction2)) throw new IllegalArgumentException("Faction " + faction1.getName() + " can't form a federation with itself!");
-				else federationData = new Federation(generateNewId(), name, faction1, faction2);
+			if(from.length == 2) {
+				FactionData faction1 = (FactionData) ((from[0] instanceof FactionData) ? from[0] : FactionDataManager.instance.getCache().get(Integer.parseInt((String) from[0])));
+				FactionData faction2 = (FactionData) ((from[1] instanceof FactionData) ? from[1] : FactionDataManager.instance.getCache().get(Integer.parseInt((String) from[1])));
+				relation = new FactionRelationship(faction1, faction2);
 			}
 		} catch(Exception exception) {
 			LogManager.logException("Failed to create new FactionRelationship", exception);
+		}
+		if(relation != null) {
+			File storageDir = getDataStorageDirectory();
+			File dataFile = new File(storageDir.getPath() + "/" + relation.getId() + ".smdat");
+			try {
+				dataFile.createNewFile();
+				relation.serialize(new PacketWriteBuffer(new DataOutputStream(Files.newOutputStream(dataFile.toPath()))));
+			} catch(IOException e) {
+				throw new RuntimeException(e);
+			}
 		}
 		return relation;
 	}
 
 	@Override
 	public void putIntoClientCache(SerializationInterface data) {
-
+		cache.invalidate(data.getId());
+		cache.put(data.getId(), (FactionRelationship) data);
 	}
 
 	@Override
 	public int generateNewId() {
-		return 0;
+		try {
+			return Objects.requireNonNull(getDataStorageDirectory().listFiles()).length;
+		} catch(Exception ignored) { }
+		return 1;
 	}
 
 	@Override
 	public File getDataStorageDirectory() {
-		return null;
+		if(NetworkUtils.onServer()) {
+			File dir = new File(DataUtils.getWorldDataPath() + "/data/relation");
+			if(!dir.exists()) dir.mkdirs();
+			return dir;
+		} else return null;
+	}
+
+	public FactionRelationship getRelationship(int id) {
+		try {
+			return cache.get(id);
+		} catch(ExecutionException exception) {
+			exception.printStackTrace();
+			return null;
+		}
+	}
+
+	public FactionRelationship getRelationship(FactionData factionFrom, FactionData factionTo) {
+		return getRelationships(factionFrom).get(factionTo);
+	}
+
+	public HashMap<FactionData, FactionRelationship> getRelationships(FactionData factionData) {
+		HashMap<FactionData, FactionRelationship> map = new HashMap<>();
+		for(FactionRelationship relationship : getCache().asMap().values()) {
+			if(relationship.getSelf().equals(factionData)) map.put(relationship.getOther(), relationship);
+		}
+		return map;
 	}
 }

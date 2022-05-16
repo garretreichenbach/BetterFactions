@@ -7,6 +7,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import thederpgamer.betterfactions.data.SerializationInterface;
 import thederpgamer.betterfactions.data.faction.FactionData;
+import thederpgamer.betterfactions.data.faction.FactionRelationship;
 import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.manager.LogManager;
 import thederpgamer.betterfactions.utils.DataUtils;
@@ -17,6 +18,7 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -107,7 +109,7 @@ public class FederationManager extends DataManager<Federation> {
 	@Override
 	public int generateNewId() {
 		try {
-			return getDataStorageDirectory().listFiles().length;
+			return Objects.requireNonNull(getDataStorageDirectory().listFiles()).length;
 		} catch(Exception ignored) { }
 		return 1;
 	}
@@ -134,7 +136,17 @@ public class FederationManager extends DataManager<Federation> {
 
 	public boolean canFormFederation(FactionData faction1, FactionData faction2) {
 		if(!faction1.equals(faction2) && !isInFederation(faction1) && !isInFederation(faction2)) {
-
+			FactionRelationship relationship = FactionRelationshipManager.instance.getRelationship(faction1, faction2);
+			for(FactionRelationship.Relationship relation : relationship.getRelations()) {
+				switch(relation.getRelationType()) {
+					case SELF:
+					case ENEMY:
+					case AT_WAR:
+					case FEDERATION_ALLY:
+					case FEDERATION_MEMBERS: return false;
+				}
+			}
+			return true;
 		}
 		return false;
 	}

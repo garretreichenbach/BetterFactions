@@ -5,7 +5,6 @@ import api.mod.config.PersistentObjectUtil;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.schine.common.language.Lng;
 import thederpgamer.betterfactions.BetterFactions;
-import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
 import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.gui.faction.news.FactionNewsEntry;
 import thederpgamer.betterfactions.manager.ConfigManager;

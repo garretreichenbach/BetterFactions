@@ -12,13 +12,13 @@ import api.mod.config.PersistentObjectUtil;
 import api.network.packets.PacketUtil;
 import org.schema.game.client.view.gui.PlayerPanel;
 import org.schema.schine.resource.ResourceLoader;
-import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
-import thederpgamer.betterfactions.data.old.faction.FactionRank;
+import thederpgamer.betterfactions.data.faction.FactionRank;
 import thederpgamer.betterfactions.gui.NewFactionPanel;
 import thederpgamer.betterfactions.manager.ConfigManager;
 import thederpgamer.betterfactions.manager.FactionManagerOld;
 import thederpgamer.betterfactions.manager.ResourceManager;
 import thederpgamer.betterfactions.manager.TradeGuildManager;
+import thederpgamer.betterfactions.manager.data.DataManager;
 import thederpgamer.betterfactions.network.client.CreateNewFederationPacket;
 import thederpgamer.betterfactions.network.client.ModifyFactionMessagePacket;
 import thederpgamer.betterfactions.network.client.RequestDataPacket;
@@ -56,6 +56,7 @@ public class BetterFactions extends StarMod {
     public void onEnable() {
         inst = this;
         ConfigManager.initialize(this);
+        DataManager.initializeManagers();
         registerListeners();
         registerPackets();
     }

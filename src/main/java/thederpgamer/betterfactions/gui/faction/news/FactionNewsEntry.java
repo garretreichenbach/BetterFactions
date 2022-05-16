@@ -2,7 +2,6 @@ package thederpgamer.betterfactions.gui.faction.news;
 
 import org.schema.common.util.StringTools;
 import org.schema.schine.common.language.Lng;
-import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
 import thederpgamer.betterfactions.data.federation.Federation;
 import java.io.Serializable;
 import java.util.Date;

@@ -11,6 +11,7 @@ import thederpgamer.betterfactions.gui.faction.management.FactionManagementTab;
 import thederpgamer.betterfactions.gui.faction.news.FactionNewsTab;
 import thederpgamer.betterfactions.gui.federation.FederationManagementTab;
 import thederpgamer.betterfactions.manager.FactionManagerOld;
+import thederpgamer.betterfactions.manager.data.FactionDataManager;
 import thederpgamer.betterfactions.manager.data.FederationManager;
 
 import java.util.Objects;
@@ -36,7 +37,7 @@ public class NewFactionPanel extends FactionPanelNew {
     }
 
     public Federation getFederation() {
-        if(isInFaction()) return FederationManager.getFederation(FactionManagerOld.getFactionData(getOwnFaction()));
+        if(isInFaction()) return FederationManager.instance.getFederation(FactionDataManager.instance.getPlayerFaction(GameClient.getClientPlayerState()));
         else return null;
     }
 

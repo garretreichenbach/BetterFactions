@@ -7,8 +7,7 @@ import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionPermission;
 import thederpgamer.betterfactions.BetterFactions;
-import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
-import thederpgamer.betterfactions.data.old.faction.FactionMember;
+import thederpgamer.betterfactions.data.faction.FactionMember;
 
 import java.util.ArrayList;
 import java.util.HashMap;

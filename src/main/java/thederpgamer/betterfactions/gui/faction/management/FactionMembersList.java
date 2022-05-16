@@ -8,9 +8,8 @@ import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
-import thederpgamer.betterfactions.data.old.faction.FactionMember;
-import thederpgamer.betterfactions.data.old.faction.FactionRank;
+import thederpgamer.betterfactions.data.faction.FactionMember;
+import thederpgamer.betterfactions.data.faction.FactionRank;
 import thederpgamer.betterfactions.manager.FactionManagerOld;
 
 import java.util.ArrayList;

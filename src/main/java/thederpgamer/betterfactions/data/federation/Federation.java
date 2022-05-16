@@ -6,8 +6,10 @@ import thederpgamer.betterfactions.data.SerializationInterface;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.manager.data.FactionDataManager;
 import thederpgamer.betterfactions.manager.LogManager;
+import thederpgamer.betterfactions.manager.data.FederationManager;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -26,13 +28,13 @@ public class Federation implements SerializationInterface {
     private String logo;
     //Todo: Policy fields?
 
-    protected final HashMap<Integer, FederationMember> members = new HashMap<>();
+    protected final ArrayList<Integer> members = new ArrayList<>();
 
     public Federation(int id, String name, FactionData founder1, FactionData founder2) {
         this.id = id;
         this.name = name;
         this.description = "A federation between " + founder1.getName() + " and " + founder2.getName() + ".";
-        this.logo = DEFAULT_LOGO;
+        //this.logo = DEFAULT_LOGO;
     }
 
     public Federation(PacketReadBuffer readBuffer) throws IOException {
@@ -59,7 +61,7 @@ public class Federation implements SerializationInterface {
 
     public HashMap<Integer, FactionData> getMembers() {
         HashMap<Integer, FactionData> map = new HashMap<>();
-        for(int id : members.keySet()) {
+        for(int id : members) {
             try {
                 map.put(id, FactionDataManager.instance.getCache().get(id));
             } catch(ExecutionException exception) {
@@ -93,7 +95,7 @@ public class Federation implements SerializationInterface {
         description = readBuffer.readString();
         logo = readBuffer.readString();
         int size = readBuffer.readInt();
-        for(int i = 0; i < size; i ++) members.put(readBuffer.readInt(), readBuffer.readObject(FederationMember.class));
+        for(int i = 0; i < size; i ++) members.add(readBuffer.readInt());
     }
 
     @Override
@@ -103,11 +105,13 @@ public class Federation implements SerializationInterface {
         writeBuffer.writeString(description);
         writeBuffer.writeString(logo);
         writeBuffer.writeInt(members.size());
-        for(Map.Entry<Integer, FederationMember> entry : members.entrySet()) {
-            writeBuffer.writeInt(entry.getKey());
-            writeBuffer.writeObject(entry.getValue());
-        }
+        for(int id : members) writeBuffer.writeInt(id);
     }
+
+	public void addMember(FactionData factionData) {
+        members.add(factionData.getId());
+        FederationManager.instance.saveData();
+	}
 
 
     /*

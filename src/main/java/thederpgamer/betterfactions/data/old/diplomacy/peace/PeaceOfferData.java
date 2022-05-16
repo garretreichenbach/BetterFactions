@@ -1,7 +1,6 @@
 package thederpgamer.betterfactions.data.old.diplomacy.peace;
 
 import thederpgamer.betterfactions.data.old.diplomacy.DiplomaticOfferData;
-import thederpgamer.betterfactions.data.old.faction.FactionDataOld;
 
 /**
  * <Description>
