@@ -1,9 +1,6 @@
 package thederpgamer.betterfactions.manager.data;
 
-import api.common.GameClient;
-import api.common.GameCommon;
 import api.common.GameServer;
-import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
 import api.network.packets.PacketUtil;
 import com.google.common.cache.LoadingCache;
@@ -20,7 +17,9 @@ import thederpgamer.betterfactions.network.client.RequestDataPacket;
 import thederpgamer.betterfactions.network.server.SendDataPacket;
 import thederpgamer.betterfactions.utils.NetworkUtils;
 
-import java.io.*;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.util.concurrent.ExecutionException;
 
@@ -34,6 +33,7 @@ public abstract class DataManager<E extends SerializationInterface> {
 
 	public static final long CACHE_MAX_SIZE = 50;
 	public static final long CACHE_EXPIRE_TIME = 300000;
+	private static boolean initialized = false;
 
 	/**
 	 * Sends a packet to the server requesting data matching the provided id.
@@ -136,12 +136,15 @@ public abstract class DataManager<E extends SerializationInterface> {
 	}
 
 	public static void initializeManagers() {
-		new FactionDataManager();
-		new FactionRelationshipManager();
-		new FederationManager();
-		new FactionMemberManager();
-		new FactionRankManager();
-		new FactionMessageManager();
+		if(!initialized) {
+			(new FactionDataManager()).initialize();
+			(new FactionRelationshipManager()).initialize();
+			(new FederationManager()).initialize();
+			(new FactionMemberManager()).initialize();
+			(new FactionRankManager()).initialize();
+			(new FactionMessageManager()).initialize();
+			initialized = true;
+		}
 	}
 
 	public static DataManager<? extends SerializationInterface> getInstance(Class<? extends SerializationInterface> type) {

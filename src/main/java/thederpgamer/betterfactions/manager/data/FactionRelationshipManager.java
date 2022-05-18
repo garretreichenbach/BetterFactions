@@ -8,7 +8,6 @@ import com.google.common.cache.LoadingCache;
 import thederpgamer.betterfactions.data.SerializationInterface;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionRelationship;
-import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.manager.LogManager;
 import thederpgamer.betterfactions.utils.DataUtils;
 import thederpgamer.betterfactions.utils.NetworkUtils;
@@ -138,7 +137,13 @@ public class FactionRelationshipManager extends DataManager<FactionRelationship>
 	}
 
 	public FactionRelationship getRelationship(FactionData factionFrom, FactionData factionTo) {
-		return getRelationships(factionFrom).get(factionTo);
+		HashMap<FactionData, FactionRelationship> relationshipMap = getRelationships(factionFrom);
+		if(!relationshipMap.containsKey(factionTo)) {
+			FactionRelationship newRelation = new FactionRelationship(factionFrom, factionTo);
+			relationshipMap.put(factionTo, newRelation);
+			cache.put(newRelation.getId(), newRelation);
+		}
+		return relationshipMap.get(factionTo);
 	}
 
 	public HashMap<FactionData, FactionRelationship> getRelationships(FactionData factionData) {

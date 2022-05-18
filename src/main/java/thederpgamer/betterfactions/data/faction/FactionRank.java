@@ -7,7 +7,6 @@ import thederpgamer.betterfactions.manager.data.FactionRankManager;
 import thederpgamer.betterfactions.utils.PermissionUtils;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -84,13 +83,6 @@ public class FactionRank implements SerializationInterface {
         return mergedList;
     }
 
-    public static FactionRank getDefaultRank() {
-        return new FactionRank("Member", 1, "chat.channel.faction", "chat.channel.federation",
-                "entity.station.%HOMEBASE%.use.storage.*", "entity.station.%HOMEBASE%.use.factory.*", "entity.station.%HOMEBASE%.use.undeathenator",
-                "entity.ship.%TYPE_MINER%, %TYPE_SALVAGER%, %TYPE_CARGO%, %TYPE_SUPPORT%.pilot",
-                "entity.station.%HOMEBASE%.dock.*", "entity.station.%HOMEBASE%.undock.%TYPE_MINER%, %TYPE_SALVAGER%, %TYPE_CARGO%, %TYPE_SUPPORT%");
-    }
-
     @Override
     public int getId() {
         return id;
@@ -122,5 +114,16 @@ public class FactionRank implements SerializationInterface {
         writeBuffer.writeInt(rankLevel);
         writeBuffer.writeInt(permissions.size());
         for(String permission : permissions) writeBuffer.writeString(permission);
+    }
+
+    public static FactionRank getDefaultRank() {
+        return new FactionRank("Member", 1, "chat.channel.faction", "chat.channel.federation",
+                "entity.station.%HOMEBASE%.use.storage.*", "entity.station.%HOMEBASE%.use.factory.*", "entity.station.%HOMEBASE%.use.undeathenator",
+                "entity.ship.%TYPE_MINER%, %TYPE_SALVAGER%, %TYPE_CARGO%, %TYPE_SUPPORT%.pilot",
+                "entity.station.%HOMEBASE%.dock.*", "entity.station.%HOMEBASE%.undock.%TYPE_MINER%, %TYPE_SALVAGER%, %TYPE_CARGO%, %TYPE_SUPPORT%");
+    }
+
+    public static FactionRank getFounderRank() {
+        return new FactionRank("Founder", 4, "*");
     }
 }

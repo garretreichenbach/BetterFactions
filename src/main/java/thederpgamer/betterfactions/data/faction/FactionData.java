@@ -1,6 +1,5 @@
 package thederpgamer.betterfactions.data.faction;
 
-import api.common.GameClient;
 import api.common.GameCommon;
 import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
@@ -11,15 +10,12 @@ import thederpgamer.betterfactions.data.SerializationInterface;
 import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.data.old.federation.FactionMessage;
 import thederpgamer.betterfactions.manager.ResourceManager;
-import thederpgamer.betterfactions.manager.data.FactionDataManager;
 import thederpgamer.betterfactions.manager.data.FactionMemberManager;
 import thederpgamer.betterfactions.manager.data.FactionMessageManager;
 import thederpgamer.betterfactions.manager.data.FederationManager;
 
-import java.awt.geom.RectangularShape;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 
 /**
  * <Description>
@@ -38,6 +34,7 @@ public class FactionData implements SerializationInterface {
 
 	private int id;
 	private String name;
+	private String namePlural;
 	private final int[] score = new int[6];
 	public final ArrayList<String> members = new ArrayList<>();
 	private String logo = "default-logo";
@@ -46,11 +43,13 @@ public class FactionData implements SerializationInterface {
 	public FactionData(int id, String name) {
 		this.id = id;
 		this.name = name;
+		this.namePlural = name;
 	}
 
 	public FactionData(Faction faction) {
 		this.id = faction.getIdFaction();
 		this.name = faction.getName();
+		this.namePlural = name;
 		this.score[0] = (int) faction.factionPoints;
 		this.members.addAll(faction.getMembersUID().keySet());
 	}
@@ -73,6 +72,14 @@ public class FactionData implements SerializationInterface {
 		this.name = name;
 	}
 
+	public String getNamePlural() {
+		return namePlural;
+	}
+
+	public void setNamePlural(String namePlural) {
+		this.namePlural = namePlural;
+	}
+
 	public Federation getFederation() {
 		return FederationManager.instance.getFederation(this);
 	}
@@ -90,6 +97,7 @@ public class FactionData implements SerializationInterface {
 	public void deserialize(PacketReadBuffer readBuffer) throws IOException {
 		id = readBuffer.readInt();
 		name = readBuffer.readString();
+		namePlural = readBuffer.readString();
 		for(int i = 0; i < score.length; i ++) score[i] = readBuffer.readInt();
 		int size = readBuffer.readInt();
 		for(int i = 0; i < size; i ++) members.add(readBuffer.readString());
@@ -99,6 +107,7 @@ public class FactionData implements SerializationInterface {
 	public void serialize(PacketWriteBuffer writeBuffer) throws IOException {
 		writeBuffer.writeInt(id);
 		writeBuffer.writeString(name);
+		writeBuffer.writeString(namePlural);
 		for(int i : score) writeBuffer.writeInt(i);
 		writeBuffer.writeInt(members.size());
 		for(String member : members) writeBuffer.writeString(member);

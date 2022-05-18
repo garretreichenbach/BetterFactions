@@ -8,7 +8,6 @@ import thederpgamer.betterfactions.data.SerializationInterface;
 import thederpgamer.betterfactions.manager.data.FactionDataManager;
 import thederpgamer.betterfactions.utils.NetworkUtils;
 
-import javax.management.relation.Relation;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -53,7 +52,7 @@ public class FactionRelationship implements SerializationInterface {
 
 	@Override
 	public int getId() {
-		return self.getId() | other.getId();
+		return (self.getId() | other.getId()) + hashCode();
 	}
 
 	@Override

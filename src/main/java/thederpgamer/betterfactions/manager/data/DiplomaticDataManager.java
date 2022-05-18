@@ -6,7 +6,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import thederpgamer.betterfactions.data.SerializationInterface;
-import thederpgamer.betterfactions.data.faction.FactionRank;
+import thederpgamer.betterfactions.data.diplomacy.DiplomaticData;
 import thederpgamer.betterfactions.manager.LogManager;
 import thederpgamer.betterfactions.utils.DataUtils;
 import thederpgamer.betterfactions.utils.NetworkUtils;
@@ -23,19 +23,19 @@ import java.util.concurrent.TimeUnit;
  * <Description>
  *
  * @author Garret Reichenbach
- * @version 1.0 - [05/16/2022]
+ * @version 1.0 - [05/17/2022]
  */
-public class FactionRankManager extends DataManager<FactionRank> {
+public class DiplomaticDataManager extends DataManager<DiplomaticData> {
 
-	public static FactionRankManager instance;
+	public static DiplomaticDataManager instance;
 
-	private final LoadingCache<Integer, FactionRank> cache;
+	private final LoadingCache<Integer, DiplomaticData> cache;
 
-	public FactionRankManager() {
+	public DiplomaticDataManager() {
 		instance = this;
-		cache = CacheBuilder.newBuilder().maximumSize(CACHE_MAX_SIZE).expireAfterAccess(CACHE_EXPIRE_TIME, TimeUnit.MILLISECONDS).build(new CacheLoader<Integer, FactionRank>() {
+		cache = CacheBuilder.newBuilder().maximumSize(CACHE_MAX_SIZE).expireAfterAccess(CACHE_EXPIRE_TIME, TimeUnit.MILLISECONDS).build(new CacheLoader<Integer, DiplomaticData>() {
 			@Override
-			public FactionRank load(Integer key) {
+			public DiplomaticData load(Integer key) {
 				if(NetworkUtils.onServer()) return loadData(key.intValue());
 				else {
 					requestDataFromServer(key.intValue());
@@ -45,24 +45,25 @@ public class FactionRankManager extends DataManager<FactionRank> {
 		});
 	}
 
+
 	@Override
-	public LoadingCache<Integer, FactionRank> getCache() {
+	public LoadingCache<Integer, DiplomaticData> getCache() {
 		return cache;
 	}
 
 	@Override
-	public Class<FactionRank> getType() {
-		return FactionRank.class;
+	public Class<DiplomaticData> getType() {
+		return DiplomaticData.class;
 	}
 
 	@Override
-	public FactionRank loadData(int id) {
+	public DiplomaticData loadData(int id) {
 		if(NetworkUtils.onServer()) {
 			File storageDir = getDataStorageDirectory();
 			File dataFile = new File(storageDir.getPath() + "/" + id + ".smdat");
 			if(dataFile.exists()) {
 				try {
-					return new FactionRank(new PacketReadBuffer(new DataInputStream(Files.newInputStream(dataFile.toPath()))));
+					return new DiplomaticData(new PacketReadBuffer(new DataInputStream(Files.newInputStream(dataFile.toPath()))));
 				} catch(IOException e) {
 					throw new RuntimeException(e);
 				}
@@ -72,30 +73,29 @@ public class FactionRankManager extends DataManager<FactionRank> {
 	}
 
 	@Override
-	public FactionRank createNewData(Object... from) {
-		FactionRank rank = null;
+	public DiplomaticData createNewData(Object... from) {
+		DiplomaticData data = null;
 		try {
-			if(from.length == 3) rank = new FactionRank((String) from[0], (Integer) from[1], (String[]) from[2]);
+
 		} catch(Exception exception) {
-			LogManager.logException("Failed to create new FactionRank", exception);
+			LogManager.logException("Failed to create new DiplomaticData", exception);
 		}
-		if(rank != null) {
+		if(data != null) {
 			File storageDir = getDataStorageDirectory();
-			File dataFile = new File(storageDir.getPath() + "/" + rank.getId() + ".smdat");
+			File dataFile = new File(storageDir.getPath() + "/" + data.getId() + ".smdat");
 			try {
 				dataFile.createNewFile();
-				rank.serialize(new PacketWriteBuffer(new DataOutputStream(Files.newOutputStream(dataFile.toPath()))));
+				data.serialize(new PacketWriteBuffer(new DataOutputStream(Files.newOutputStream(dataFile.toPath()))));
 			} catch(IOException e) {
 				throw new RuntimeException(e);
 			}
 		}
-		return rank;
-	}
+		return data;	}
 
 	@Override
 	public void putIntoClientCache(SerializationInterface data) {
 		cache.invalidate(data.getId());
-		cache.put(data.getId(), (FactionRank) data);
+		cache.put(data.getId(), (DiplomaticData) data);
 	}
 
 	@Override
@@ -103,13 +103,12 @@ public class FactionRankManager extends DataManager<FactionRank> {
 		try {
 			return Objects.requireNonNull(getDataStorageDirectory().listFiles()).length;
 		} catch(Exception ignored) { }
-		return 1;
-	}
+		return 1;	}
 
 	@Override
 	public File getDataStorageDirectory() {
 		if(NetworkUtils.onServer()) {
-			File dir = new File(DataUtils.getWorldDataPath() + "/data/factionRanks");
+			File dir = new File(DataUtils.getWorldDataPath() + "/data/diplomaticData");
 			if(!dir.exists()) dir.mkdirs();
 			return dir;
 		} else return null;
