@@ -10,7 +10,8 @@ import thederpgamer.betterfactions.data.faction.FactionData;
 import java.io.IOException;
 
 /**
- * <Description>
+ * Data object for diplomatic peace offers.
+ * <p>These usually come with offers or demands that the other party needs to accept for peace to be made.</p>
  *
  * @author Garret Reichenbach
  * @version 1.0 - [05/17/2022]

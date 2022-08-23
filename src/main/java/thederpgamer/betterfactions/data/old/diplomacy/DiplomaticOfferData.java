@@ -1,7 +1,5 @@
 package thederpgamer.betterfactions.data.old.diplomacy;
 
-import thederpgamer.betterfactions.data.diplomacy.change.DiplomaticChangeData;
-
 import java.util.HashMap;
 
 /**

@@ -1,5 +1,8 @@
 package thederpgamer.betterfactions.utils;
 
+import api.common.GameServer;
+import org.schema.common.util.linAlg.Vector3i;
+import org.schema.game.server.data.Galaxy;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.federation.Federation;
 
@@ -39,5 +42,34 @@ public class NameUtils {
 			} else name = side[0].getNamePlural();
 		} else name = side[0].getNamePlural();
 		return name;
+	}
+
+	/**
+	 * Returns the name of the system at the given coordinates. Only works on server.
+	 *
+	 * @param systemCoords The coordinates of the system.
+	 * @return The name of the system at the given coordinates.
+	 */
+	public static String getSystemName(Vector3i systemCoords) {
+		if(GameServer.getServerState() != null) {
+			Galaxy galaxy = GameServer.getUniverse().getGalaxyFromSystemPos(systemCoords);
+			Vector3i relPos = Galaxy.getLocalCoordinatesFromSystem(systemCoords, new Vector3i());
+			return galaxy.getName(relPos);
+		} else return null;
+	}
+
+	/**
+	 * Sets the name of the system at the given coordinates to a custom name. Only works on server.
+	 *
+	 * @param systemCoords The coordinates of the system.
+	 * @param systemName The new name of the system.
+	 */
+	public static void setSystemName(Vector3i systemCoords, String systemName) {
+		if(GameServer.getServerState() != null) {
+			Galaxy galaxy = GameServer.getUniverse().getGalaxyFromSystemPos(systemCoords);
+			Vector3i relPos = Galaxy.getLocalCoordinatesFromSystem(systemCoords, new Vector3i());
+			long index = galaxy.getIndex(relPos.x, relPos.y, relPos.z);
+			galaxy.nameCache.replace(index, systemName);
+		}
 	}
 }

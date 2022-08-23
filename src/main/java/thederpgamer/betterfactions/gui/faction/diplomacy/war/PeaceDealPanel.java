@@ -5,17 +5,18 @@ import org.schema.schine.graphicsengine.forms.gui.GUICallback;
 import org.schema.schine.graphicsengine.forms.gui.GUIElementList;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActivatableTextBar;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.old.diplomacy.peace.PeaceOfferData;
+import thederpgamer.betterfactions.data.diplomacy.WarData;
+import thederpgamer.betterfactions.data.diplomacy.PeaceOfferData;
 
 /**
- * <Description>
+ * GUI for offering peace to a currently hostile faction.
  *
  * @author TheDerpGamer
  * @version 1.0 - [12/15/2021]
  */
 public class PeaceDealPanel extends GUIInputDialogPanel {
 
-    //private WarData warData;
+    private WarData warData;
     private PeaceOfferData peaceOfferData;
 
     private GUIActivatableTextBar messageBar;
@@ -31,6 +32,11 @@ public class PeaceDealPanel extends GUIInputDialogPanel {
 	public void sendMessage() {
         //Todo:
 	}
+
+    private void createPanel(WarData warData) {
+        this.warData = warData; //Todo: Probably don't want to pass on the full object through network, maybe make some sort of immutable version of the data?
+        this.peaceOfferData = new PeaceOfferData(warData);
+    }
 
     /*
     public void createPanel(WarData warData) {

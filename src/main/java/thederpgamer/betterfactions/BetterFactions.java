@@ -1,5 +1,6 @@
 package thederpgamer.betterfactions;
 
+import api.config.BlockConfig;
 import api.listener.Listener;
 import api.listener.events.faction.FactionCreateEvent;
 import api.listener.events.gui.PlayerGUICreateEvent;
@@ -14,6 +15,8 @@ import org.schema.game.client.view.gui.PlayerPanel;
 import org.schema.schine.resource.ResourceLoader;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.faction.FactionRank;
+import thederpgamer.betterfactions.element.ElementManager;
+import thederpgamer.betterfactions.element.block.module.SystemController;
 import thederpgamer.betterfactions.gui.NewFactionPanel;
 import thederpgamer.betterfactions.manager.ConfigManager;
 import thederpgamer.betterfactions.manager.ResourceManager;
@@ -64,6 +67,12 @@ public class BetterFactions extends StarMod {
     @Override
     public void onResourceLoad(ResourceLoader resourceLoader) {
         ResourceManager.loadResources(resourceLoader);
+    }
+
+    @Override
+    public void onBlockConfigLoad(BlockConfig config) {
+        ElementManager.addBlock(new SystemController());
+        ElementManager.initialize();
     }
 
     private void registerListeners() {
