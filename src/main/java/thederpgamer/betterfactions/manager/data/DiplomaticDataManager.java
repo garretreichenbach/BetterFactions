@@ -63,7 +63,7 @@ public class DiplomaticDataManager extends DataManager<DiplomaticData> {
 			File dataFile = new File(storageDir.getPath() + "/" + id + ".smdat");
 			if(dataFile.exists()) {
 				try {
-					return new DiplomaticData(new PacketReadBuffer(new DataInputStream(Files.newInputStream(dataFile.toPath()))));
+					return DiplomaticData.read(new PacketReadBuffer(new DataInputStream(Files.newInputStream(dataFile.toPath()))));
 				} catch(IOException e) {
 					throw new RuntimeException(e);
 				}

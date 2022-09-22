@@ -3,6 +3,7 @@ package thederpgamer.betterfactions.utils;
 import api.common.GameServer;
 import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.server.data.Galaxy;
+import thederpgamer.betterfactions.data.diplomacy.WarData;
 import thederpgamer.betterfactions.data.faction.FactionData;
 import thederpgamer.betterfactions.data.federation.Federation;
 
@@ -15,6 +16,10 @@ import java.util.ArrayList;
  * @version 1.0 - [05/17/2022]
  */
 public class NameUtils {
+
+	public static String generateWarName(FactionData[] from, FactionData[] to, WarData warData) {
+		return "Placeholder war name";
+	}
 
 	public static String getSideName(FactionData[] side) {
 		String name = null;

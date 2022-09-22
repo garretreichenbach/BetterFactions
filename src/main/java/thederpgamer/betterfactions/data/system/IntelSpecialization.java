@@ -13,6 +13,10 @@ import java.io.IOException;
  */
 public class IntelSpecialization implements SystemSpecialization {
 
+	public IntelSpecialization(PacketReadBuffer readBuffer) throws IOException {
+		deserialize(readBuffer);
+	}
+
 	@Override
 	public int getId() {
 		return 0;

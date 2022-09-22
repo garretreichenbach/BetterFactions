@@ -35,7 +35,7 @@ public class PeaceDealPanel extends GUIInputDialogPanel {
 
     private void createPanel(WarData warData) {
         this.warData = warData; //Todo: Probably don't want to pass on the full object through network, maybe make some sort of immutable version of the data?
-        this.peaceOfferData = new PeaceOfferData(warData);
+        this.peaceOfferData = new PeaceOfferData(warData.getFrom(), warData.getTo(), warData);
     }
 
     /*

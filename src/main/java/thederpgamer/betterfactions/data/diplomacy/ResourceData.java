@@ -8,24 +8,23 @@ import thederpgamer.betterfactions.data.SerializationInterface;
 import thederpgamer.betterfactions.data.faction.FactionData;
 
 import java.io.IOException;
+import java.util.HashMap;
 
 /**
- * Data object for diplomatic peace offers.
- * <p>These usually come with offers or demands that the other party needs to accept for peace to be made.</p>
+ * [Description]
  *
- * @author Garret Reichenbach
- * @version 1.0 - [05/17/2022]
+ * @author TheDerpGamer (MrGoose#0027)
  */
-public class PeaceOfferData extends DiplomaticData {
+public class ResourceData extends DiplomaticData {
 
-	private WarData warData;
+	private HashMap<Short, Integer> resourceMap;
 
-	public PeaceOfferData(FactionData[] from, FactionData[] to, WarData warData) {
+	public ResourceData(FactionData[] from, FactionData[] to, HashMap<Short, Integer> resourceMap) {
 		super(from, to);
-		this.warData = warData;
+		this.resourceMap = resourceMap;
 	}
 
-	public PeaceOfferData(PacketReadBuffer readBuffer) throws IOException {
+	public ResourceData(PacketReadBuffer readBuffer) throws IOException {
 		super(readBuffer);
 	}
 
@@ -46,21 +45,25 @@ public class PeaceOfferData extends DiplomaticData {
 
 	@Override
 	public String getName() {
-		return "PEACE_OFFER";
+		return "RESOURCE_DATA";
 	}
 
 	@Override
 	public boolean equals(SerializationInterface data) {
-		return data instanceof PeaceOfferData && data.getId() == id;
+		return resourceMap.equals(((ResourceData) data).resourceMap);
 	}
 
 	@Override
 	public void deserialize(PacketReadBuffer readBuffer) throws IOException {
-
+		for(int i = 0; i < readBuffer.readInt(); i ++) resourceMap.put(readBuffer.readShort(), readBuffer.readInt());
 	}
 
 	@Override
 	public void serialize(PacketWriteBuffer writeBuffer) throws IOException {
-
+		writeBuffer.writeInt(resourceMap.size());
+		for(Short key : resourceMap.keySet()) {
+			writeBuffer.writeShort(key);
+			writeBuffer.writeInt(resourceMap.get(key));
+		}
 	}
 }

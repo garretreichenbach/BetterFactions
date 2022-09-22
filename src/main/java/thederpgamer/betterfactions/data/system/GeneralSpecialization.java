@@ -57,6 +57,11 @@ public class GeneralSpecialization implements SystemSpecialization {
 	}
 
 	public static SystemSpecialization fromPacket(PacketReadBuffer readBuffer) throws IOException {
-
+		switch(readBuffer.readString()) {
+			case "INTEL":
+				return new IntelSpecialization(readBuffer);
+			default:
+				return null;
+		}
 	}
 }

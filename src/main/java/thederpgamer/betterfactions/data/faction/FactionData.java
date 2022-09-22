@@ -7,15 +7,19 @@ import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.schine.graphicsengine.forms.Sprite;
 import thederpgamer.betterfactions.data.SerializationInterface;
+import thederpgamer.betterfactions.data.diplomacy.WarData;
+import thederpgamer.betterfactions.data.diplomacy.WarGoalData;
 import thederpgamer.betterfactions.data.federation.Federation;
 import thederpgamer.betterfactions.data.old.federation.FactionMessage;
 import thederpgamer.betterfactions.manager.ResourceManager;
+import thederpgamer.betterfactions.manager.data.DiplomaticDataManager;
 import thederpgamer.betterfactions.manager.data.FactionMemberManager;
 import thederpgamer.betterfactions.manager.data.FactionMessageManager;
 import thederpgamer.betterfactions.manager.data.FederationManager;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * <Description>
@@ -25,6 +29,7 @@ import java.util.ArrayList;
  */
 public class FactionData implements SerializationInterface {
 
+	//Score
 	public static final int FP = 0;
 	public static final int INFLUENCE = 1;
 	public static final int TERRITORY = 2;
@@ -32,10 +37,16 @@ public class FactionData implements SerializationInterface {
 	public static final int MILITARY = 4;
 	public static final int DIPLOMATIC = 5;
 
+	//Modifiers
+	public static final int AGGRESSION = 0;
+	public static final int EXHAUSTION = 1;
+
 	private int id;
 	private String name;
 	private String namePlural;
+	private String nameAdj;
 	private final int[] score = new int[6];
+	private final float[] modifiers = new float[2];
 	public final ArrayList<String> members = new ArrayList<>();
 	private String logo = "default-logo";
 	public final ArrayList<Integer> inbox = new ArrayList<>();
@@ -50,6 +61,7 @@ public class FactionData implements SerializationInterface {
 		this.id = faction.getIdFaction();
 		this.name = faction.getName();
 		this.namePlural = name;
+		this.nameAdj = name;
 		this.score[0] = (int) faction.factionPoints;
 		this.members.addAll(faction.getMembersUID().keySet());
 	}
@@ -80,6 +92,14 @@ public class FactionData implements SerializationInterface {
 		this.namePlural = namePlural;
 	}
 
+	public String getNameAdj() {
+		return nameAdj;
+	}
+
+	public void setNameAdj(String nameAdj) {
+		this.nameAdj = nameAdj;
+	}
+
 	public Federation getFederation() {
 		return FederationManager.instance.getFederation(this);
 	}
@@ -98,7 +118,9 @@ public class FactionData implements SerializationInterface {
 		id = readBuffer.readInt();
 		name = readBuffer.readString();
 		namePlural = readBuffer.readString();
+		nameAdj = readBuffer.readString();
 		for(int i = 0; i < score.length; i ++) score[i] = readBuffer.readInt();
+		for(int i = 0; i < modifiers.length; i ++) modifiers[i] = readBuffer.readFloat();
 		int size = readBuffer.readInt();
 		for(int i = 0; i < size; i ++) members.add(readBuffer.readString());
 	}
@@ -108,7 +130,9 @@ public class FactionData implements SerializationInterface {
 		writeBuffer.writeInt(id);
 		writeBuffer.writeString(name);
 		writeBuffer.writeString(namePlural);
+		writeBuffer.writeString(nameAdj);
 		for(int i : score) writeBuffer.writeInt(i);
+		for(float f : modifiers) writeBuffer.writeFloat(f);
 		writeBuffer.writeInt(members.size());
 		for(String member : members) writeBuffer.writeString(member);
 	}
@@ -175,5 +199,81 @@ public class FactionData implements SerializationInterface {
 		inbox.remove(message.getId());
 		FactionMessageManager.instance.getCache().asMap().remove(message.getId());
 		FactionMessageManager.instance.sendAllDataToClients();
+	}
+
+	public float getAggressionScore() {
+		return modifiers[AGGRESSION];
+	}
+
+	public void addAggressionScore(float v) {
+		modifiers[AGGRESSION] += v;
+	}
+
+	public float getExhaustionScore() {
+		return modifiers[EXHAUSTION];
+	}
+
+	public void addExhaustionScore(float v) {
+		modifiers[EXHAUSTION] += v;
+	}
+
+	public HashMap<FactionData[], WarData> getOffensiveWars() {
+		HashMap<FactionData[], WarData> wars = new HashMap<>();
+		DiplomaticDataManager.instance.getCache().asMap().values().stream().filter(data -> data instanceof WarData).forEach(data -> {
+			WarData war = (WarData) data;
+			for(FactionData faction : war.getFrom()) {
+				if(faction.equals(this))  {
+					for(WarGoalData warGoalData : war.getWarGoalData()) {
+						if(warGoalData.getFrom()[0].equals(this)) {
+							switch(warGoalData.getType()) {
+								case FORCE_CONCESSION:
+								case RESOURCES:
+								case TERRITORY:
+								case SUBJUGATION:
+								case INDEPENDENCE:
+								case GREAT_WAR:
+									wars.put(war.getTo(), war);
+									break;
+							}
+						}
+					}
+				}
+			}
+		});
+		return wars;
+	}
+
+	public boolean inOffensiveWar() {
+		return !getOffensiveWars().isEmpty();
+	}
+
+	public HashMap<FactionData[], WarData> getDefensiveWars() {
+		HashMap<FactionData[], WarData> wars = new HashMap<>();
+		DiplomaticDataManager.instance.getCache().asMap().values().stream().filter(data -> data instanceof WarData).forEach(data -> {
+			WarData war = (WarData) data;
+			for(FactionData faction : war.getTo()) {
+				if(faction.equals(this))  {
+					for(WarGoalData warGoalData : war.getWarGoalData()) {
+						if(warGoalData.getTo()[0].equals(this)) {
+							switch(warGoalData.getType()) {
+								case FORCE_CONCESSION:
+								case RESOURCES:
+								case TERRITORY:
+								case SUBJUGATION:
+								case INDEPENDENCE:
+								case GREAT_WAR:
+									wars.put(war.getFrom(), war);
+									break;
+							}
+						}
+					}
+				}
+			}
+		});
+		return wars;
+	}
+
+	public boolean inDefensiveWar() {
+		return !getDefensiveWars().isEmpty();
 	}
 }

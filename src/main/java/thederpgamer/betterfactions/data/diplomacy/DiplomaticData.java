@@ -28,6 +28,21 @@ public abstract class DiplomaticData implements SerializationInterface, GUICallb
 		deserialize(readBuffer);
 	}
 
+	public static DiplomaticData read(PacketReadBuffer readBuffer) {
+		try {
+			switch(readBuffer.readString()) {
+				case "PEACE_OFFER":
+					return new PeaceOfferData(readBuffer);
+				case "WAR":
+					return new WarData(readBuffer);
+				default:
+					return null;
+			}
+		} catch(IOException exception) {
+			throw new RuntimeException(exception);
+		}
+	}
+
 	@Override
 	public int getId() {
 		return id;

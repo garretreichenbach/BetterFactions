@@ -6,6 +6,7 @@ import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import thederpgamer.betterfactions.data.SerializationInterface;
 import thederpgamer.betterfactions.data.faction.FactionData;
+import thederpgamer.betterfactions.utils.NameUtils;
 
 import java.io.IOException;
 
@@ -18,6 +19,8 @@ import java.io.IOException;
 public class WarData extends DiplomaticData {
 
 	private WarGoalData[] warGoalData;
+	private int[] warGoalProgress;
+	private long warStart;
 
 	public WarData(FactionData[] from, FactionData[] to, WarGoalData... warGoalData) {
 		super(from, to);
@@ -65,5 +68,25 @@ public class WarData extends DiplomaticData {
 
 	public WarGoalData[] getWarGoalData() {
 		return warGoalData;
+	}
+
+	public long getWarStart() {
+		return warStart;
+	}
+
+	public long getWarDuration() {
+		return System.currentTimeMillis() - warStart;
+	}
+
+	public float getWarDurationDays() {
+		return getWarDuration() / 86400000f;
+	}
+
+	public int[] getWarGoalProgress() {
+		return warGoalProgress;
+	}
+
+	public void setWarGoalProgress(int[] warGoalProgress) {
+		this.warGoalProgress = warGoalProgress;
 	}
 }
