@@ -1,9 +1,12 @@
 package thederpgamer.betterfactions;
 
 import api.listener.events.controller.ClientInitializeEvent;
+import api.mod.StarLoader;
 import api.mod.StarMod;
+import thederpgamer.betterfactions.data.commands.ForceDiploCommand;
 import thederpgamer.betterfactions.manager.ConfigManager;
 import thederpgamer.betterfactions.manager.EventManager;
+import thederpgamer.betterfactions.manager.FactionDiplomacyManager;
 import thederpgamer.betterfactions.utils.DataUtils;
 
 import java.io.File;
@@ -36,6 +39,8 @@ public class BetterFactions extends StarMod {
 		ConfigManager.initialize(this);
 		initLogger();
 		EventManager.registerEvents(this);
+		FactionDiplomacyManager.initialize();
+		registerCommands();
 	}
 
 	@Override
@@ -78,5 +83,9 @@ public class BetterFactions extends StarMod {
 		} catch(IOException exception) {
 			exception.printStackTrace();
 		}
+	}
+
+	private void registerCommands() {
+		StarLoader.registerCommand(new ForceDiploCommand());
 	}
 }

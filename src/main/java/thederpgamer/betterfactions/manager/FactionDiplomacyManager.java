@@ -1,6 +1,9 @@
 package thederpgamer.betterfactions.manager;
 
 import api.common.GameCommon;
+import api.common.GameServer;
+import api.utils.StarRunnable;
+import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyAction;
 import org.schema.schine.resource.tag.Tag;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.diplomacy.FactionDiplomacy;
@@ -15,6 +18,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 
 /**
@@ -24,12 +28,46 @@ import java.util.logging.Level;
  */
 public class FactionDiplomacyManager {
 
-	public static final ArrayList<FactionDiplomacy> diplomacyChanged = new ArrayList<>(); //Todo: Update these
+	public static final ConcurrentLinkedQueue<FactionDiplomacy> diplomacyChanged = new ConcurrentLinkedQueue<>();
 	private static boolean initialized = false;
 
-	private static void initialize() {
-		File file = new File(DataUtils.getWorldDataPath() + "diplomacy");
+	public static void initialize() {
+		final File file = new File(DataUtils.getWorldDataPath() + "/diplomacy");
 		if(!file.exists()) file.mkdirs();
+		new StarRunnable() {
+			@Override
+			public void run() {
+				try {
+					for(File f : file.listFiles()) {
+						if(f.getName().endsWith(".smdat")) {
+							FactionDiplomacy diplomacy = new FactionDiplomacy(GameCommon.getGameState().getFactionManager().getFaction(Integer.parseInt(f.getName().split("\\.")[0])));
+							diplomacy.fromTag(Tag.readFrom(Files.newInputStream(f.toPath()), true, false));
+							diplomacy.update(GameServer.getServerState().getController().getTimer().currentTime);
+						}
+					}
+				} catch(IOException exception) {
+					BetterFactions.log.log(Level.WARNING, "Failed to load diplomacy files!");
+				}
+			}
+		}.runTimer(BetterFactions.getInstance(), 1000);
+		new StarRunnable() {
+			@Override
+			public void run() {
+				FactionDiplomacy diplomacy = diplomacyChanged.poll();
+				while(diplomacy != null) {
+					File output = new File(DataUtils.getWorldDataPath() + "/diplomacy/" + diplomacy.faction.getIdFaction() + ".smdat");
+					if(output.exists()) output.delete();
+					try {
+						output.createNewFile();
+						diplomacy.toTag().writeTo(Files.newOutputStream(output.toPath()), true);
+						diplomacy = diplomacyChanged.poll();
+					} catch(IOException e) {
+						throw new RuntimeException(e);
+					}
+				}
+			}
+		}.runTimer(BetterFactions.getInstance(), 1000);
+		initialized = true;
 	}
 
 	private static void initDiplomacyData(int factionId, File file) {
@@ -47,7 +85,7 @@ public class FactionDiplomacyManager {
 
 	public static FactionDiplomacy getDiplomacy(int factionId) {
 		if(!initialized) initialize();
-		File file = new File(DataUtils.getWorldDataPath() + "diplomacy/" + factionId + ".smdat");
+		File file = new File(DataUtils.getWorldDataPath() + "/diplomacy/" + factionId + ".smdat");
 		if(!file.exists()) initDiplomacyData(factionId, file);
 		FactionDiplomacy diplomacy = new FactionDiplomacy(GameCommon.getGameState().getFactionManager().getFaction(factionId));
 		try {
@@ -106,5 +144,11 @@ public class FactionDiplomacyManager {
 
 	public static boolean existsAction(FactionDiplomacyTurnMod d) {
 		return false; //TODO: Implement
+	}
+
+	public static void forceDiplomacyAction(int faction1, int faction2, DiplomacyAction.DiplActionType diplomacyAction) {
+		FactionDiplomacy diplomacy1 = getDiplomacy(faction1);
+		FactionDiplomacy diplomacy2 = getDiplomacy(faction2);
+		diplomacy1.diplomacyAction(diplomacyAction, diplomacy2.faction.getIdFaction());
 	}
 }

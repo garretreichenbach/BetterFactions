@@ -333,6 +333,7 @@ public class FactionDiplomacyConfig {
 			}
 			reactions.add(r);
 		}
+		/*
 		{
 			FactionDiplomacyReaction r = new FactionDiplomacyReaction(i++);
 			r.reaction = FactionDiplomacyReaction.ConditionReaction.OFFER_PEACE_DEAL;
@@ -354,6 +355,8 @@ public class FactionDiplomacyConfig {
 			}
 			reactions.add(r);
 		}
+			*/
+			/*
 		{
 			FactionDiplomacyReaction r = new FactionDiplomacyReaction(i++);
 			r.name = "Offer Peace Deal on non agression only";
@@ -369,6 +372,8 @@ public class FactionDiplomacyConfig {
 			}
 			reactions.add(r);
 		}
+			 */
+			/*
 		{
 			FactionDiplomacyReaction r = new FactionDiplomacyReaction(i++);
 			r.name = "Offer Alliance";
@@ -390,6 +395,7 @@ public class FactionDiplomacyConfig {
 			}
 			reactions.add(r);
 		}
+			 */
 		{
 			FactionDiplomacyReaction r = new FactionDiplomacyReaction(i++);
 			r.reaction = FactionDiplomacyReaction.ConditionReaction.REMOVE_ALLIANCE_OFFER;

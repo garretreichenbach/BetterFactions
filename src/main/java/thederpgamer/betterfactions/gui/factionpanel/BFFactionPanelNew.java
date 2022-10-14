@@ -3,6 +3,7 @@ package thederpgamer.betterfactions.gui.factionpanel;
 import org.schema.game.client.data.GameClientState;
 import org.schema.game.client.view.gui.faction.newfaction.FactionMemberScrollableListNew;
 import org.schema.game.client.view.gui.faction.newfaction.FactionNewsScrollableListNew;
+import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;
 import org.schema.game.client.view.gui.faction.newfaction.FactionScrollableListNew;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
@@ -14,7 +15,6 @@ import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
 import org.schema.schine.graphicsengine.forms.gui.GUICallback;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.GUIScrollablePanel;
-import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActiveInterface;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIMainWindow;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUITextOverlayTable;
@@ -27,7 +27,7 @@ import thederpgamer.betterfactions.manager.FactionDiplomacyManager;
  *
  * @author TheDerpGamer (MrGoose#0027)
  */
-public class BFFactionPanelNew extends GUIElement implements GUIActiveInterface {
+public class BFFactionPanelNew extends FactionPanelNew {
 
 	public GUIMainWindow factionPanel;
 	private GUIContentPane newsTab;
@@ -114,7 +114,7 @@ public class BFFactionPanelNew extends GUIElement implements GUIActiveInterface 
 		}
 	}
 
-	private void createNewsPane() {
+	public void createNewsPane() {
 		newsTab.setTextBoxHeightLast(28);
 		GUIAncor content = newsTab.getContent(0);
 		GUIFactionNewsScrollableList c = new GUIFactionNewsScrollableList(getState(), content);

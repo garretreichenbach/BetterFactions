@@ -25,7 +25,20 @@ public class ConfigManager {
 			"diplomacy-dynamic-upper: 30",
 			"diplomacy-dynamic-lower: 0",
 			"diplomacy-existing-action-modifier: 2",
-			"diplomacy-non-existing-action-modifier: 1"
+			"diplomacy-non-existing-action-modifier: 1",
+			"diplomacy-values-war: -70",
+			"diplomacy-values-war-with-enemy: 50",
+			"diplomacy-values-close-territory: 10",
+			"diplomacy-values-power: 15",
+			"diplomacy-values-alliance: 100",
+			"diplomacy-values-alliance-with-enemy: -40",
+			"diplomacy-values-alliance-with-friends: 50",
+			"diplomacy-values-non-aggression: 50",
+			"diplomacy-values-faction-member-at-war-with-us: -50",
+			"diplomacy-values-faction-member-we-dont-like: -20",
+			"diplomacy-values-in-federation: 80",
+			"diplomacy-values-federation-ally: 60",
+			"diplomacy-values-federation-enemy: -40"
 	};
 
 

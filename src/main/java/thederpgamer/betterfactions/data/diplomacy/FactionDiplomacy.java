@@ -28,7 +28,7 @@ import java.util.*;
 public class FactionDiplomacy extends Observable implements LogInterface {
 
 	private static final long CHANGE_MOD_DURATION = 11000;
-	public Long2ObjectOpenHashMap<FactionDiplomacyEntity> entities = new Long2ObjectOpenHashMap<FactionDiplomacyEntity>();
+	public Long2ObjectOpenHashMap<FactionDiplomacyEntity> entities = new Long2ObjectOpenHashMap<>();
 	private LongOpenHashSet changedEnts = new LongOpenHashSet();
 
 	public final Faction faction;
@@ -41,6 +41,7 @@ public class FactionDiplomacy extends Observable implements LogInterface {
 	}
 
 	public void initialize() {
+		if(faction == null) return;
 		if(faction.isOnServer()) {
 			Collection<Faction> m = ((FactionState) faction.getState()).getFactionManager().getFactionCollection();
 			for(Faction f : m) if(f != faction) onAddedFaction(f);
@@ -143,6 +144,8 @@ public class FactionDiplomacy extends Observable implements LogInterface {
 		}
 		e.diplomacyAction(type);
 		changedEnts.add(e.getDbId());
+		ntChanged.add(e.getDbId());
+		FactionDiplomacyManager.diplomacyChanged.add(this);
 	}
 
 	public void trigger(NPCDipleExecType type) {
@@ -182,7 +185,7 @@ public class FactionDiplomacy extends Observable implements LogInterface {
 	private List<TimedExecution> execs = new ObjectArrayList<TimedExecution>();
 
 
-	public void update(long time){
+	public void update(long time) {
 		if(first){
 			initialize();
 			assert(entities.size() > 0);

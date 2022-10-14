@@ -5,6 +5,7 @@ import org.hsqldb.lib.StringComparator;
 import org.schema.game.client.data.GameClientState;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
+import org.schema.game.server.data.FactionState;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.forms.gui.GUIAncor;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
@@ -123,13 +124,14 @@ public class GUIFactionDiploScrollableList extends ScrollableTableList<FactionDi
 	protected Collection<FactionDiplomacyMod> getElementList() {
 		List<FactionDiplomacyMod> d = new ObjectArrayList<>();
 		FactionDiplomacyEntity ent = FactionDiplomacyManager.getDiplomacy(toFaction.getIdFaction()).entities.get(diplEntityId);
-		if(ent != null) {
-			d.addAll(ent.getDynamicMap().values());
-			d.addAll(ent.getStaticMap().values());
+		if(ent == null) {
+			ent = new FactionDiplomacyEntity((FactionState) toFaction.getState(), (int) diplEntityId);
+			FactionDiplomacyManager.getDiplomacy(toFaction.getIdFaction()).entities.put(diplEntityId, ent);
 		}
+		d.addAll(ent.getDynamicMap().values());
+		d.addAll(ent.getStaticMap().values());
 		return d;
 	}
-
 
 	@Override
 	public void updateListEntries(GUIElementList mainList,

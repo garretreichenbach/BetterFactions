@@ -920,7 +920,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 		NON_AGGRESSION(new Translatable() {
 			@Override
 			public String getName(Enum en) {
-				return Lng.str("Non-Aggresion Pact");
+				return Lng.str("No recent aggression");
 			}
 		}),
 		ALLIANCE_WITH_FRIENDS(new Translatable() {

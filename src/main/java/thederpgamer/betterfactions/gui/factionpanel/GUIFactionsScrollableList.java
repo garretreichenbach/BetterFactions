@@ -135,11 +135,8 @@ public class GUIFactionsScrollableList extends ScrollableTableList<Faction> {
 	protected Collection<Faction> getElementList() {
 		List<Faction> d = new ObjectArrayList<Faction>();
 		for(Faction f : ((GameClientState) getState()).getFactionManager().getFactionCollection()) {
-			if(f.isNPC()) {
-				d.add((Faction) f);
-			}
+			if((f.isNPC() || f.getIdFaction() > 0) && f.getIdFaction() != ((GameClientState) getState()).getPlayer().getFactionId()) d.add(f);
 		}
-
 		return d;
 	}
 
