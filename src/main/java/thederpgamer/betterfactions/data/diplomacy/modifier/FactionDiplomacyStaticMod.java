@@ -1,6 +1,5 @@
 package thederpgamer.betterfactions.data.diplomacy.modifier;
 
-import org.schema.game.server.data.simulation.npc.diplomacy.NPCDiplomacyEntity.DiplStatusType;
 import org.schema.schine.resource.tag.FinishTag;
 import org.schema.schine.resource.tag.Tag;
 import org.schema.schine.resource.tag.Tag.Type;
@@ -28,7 +27,7 @@ public class FactionDiplomacyStaticMod extends FactionDiplomacyMod {
 		byte version = t[0].getByte();
 		value = t[1].getInt();
 		elapsedTimeInactive = t[2].getLong();
-		type = DiplStatusType.values()[t[3].getByte()];
+		type = FactionDiplomacyEntity.DiploStatusType.values()[t[3].getByte()];
 	}
 
 	@Override
