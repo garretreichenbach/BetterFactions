@@ -7,6 +7,7 @@ import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.schine.graphicsengine.forms.Sprite;
 import thederpgamer.betterfactions.data.SerializationInterface;
+import thederpgamer.betterfactions.data.diplomacy.DiplomaticData;
 import thederpgamer.betterfactions.data.diplomacy.WarData;
 import thederpgamer.betterfactions.data.diplomacy.WarGoalData;
 import thederpgamer.betterfactions.data.federation.Federation;
@@ -219,7 +220,7 @@ public class FactionData implements SerializationInterface {
 
 	public HashMap<FactionData[], WarData> getOffensiveWars() {
 		HashMap<FactionData[], WarData> wars = new HashMap<>();
-		DiplomaticDataManager.instance.getCache().asMap().values().stream().filter(data -> data instanceof WarData).forEach(data -> {
+		for(DiplomaticData data : DiplomaticDataManager.instance.getCache().asMap().values()) {
 			WarData war = (WarData) data;
 			for(FactionData faction : war.getFrom()) {
 				if(faction.equals(this))  {
@@ -239,7 +240,7 @@ public class FactionData implements SerializationInterface {
 					}
 				}
 			}
-		});
+		}
 		return wars;
 	}
 
@@ -249,7 +250,7 @@ public class FactionData implements SerializationInterface {
 
 	public HashMap<FactionData[], WarData> getDefensiveWars() {
 		HashMap<FactionData[], WarData> wars = new HashMap<>();
-		DiplomaticDataManager.instance.getCache().asMap().values().stream().filter(data -> data instanceof WarData).forEach(data -> {
+		for(DiplomaticData data : DiplomaticDataManager.instance.getCache().asMap().values()) {
 			WarData war = (WarData) data;
 			for(FactionData faction : war.getTo()) {
 				if(faction.equals(this))  {
@@ -269,7 +270,7 @@ public class FactionData implements SerializationInterface {
 					}
 				}
 			}
-		});
+		}
 		return wars;
 	}
 

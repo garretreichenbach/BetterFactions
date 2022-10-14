@@ -3,43 +3,45 @@ package thederpgamer.betterfactions.manager;
 import api.mod.config.FileConfiguration;
 import thederpgamer.betterfactions.BetterFactions;
 
-/**
- * <Description>
- *
- * @author TheDerpGamer
- * @version 1.0 - [08/23/2021]
- */
 public class ConfigManager {
 
-    //Main Config
-    private static FileConfiguration mainConfig;
-    public static final String[] defaultMainConfig = {
-            "debug-mode: false",
-            "save-interval: 12000",
-            "max-news-backup: 30",
-            "log-queue-size: 3"
-    };
+	private static FileConfiguration mainConfig;
+	private static FileConfiguration diplomacyConfig;
+	private static final String[] defaultMainConfig = {
+			"debug-mode: false",
+			"max-world-logs: 5"
+	};
 
-    //Diplomacy Config
-    private static FileConfiguration diploConfig;
-    public static final String[] defaultDiploConfig = {
-            "white-peace-base-cost: 15.0",
-            "white-peace-opposing-side-progress-limit: 60.0"
-    };
+	private static final String[] defaultDiplomacyConfig = {
+			"diplomacy-start-points: 0",
+			"diplomacy-min-points: -300",
+			"diplomacy-max-points: 300",
+			"diplomacy-apply-delay: 5000",
+			"diplomacy-status-calc-delay: 5000",
+			"diplomacy-change-check-delay: 5000",
+			"diplomacy-static-timeout: 5000000",
+			"diplomacy-turn-timeout: 500000",
+			"diplomacy-action-timeout: 500000",
+			"diplomacy-dynamic-upper: 30",
+			"diplomacy-dynamic-lower: 0",
+			"diplomacy-existing-action-modifier: 2",
+			"diplomacy-non-existing-action-modifier: 1"
+	};
 
-    public static void initialize(BetterFactions instance) {
-        mainConfig = instance.getConfig("config");
-        mainConfig.saveDefault(defaultMainConfig);
 
-        diploConfig = instance.getConfig("diplo-config");
-        diploConfig.saveDefault(defaultDiploConfig);
-    }
+	public static void initialize(BetterFactions instance) {
+		mainConfig = instance.getConfig("config");
+		mainConfig.saveDefault(defaultMainConfig);
 
-    public static FileConfiguration getMainConfig() {
-        return mainConfig;
-    }
+		diplomacyConfig = instance.getConfig("diplomacy");
+		diplomacyConfig.saveDefault(defaultDiplomacyConfig);
+	}
 
-    public static FileConfiguration getDiploConfig() {
-        return diploConfig;
-    }
+	public static FileConfiguration getMainConfig() {
+		return mainConfig;
+	}
+
+	public static FileConfiguration getDiplomacyConfig() {
+		return diplomacyConfig;
+	}
 }

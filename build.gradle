@@ -1,7 +1,10 @@
 plugins {
 		id 'java'
-		id 'com.appland.appmap' version '1.1.0'
 }
+
+apply plugin: 'java'
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
 
 def starmadeDirectory = 'C:/Program Files (x86)/Steam/steamapps/common/StarMade/StarMade/'
 def jarName = 'BetterFactions'
@@ -14,8 +17,6 @@ repositories {
 }
 
 dependencies {
-	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
 	implementation(files(starmadeDirectory + "StarMade.jar"))
 	implementation(fileTree(dir: (starmadeDirectory + "lib"), include: "*.jar"))
 }
@@ -33,8 +34,4 @@ jar {
 			else return null;
 		}
 	}
-}
-
-test {
-	useJUnitPlatform()
 }
