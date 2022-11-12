@@ -57,12 +57,30 @@ public class BetterFactions extends StarMod {
 				File[] logFiles = new File[logsFolder.listFiles().length];
 				int j = logFiles.length - 1;
 				for(int i = 0; i < logFiles.length && j >= 0; i++) {
-					logFiles[i] = logsFolder.listFiles()[j];
-					j--;
+					try {
+						if(!logFiles[i].getName().endsWith(".lck")) logFiles[j] = logFiles[i];
+						else logFiles[i].delete();
+						j--;
+					} catch(Exception ignored) { }
 				}
 
-				for(File logFile : logFiles) {
-					if(!logFile.getName().endsWith(".txt")) continue;
+				//Trim null entries
+				int nullCount = 0;
+				for(File value : logFiles) {
+					if(value == null) nullCount ++;
+				}
+
+				File[] trimmedLogFiles = new File[logFiles.length - nullCount];
+				int l = 0;
+				for(File file : logFiles) {
+					if(file != null) {
+						trimmedLogFiles[l] = file;
+						l++;
+					}
+				}
+
+				for(File logFile : trimmedLogFiles) {
+					if(logFile == null) continue;
 					String fileName = logFile.getName().replace(".txt", "");
 					int logNumber = Integer.parseInt(fileName.substring(fileName.indexOf("log") + 3)) + 1;
 					String newName = logFolderPath + "/log" + logNumber + ".txt";

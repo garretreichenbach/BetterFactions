@@ -4,7 +4,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.schema.common.config.ConfigParserException;
-import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyAction;
 import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyAction.DiplActionType;
 import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyCondition;
 import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyCondition.ConditionType;
@@ -319,61 +318,164 @@ public class FactionDiplomacyConfig {
 
 	public void addDefaultActions() {
 		int i = 0;
-		{
-			FactionDiplomacyReaction r = new FactionDiplomacyReaction(i++);
-			r.reaction = FactionDiplomacyReaction.ConditionReaction.DECLARE_WAR;
-			r.name = "Declare War on bad score";
-			r.condition = new FactionDiplomacyConditionGroup();
-			r.condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
-			{
-				FactionDiplomacyCondition m = new FactionDiplomacyCondition();
-				m.type = FactionDiplomacyCondition.ConditionType.TOTAL_POINTS;
-				m.argumentValue = - 1000;
-				r.condition.conditions.add(m);
+		{ //Declare war
+			FactionDiplomacyReaction diplomacyReaction = new FactionDiplomacyReaction(i ++);
+			diplomacyReaction.reaction =  FactionDiplomacyReaction.ConditionReaction.DECLARE_WAR;
+			diplomacyReaction.name = "Declare War";
+			diplomacyReaction.condition = new FactionDiplomacyConditionGroup();
+			diplomacyReaction.condition.mod = FactionDiplomacyConditionGroup.ConditionMod.AND;
+
+			{ //Has a valid war goal
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.HAS_WAR_GOAL;
+				diplomacyReaction.condition.conditions.add(condition);
 			}
-			reactions.add(r);
+
+			{ //Not allied
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.ALLIANCE;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+
+			{ //No Non-aggression pact
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.NON_AGGRESSION_PACT;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+
+			{ //Not in federation
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.IN_FEDERATION;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+
+			{ //Not protecting
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.PROTECTING;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+
+			reactions.add(diplomacyReaction);
+		}
+
+		{ //Offer peace deal
+			FactionDiplomacyReaction diplomacyReaction = new FactionDiplomacyReaction(i++);
+			diplomacyReaction.reaction = FactionDiplomacyReaction.ConditionReaction.OFFER_PEACE_DEAL;
+			diplomacyReaction.name = "Offer Peace Deal";
+			diplomacyReaction.condition = new FactionDiplomacyConditionGroup();
+			diplomacyReaction.condition.mod = FactionDiplomacyConditionGroup.ConditionMod.AND;
+
+			{ //At war
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.IN_WAR;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+
+			reactions.add(diplomacyReaction);
+		}
+
+		{ //Improve relations
+			
+		}
+
+		{ //Offer non-aggression
+			FactionDiplomacyReaction diplomacyReaction = new FactionDiplomacyReaction(i++);
+			diplomacyReaction.reaction = FactionDiplomacyReaction.ConditionReaction.OFFER_NON_AGGRESSION_PACT;
+			diplomacyReaction.name = "Offer Non-Aggression Pact";
+			diplomacyReaction.condition = new FactionDiplomacyConditionGroup();
+			diplomacyReaction.condition.mod = FactionDiplomacyConditionGroup.ConditionMod.AND;
+
+			{ //Not at war
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.IN_WAR;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+
+			{ //Not allied
+				FactionDiplomacyConditionGroup conditionGroup = new FactionDiplomacyConditionGroup();
+				conditionGroup.mod = FactionDiplomacyConditionGroup.ConditionMod.AND;
+
+				{ //Relation must be above -30
+					FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+					condition.type = FactionDiplomacyCondition.ConditionType.TOTAL_POINTS;
+					condition.argumentValue = -30;
+				}
+
+				{ //Not allied
+					FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+					condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+					condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+					condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.ALLIANCE;
+					conditionGroup.conditions.add(condition);
+				}
+
+				{ //Not in federation
+					FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+					condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+					condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+					condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.IN_FEDERATION;
+					conditionGroup.conditions.add(condition);
+				}
+			}
+		}
+
+		{ //Offer alliance
+			FactionDiplomacyReaction diplomacyReaction = new FactionDiplomacyReaction(i++);
+			diplomacyReaction.reaction = FactionDiplomacyReaction.ConditionReaction.OFFER_ALLIANCE;
+			diplomacyReaction.name = "Offer Alliance";
+			diplomacyReaction.condition = new FactionDiplomacyConditionGroup();
+			diplomacyReaction.condition.mod = FactionDiplomacyConditionGroup.ConditionMod.AND;
+
+			{ //Not at war
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.IN_WAR;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+
+			{ //Relation must be above 30
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.type = FactionDiplomacyCondition.ConditionType.TOTAL_POINTS;
+				condition.argumentValue = 30;
+			}
+
+			{
+				FactionDiplomacyConditionGroup conditionGroup = new FactionDiplomacyConditionGroup();
+				conditionGroup.mod = FactionDiplomacyConditionGroup.ConditionMod.OR;
+
+				{ //Not allied
+					FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+					condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+					condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+					condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.ALLIANCE;
+					conditionGroup.conditions.add(condition);
+				}
+
+				{ //Not in federation
+					FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+					condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+					condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+					condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.IN_FEDERATION;
+					conditionGroup.conditions.add(condition);
+				}
+
+				diplomacyReaction.condition.conditions.add(conditionGroup);
+			}
 		}
 		/*
-		{
-			FactionDiplomacyReaction r = new FactionDiplomacyReaction(i++);
-			r.reaction = FactionDiplomacyReaction.ConditionReaction.OFFER_PEACE_DEAL;
-			r.name = "Offer Peace Deal";
-			r.condition = new FactionDiplomacyConditionGroup();
-			r.condition.mod = FactionDiplomacyConditionGroup.ConditionMod.AND;
-			{
-				FactionDiplomacyCondition d = new FactionDiplomacyCondition();
-				d.type = FactionDiplomacyCondition.ConditionType.TOTAL_POINTS;
-				d.argumentValue = - 500;
-				r.condition.conditions.add(d);
-			}
-			{
-				FactionDiplomacyCondition d = new FactionDiplomacyCondition();
-				d.type = FactionDiplomacyCondition.ConditionType.STATUS_PERSISTED;
-				d.argumentStatus = FactionDiplomacyEntity.DiploStatusType.NON_AGGRESSION;
-				d.argumentValue = 15 * 60 * 1000;
-				r.condition.conditions.add(d);
-			}
-			reactions.add(r);
-		}
-			*/
-			/*
-		{
-			FactionDiplomacyReaction r = new FactionDiplomacyReaction(i++);
-			r.name = "Offer Peace Deal on non agression only";
-			r.reaction = FactionDiplomacyReaction.ConditionReaction.OFFER_PEACE_DEAL;
-			r.condition = new FactionDiplomacyConditionGroup();
-			r.condition.mod = FactionDiplomacyConditionGroup.ConditionMod.AND;
-			{
-				FactionDiplomacyCondition d = new FactionDiplomacyCondition();
-				d.type = FactionDiplomacyCondition.ConditionType.STATUS_PERSISTED;
-				d.argumentStatus = FactionDiplomacyEntity.DiploStatusType.NON_AGGRESSION;
-				d.argumentValue = 120 * 60 * 1000;
-				r.condition.conditions.add(d);
-			}
-			reactions.add(r);
-		}
-			 */
-			/*
 		{
 			FactionDiplomacyReaction r = new FactionDiplomacyReaction(i++);
 			r.name = "Offer Alliance";
@@ -395,7 +497,7 @@ public class FactionDiplomacyConfig {
 			}
 			reactions.add(r);
 		}
-			 */
+
 		{
 			FactionDiplomacyReaction r = new FactionDiplomacyReaction(i++);
 			r.reaction = FactionDiplomacyReaction.ConditionReaction.REMOVE_ALLIANCE_OFFER;
@@ -475,7 +577,7 @@ public class FactionDiplomacyConfig {
 		{
 			FactionDiplomacyReaction r = new FactionDiplomacyReaction(i++);
 			r.reaction = FactionDiplomacyReaction.ConditionReaction.DECLARE_WAR;
-			r.name = "Declare War on three hostile actions";
+			r.name = "Declare War on hostile actions";
 			r.condition = new FactionDiplomacyConditionGroup();
 			r.condition.mod = FactionDiplomacyConditionGroup.ConditionMod.AND;
 			{
@@ -487,6 +589,7 @@ public class FactionDiplomacyConfig {
 			}
 			reactions.add(r);
 		}
+		 */
 	}
 
 	public int getIndex(DiplActionType action) {

@@ -38,7 +38,8 @@ public class ConfigManager {
 			"diplomacy-values-faction-member-we-dont-like: -20",
 			"diplomacy-values-in-federation: 80",
 			"diplomacy-values-federation-ally: 60",
-			"diplomacy-values-federation-enemy: -40"
+			"diplomacy-values-federation-enemy: -40",
+			"diplomacy-values-has-war-goal: -70",
 	};
 
 

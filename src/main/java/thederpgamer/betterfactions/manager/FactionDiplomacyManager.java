@@ -129,6 +129,8 @@ public class FactionDiplomacyManager {
 				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-federation-ally");
 			case FEDERATION_ENEMY:
 				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-federation-enemy");
+			case HAS_WAR_GOAL:
+				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-has-war-goal");
 			default:
 				return 0;
 		}

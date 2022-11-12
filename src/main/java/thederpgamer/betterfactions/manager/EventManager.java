@@ -29,7 +29,7 @@ public class EventManager {
 						factionPanelNew.onInit();
 						factionPanelNewField.set(playerPanel, factionPanelNew);
 					}
-				} catch (NoSuchFieldException | IllegalAccessException e) {
+				} catch(NoSuchFieldException | IllegalAccessException e) {
 					e.printStackTrace();
 				}
 			}

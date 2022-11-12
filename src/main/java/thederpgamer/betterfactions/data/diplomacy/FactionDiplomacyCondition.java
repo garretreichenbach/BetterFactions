@@ -18,8 +18,7 @@ public class FactionDiplomacyCondition extends FactionDiplomacyConditionGroup {
 		ACTION_PERSISTED("Min time the action has been applied for equal or bigger than X. the action will persist to exist as long as it is repeated it timeouts", true, false, true),
 		ACTION_COUNTER("Amount of actions triggered (within timeout) equal or bigger than", true, false, true),
 		TOTAL_POINTS("Total diplomacy points equal or bigger than X", false, false, true),
-		RAW_POINTS("Raw diplomacy points (without sttaus effects) equal or bigger than X", false, false, true),
-		;
+		RAW_POINTS("Raw diplomacy points (without status effects) equal or bigger than X", false, false, true);
 		public static String list() {
 			return StringTools.listEnum(ConditionType.values());
 		}

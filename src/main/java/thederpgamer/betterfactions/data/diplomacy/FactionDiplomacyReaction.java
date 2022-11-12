@@ -24,7 +24,7 @@ public class FactionDiplomacyReaction {
 		REJECT_ALLIANCE_OFFER(""),
 		REJECT_PEACE_OFFER(""),
 		SEND_POPUP_MESSAGE(""),
-		;
+		OFFER_NON_AGGRESSION_PACT("");
 
 		public final String desc;
 

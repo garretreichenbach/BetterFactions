@@ -923,6 +923,12 @@ public class FactionDiplomacyEntity implements LogInterface {
 				return Lng.str("No recent aggression");
 			}
 		}),
+		NON_AGGRESSION_PACT(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("You have a non-aggression pact with them");
+			}
+		}),
 		ALLIANCE_WITH_FRIENDS(new Translatable() {
 			@Override
 			public String getName(Enum en) {
@@ -938,13 +944,13 @@ public class FactionDiplomacyEntity implements LogInterface {
 		FACTION_MEMBER_AT_WAR_WITH_US(new Translatable() {
 			@Override
 			public String getName(Enum en) {
-				return Lng.str("One or more of your faction members is at war with us");
+				return Lng.str("One or more of your faction members is at war with them");
 			}
 		}),
 		FACTION_MEMBER_WE_DONT_LIKE(new Translatable() {
 			@Override
 			public String getName(Enum en) {
-				return Lng.str("We don't like one or more of your faction members");
+				return Lng.str("They don't like one or more of your faction members");
 			}
 		}),
 		IN_FEDERATION(new Translatable() {
@@ -963,6 +969,30 @@ public class FactionDiplomacyEntity implements LogInterface {
 			@Override
 			public String getName(Enum anEnum) {
 				return Lng.str("You are in a federation with their enemies");
+			}
+		}),
+		HAS_WAR_GOAL(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("We have a war goal against them");
+			}
+		}),
+		TARGET_OF_WAR_GOAL(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("They have a war goal against us");
+			}
+		}),
+		PROTECTING(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("We are protecting them");
+			}
+		}),
+		BEING_PROTECTED(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("They are protecting us");
 			}
 		});
 
