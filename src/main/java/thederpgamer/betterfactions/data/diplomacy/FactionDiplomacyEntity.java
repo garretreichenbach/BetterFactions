@@ -14,11 +14,9 @@ import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionRelation.RType;
 import org.schema.game.common.data.player.faction.FactionRelationOffer;
 import org.schema.game.common.data.player.faction.FactionRelationOfferAcceptOrDecline;
-import org.schema.game.common.data.player.faction.PersonalEnemyMod;
 import org.schema.game.server.data.FactionState;
 import org.schema.game.server.data.GameServerState;
 import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyAction;
-import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyAction.DiplActionType;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.common.language.Translatable;
 import org.schema.schine.network.server.ServerMessage;
@@ -42,25 +40,25 @@ public class FactionDiplomacyEntity implements LogInterface {
 
 	private final Byte2ObjectOpenHashMap<FactionDiplomacyAction> actions = new Byte2ObjectOpenHashMap<>();
 	private final FactionState state;
-	private final Object2ObjectOpenHashMap<DiplActionType, FactionDiplomacyTurnMod> dynamicMap = new Object2ObjectOpenHashMap<DiplActionType, FactionDiplomacyTurnMod>() {
+	private final Object2ObjectOpenHashMap<FactionDiplomacyAction.DiploActionType, FactionDiplomacyTurnMod> dynamicMap = new Object2ObjectOpenHashMap<FactionDiplomacyAction.DiploActionType, FactionDiplomacyTurnMod>() {
 
 		private static final long serialVersionUID = 1L;
 
 		@Override
 		public FactionDiplomacyTurnMod remove(Object k) {
-			if(! (k == null || k instanceof DiplActionType)) throw new IllegalArgumentException();
+			if(! (k == null || k instanceof FactionDiplomacyAction.DiploActionType)) throw new IllegalArgumentException();
 			return super.remove(k);
 		}
 
 		@Override
 		public FactionDiplomacyTurnMod get(Object k) {
-			if(! (k == null || k instanceof DiplActionType)) throw new IllegalArgumentException();
+			if(! (k == null || k instanceof FactionDiplomacyAction.DiploActionType)) throw new IllegalArgumentException();
 			return super.get(k);
 		}
 
 		@Override
 		public boolean containsKey(Object k) {
-			if(! (k == null || k instanceof DiplActionType)) throw new IllegalArgumentException();
+			if(! (k == null || k instanceof FactionDiplomacyAction.DiploActionType)) throw new IllegalArgumentException();
 			return super.containsKey(k);
 		}
 
@@ -167,30 +165,71 @@ public class FactionDiplomacyEntity implements LogInterface {
 		}
 	}
 
-	public void toNetwork(PacketWriteBuffer packetWriteBuffer) {
+	public void toNetwork(PacketWriteBuffer packetWriteBuffer) throws IOException {
+		packetWriteBuffer.writeInt(getPoints());
+		packetWriteBuffer.writeInt(pointCached);
+		packetWriteBuffer.writeInt(actions.size());
+		for(FactionDiplomacyAction action : actions.values()) action.toNetwork(packetWriteBuffer);
 	}
 
 	public void calculateStaticModifiers(long timeElapsed) {
 		for(DiploStatusType s : DiploStatusType.values()) calculateStaticModifier(timeElapsed, staticMap, s);
 		for(FactionDiplomacyStaticMod m : staticMap.values()) {
+			int elapsed = Math.max(0, m.value - (int) (timeElapsed / 1000 / 60 / 60 / 24));
 			switch(m.type) {
 				case ALLIANCE:
+					m.value = Math.min(getConfig().getInt("diplomacy-alliance-max-points"), Math.max(getConfig().getInt("diplomacy-alliance-min-points"), elapsed));
 					break;
 				case ALLIANCE_WITH_ENEMY:
+					m.value = Math.min(getConfig().getInt("diplomacy-alliance-with-enemy-max-points"), Math.max(getConfig().getInt("diplomacy-alliance-with-enemy-min-points"), elapsed));
 					break;
 				case ALLIANCE_WITH_FRIENDS:
+					m.value = Math.min(getConfig().getInt("diplomacy-alliance-with-friends-max-points"), Math.max(getConfig().getInt("diplomacy-alliance-with-friends-min-points"), elapsed));
 					break;
 				case CLOSE_TERRITORY:
+					m.value = Math.min(getConfig().getInt("diplomacy-close-territory-max-points"), Math.max(getConfig().getInt("diplomacy-close-territory-min-points"), elapsed));
 					break;
 				case IN_WAR:
+					m.value = Math.min(getConfig().getInt("diplomacy-in-war-max-points"), Math.max(getConfig().getInt("diplomacy-in-war-min-points"), elapsed));
 					break;
 				case IN_WAR_WITH_ENEMY:
+					m.value = Math.min(getConfig().getInt("diplomacy-in-war-with-enemy-max-points"), Math.max(getConfig().getInt("diplomacy-in-war-with-enemy-min-points"), elapsed));
 					break;
 				case IN_WAR_WITH_FRIENDS:
+					m.value = Math.min(getConfig().getInt("diplomacy-in-war-with-friends-max-points"), Math.max(getConfig().getInt("diplomacy-in-war-with-friends-min-points"), elapsed));
 					break;
 				case NON_AGGRESSION:
+					m.value = Math.min(getConfig().getInt("diplomacy-non-aggression-max-points"), Math.max(getConfig().getInt("diplomacy-non-aggression-min-points"), elapsed));
 					break;
 				case POWER:
+					m.value = Math.min(getConfig().getInt("diplomacy-power-max-points"), Math.max(getConfig().getInt("diplomacy-power-min-points"), elapsed));
+					break;
+				case PROTECTING:
+					m.value = Math.min(getConfig().getInt("diplomacy-protecting-max-points"), Math.max(getConfig().getInt("diplomacy-protecting-min-points"), elapsed));
+					break;
+				case BEING_PROTECTED:
+					m.value = Math.min(getConfig().getInt("diplomacy-being-protected-max-points"), Math.max(getConfig().getInt("diplomacy-being-protected-min-points"), elapsed));
+					break;
+				case HAS_WAR_GOAL:
+					m.value = Math.min(getConfig().getInt("diplomacy-has-war-goal-max-points"), Math.max(getConfig().getInt("diplomacy-has-war-goal-min-points"), elapsed));
+					break;
+				case TARGET_OF_WAR_GOAL:
+					m.value = Math.min(getConfig().getInt("diplomacy-target-of-war-goal-max-points"), Math.max(getConfig().getInt("diplomacy-target-of-war-goal-min-points"), elapsed));
+					break;
+				case TRUCE:
+					m.value = Math.min(getConfig().getInt("diplomacy-truce-max-points"), Math.max(getConfig().getInt("diplomacy-truce-min-points"), elapsed));
+					break;
+				case NON_AGGRESSION_PACT:
+					m.value = Math.min(getConfig().getInt("diplomacy-non-aggression-pact-max-points"), Math.max(getConfig().getInt("diplomacy-non-aggression-pact-min-points"), elapsed));
+					break;
+				case IN_FEDERATION:
+					m.value = Math.min(getConfig().getInt("diplomacy-in-federation-max-points"), Math.max(getConfig().getInt("diplomacy-in-federation-min-points"), elapsed));
+					break;
+				case FEDERATION_ALLY:
+					m.value = Math.min(getConfig().getInt("diplomacy-federation-ally-max-points"), Math.max(getConfig().getInt("diplomacy-federation-ally-min-points"), elapsed));
+					break;
+				case FEDERATION_ENEMY:
+					m.value = Math.min(getConfig().getInt("diplomacy-federation-enemy-max-points"), Math.max(getConfig().getInt("diplomacy-federation-enemy-min-points"), elapsed));
 					break;
 				default:
 					break;
@@ -199,6 +238,10 @@ public class FactionDiplomacyEntity implements LogInterface {
 		checkReactions();
 		setChanged();
 		setNTChanged();
+	}
+
+	private boolean isNPCFaction() {
+		return getFaction().isNPC() || dbId < 0;
 	}
 
 	private void checkReactions() {
@@ -214,38 +257,116 @@ public class FactionDiplomacyEntity implements LogInterface {
 
 	private boolean executeReaction(FactionDiplomacyReaction r) {
 		switch(r.reaction) {
-			case ACCEPT_ALLIANCE_OFFER:
+			case OFFER_NON_AGGRESSION_PACT:
 				if(isFaction()) {
-					for(FactionRelationOffer k : ((GameServerState) getFaction().getState()).getFactionManager().getRelationShipOffers().values()) {
-						if(k.rel == RType.FRIEND.code && k.b == getFaction().getIdFaction()) {
-							FactionRelationOfferAcceptOrDecline rl =
-									new FactionRelationOfferAcceptOrDecline("ADMIN", k.getCode(), true);
-							state.getFactionManager().getToAddFactionRelationOfferAccepts().add(rl);
+					if(isNPCFaction()) {
+						FactionRelationOfferAcceptOrDecline offer;
+						RType relation = state.getFactionManager().getRelation(getFaction().getIdFaction(), (int) dbId);
+						if(relation.equals(RType.NEUTRAL)) {
+							offer = new FactionRelationOfferAcceptOrDecline("ADMIN", FactionRelationOffer.getOfferCode(getFaction().getIdFaction(), (int) dbId), true);
+							log("Faction accepted non-aggression pact offer", LogLevel.NORMAL);
+							getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.ACCEPT_NON_AGGRESSION_PACT, (int) dbId);
+						} else {
+							offer = new FactionRelationOfferAcceptOrDecline("ADMIN", FactionRelationOffer.getOfferCode(getFaction().getIdFaction(), (int) dbId), false);
+							log("Faction declined non-aggression pact offer", LogLevel.NORMAL);
+							getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.REJECT_NON_AGRESSION_PACT, (int) dbId);
+						}
+						state.getFactionManager().getToAddFactionRelationOfferAccepts().add(offer);
+					} else {
+						FactionRelationOffer offer = new FactionRelationOffer();
+						offer.a = getFaction().getIdFaction();
+						offer.b = (int) dbId;
+						offer.rel = RType.NON_AGGRESSION_PACT.code;
+						state.getFactionManager().getRelationOffersToAdd().add(offer);
+					}
+				}
+				return true;
+			case ACCEPT_NON_AGGRESSION_PACT:
+				if(isFaction() && !isNPCFaction()) getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.ACCEPT_NON_AGGRESSION_PACT, (int) dbId);
+				return true;
+			case REJECT_NON_AGGRESSION_PACT:
+				if(isFaction() && !isNPCFaction()) getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.REJECT_NON_AGRESSION_PACT, (int) dbId);
+				return false;
+			case REMOVE_NON_AGGRESSION_PACT:
+				if(isFaction() && !isNPCFaction()) getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.REMOVE_NON_AGGRESSION_PACT, (int) dbId);
+				return false;
+			case OFFER_ALLIANCE:
+				if(isFaction()) {
+					if(isNPCFaction()) {
+						FactionRelationOfferAcceptOrDecline offer;
+						RType relation = state.getFactionManager().getRelation(getFaction().getIdFaction(), (int) dbId);
+						if(relation.equals(RType.NEUTRAL) && getDiplomacy().entities.get((int) dbId).getPoints() >= 30) {
+							offer = new FactionRelationOfferAcceptOrDecline("ADMIN", FactionRelationOffer.getOfferCode(getFaction().getIdFaction(), (int) dbId), true);
 							log("Faction accepted alliance offer", LogLevel.NORMAL);
-							return true;
+							getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.ACCEPT_ALLIANCE, (int) dbId);
+						} else {
+							offer = new FactionRelationOfferAcceptOrDecline("ADMIN", FactionRelationOffer.getOfferCode(getFaction().getIdFaction(), (int) dbId), false);
+							log("Faction declined alliance offer", LogLevel.NORMAL);
+							getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.REJECT_ALLIANCE, (int) dbId);
 						}
+						state.getFactionManager().getToAddFactionRelationOfferAccepts().add(offer);
+					} else {
+						FactionRelationOffer offer = new FactionRelationOffer();
+						offer.a = getFaction().getIdFaction();
+						offer.b = (int) dbId;
+						offer.rel = RType.FRIEND.code;
+						state.getFactionManager().getRelationOffersToAdd().add(offer);
 					}
 				}
-				return false;
+				return true;
+			case ACCEPT_ALLIANCE_OFFER:
+				if(isFaction() && !isNPCFaction()) getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.ACCEPT_ALLIANCE, (int) dbId);
+				return true;
 			case REJECT_ALLIANCE_OFFER:
+				if(isFaction() && !isNPCFaction()) getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.REJECT_ALLIANCE, (int) dbId);
+				return false;
+			case REMOVE_ALLIANCE:
+				if(isFaction() && !isNPCFaction()) getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.ALLIANCE_CANCEL, (int) dbId);
+				return false;
+			case OFFER_PEACE_DEAL:
 				if(isFaction()) {
-					for(FactionRelationOffer k : ((GameServerState) getFaction().getState()).getFactionManager().getRelationShipOffers().values()) {
-						if(k.rel == RType.FRIEND.code && k.b == getFaction().getIdFaction()) {
-							FactionRelationOfferAcceptOrDecline rl =
-									new FactionRelationOfferAcceptOrDecline("ADMIN", k.getCode(), false);
-							state.getFactionManager().getToAddFactionRelationOfferAccepts().add(rl);
-							log("Faction rejected alliance offer", LogLevel.NORMAL);
-							return true;
+					if(isNPCFaction()) {
+						//FactionRelationOfferAcceptOrDecline offer;
+						RType relation = state.getFactionManager().getRelation(getFaction().getIdFaction(), (int) dbId);
+						if(relation.equals(RType.ENEMY)) {
+							//Todo: Calculate war score
+							//offer = new FactionRelationOfferAcceptOrDecline("ADMIN", FactionRelationOffer.getOfferCode(getFaction().getIdFaction(), (int) dbId), true);
+							//log("Faction accepted alliance offer", LogLevel.NORMAL);
+							//getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.ACCEPT_ALLIANCE, (int) dbId);
+						} else {
+							//offer = new FactionRelationOfferAcceptOrDecline("ADMIN", FactionRelationOffer.getOfferCode(getFaction().getIdFaction(), (int) dbId), false);
+							//log("Faction declined alliance offer", LogLevel.NORMAL);
+							//getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.REJECT_ALLIANCE, (int) dbId);
 						}
+						//state.getFactionManager().getToAddFactionRelationOfferAccepts().add(offer);
+					} else {
+						FactionRelationOffer offer = new FactionRelationOffer();
+						offer.a = getFaction().getIdFaction();
+						offer.b = (int) dbId;
+						offer.rel = RType.NEUTRAL.code;
+						state.getFactionManager().getRelationOffersToAdd().add(offer);
 					}
 				}
-				return false;
+				return true;
 			case ACCEPT_PEACE_OFFER:
+				if(isFaction() && !isNPCFaction()) getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.ACCEPT_PEACE_OFFER, (int) dbId);
+				return true;
+			case REJECT_PEACE_OFFER:
+				if(isFaction() && !isNPCFaction()) getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.REJECT_PEACE_OFFER, (int) dbId);
+				return false;
+			case DECLARE_WAR:
+				if(getFaction().getRelationshipWithFactionOrPlayer(dbId) != RType.ENEMY) {
+					getFaction().declareWarAgainstEntity(dbId);
+					//Todo: War goal system
+					return true;
+				} else return false;
+
+			/*
+				case ACCEPT_PEACE_OFFER:
 				if(isFaction()) {
 					for(FactionRelationOffer k : ((GameServerState) getFaction().getState()).getFactionManager().getRelationShipOffers().values()) {
 						if(k.rel == RType.NEUTRAL.code && k.b == getFaction().getIdFaction()) {
-							FactionRelationOfferAcceptOrDecline rl =
-									new FactionRelationOfferAcceptOrDecline("ADMIN", k.getCode(), true);
+							FactionRelationOfferAcceptOrDecline rl = new FactionRelationOfferAcceptOrDecline("ADMIN", k.getCode(), true);
 							state.getFactionManager().getToAddFactionRelationOfferAccepts().add(rl);
 							log("Faction accepted peace offer", LogLevel.NORMAL);
 							return true;
@@ -257,8 +378,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 				if(isFaction()) {
 					for(FactionRelationOffer k : ((GameServerState) getFaction().getState()).getFactionManager().getRelationShipOffers().values()) {
 						if(k.rel == RType.FRIEND.code && k.b == getFaction().getIdFaction()) {
-							FactionRelationOfferAcceptOrDecline rl =
-									new FactionRelationOfferAcceptOrDecline("ADMIN", k.getCode(), false);
+							FactionRelationOfferAcceptOrDecline rl = new FactionRelationOfferAcceptOrDecline("ADMIN", k.getCode(), false);
 							state.getFactionManager().getToAddFactionRelationOfferAccepts().add(rl);
 							log("Faction rejected peace offer", LogLevel.NORMAL);
 							return true;
@@ -372,6 +492,8 @@ public class FactionDiplomacyEntity implements LogInterface {
 					}
 				}
 				return false;
+
+			 */
 			case SEND_POPUP_MESSAGE:
 				if(! reactionsFired.containsKey(r.index)) {
 					if(isSinglePlayer()) {
@@ -421,7 +543,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 		return mod == null ? - 1 : mod.totalTimeApplied;
 	}
 
-	public long persistedActionModifier(DiplActionType action) {
+	public long persistedActionModifier(FactionDiplomacyAction.DiploActionType action) {
 		FactionDiplomacyTurnMod mod = dynamicMap.get(action);
 		return mod == null ? - 1 : mod.totalElapsedTime;
 	}
@@ -480,7 +602,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 					return alliances;
 				} else return 0;
 			case CLOSE_TERRITORY:
-				DiplomacyAction dd = actions.get((byte) DiplActionType.TERRITORY.ordinal());
+				DiplomacyAction dd = actions.get((byte) FactionDiplomacyAction.DiploActionType.TERRITORY.ordinal());
 				if(dd != null && dd.counter > 0) {
 					return 1;
 				} else {
@@ -536,7 +658,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 				return warsWFriends;
 
 			case NON_AGGRESSION:
-				DiplomacyAction diplomacyAction = actions.get((byte) DiplActionType.ATTACK.ordinal());
+				DiplomacyAction diplomacyAction = actions.get((byte) FactionDiplomacyAction.DiploActionType.ATTACK.ordinal());
 				if(diplomacyAction == null || diplomacyAction.counter < 1) {
 					return 1;
 				} else {
@@ -554,7 +676,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 		return getDiplomacy().faction;
 	}
 
-	private void calculateDynamicModifier(long timeElapsed, Object2ObjectOpenHashMap<DiplActionType, FactionDiplomacyTurnMod> dynamicMap2, DiplActionType action) {
+	private void calculateDynamicModifier(long timeElapsed, Object2ObjectOpenHashMap<FactionDiplomacyAction.DiploActionType, FactionDiplomacyTurnMod> dynamicMap2, FactionDiplomacyAction.DiploActionType action) {
 		int upperOrig = getConfig().getInt("diplomacy-dynamic-upper");
 		int lowerOrig = getConfig().getInt("diplomacy-dynamic-lower");
 
@@ -631,12 +753,12 @@ public class FactionDiplomacyEntity implements LogInterface {
 		}
 	}
 
-	public int getActionCount(FactionDiplomacyAction.DiplActionType type) {
+	public int getActionCount(FactionDiplomacyAction.DiploActionType type) {
 		FactionDiplomacyAction action = actions.get((byte) type.ordinal());
 		return action == null ? 0 : action.counter;
 	}
 
-	public void diplomacyAction(FactionDiplomacyAction.DiplActionType type) {
+	public void diplomacyAction(FactionDiplomacyAction.DiploActionType type) {
 		FactionDiplomacyAction action = actions.get((byte) type.ordinal());
 		if(action == null) {
 			action = new FactionDiplomacyAction();
@@ -645,7 +767,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 		}
 
 		log("Faction action modifier triggered: " + action.type.name(), LogLevel.DEBUG);
-		if(isFaction() && (action.type == DiplActionType.ATTACK || action.type == DiplActionType.DECLARATION_OF_WAR)) {
+		if(isFaction() && (action.type == FactionDiplomacyAction.DiploActionType.ATTACK || action.type == FactionDiplomacyAction.DiploActionType.DECLARATION_OF_WAR)) {
 			FactionRelationOffer offer = state.getFactionManager().getRelationShipOffers().get(FactionRelationOffer.getCode(getFaction().getIdFaction(), (int) dbId));
 			if(offer != null) {
 				//remove offer since there was aggression
@@ -743,7 +865,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 			byte key = m[0].getByte();
 			FactionDiplomacyTurnMod s = new FactionDiplomacyTurnMod();
 			s.fromTag(m[1]);
-			dynamicMap.put(DiplActionType.values()[key], s);
+			dynamicMap.put(FactionDiplomacyAction.DiploActionType.values()[key], s);
 		}
 	}
 
@@ -814,7 +936,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 
 		int i = 0;
 
-		for(Entry<DiplActionType, FactionDiplomacyTurnMod> e : dynamicMap.entrySet()) {
+		for(Entry<FactionDiplomacyAction.DiploActionType, FactionDiplomacyTurnMod> e : dynamicMap.entrySet()) {
 			t[i++] = new Tag(Type.STRUCT, null, new Tag[]{
 					new Tag(Type.BYTE, null, (byte) e.getKey().ordinal()),
 					e.getValue().toTag(),
@@ -860,7 +982,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 		return b.toString();
 	}
 
-	public Object2ObjectOpenHashMap<DiplActionType, FactionDiplomacyTurnMod> getDynamicMap() {
+	public Object2ObjectOpenHashMap<FactionDiplomacyAction.DiploActionType, FactionDiplomacyTurnMod> getDynamicMap() {
 		return dynamicMap;
 	}
 
@@ -993,6 +1115,12 @@ public class FactionDiplomacyEntity implements LogInterface {
 			@Override
 			public String getName(Enum anEnum) {
 				return Lng.str("They are protecting us");
+			}
+		}),
+		TRUCE(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("We have a truce with them");
 			}
 		});
 

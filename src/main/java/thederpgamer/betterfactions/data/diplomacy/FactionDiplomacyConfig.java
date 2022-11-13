@@ -4,15 +4,13 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.schema.common.config.ConfigParserException;
-import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyAction.DiplActionType;
-import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyCondition;
 import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyCondition.ConditionType;
-import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyConditionGroup;
-import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyConditionGroup.ConditionMod;
 import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyReaction;
 import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyReaction.ConditionReaction;
 import org.schema.game.server.data.simulation.npc.diplomacy.NPCDiplomacyEntity.DiplStatusType;
 import org.w3c.dom.*;
+import thederpgamer.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
+import thederpgamer.betterfactions.manager.FactionDiplomacyManager;
 
 import java.util.List;
 import java.util.Locale;
@@ -20,162 +18,27 @@ import java.util.Locale;
 public class FactionDiplomacyConfig {
 	public static final byte VERSION = 2;
 	public final List<FactionDiplomacyReaction> reactions = new ObjectArrayList<>();
-	public final Object2LongOpenHashMap<DiplActionType> actionTimeoutMap = new Object2LongOpenHashMap<DiplActionType>();
+	public final Object2LongOpenHashMap<FactionDiplomacyAction.DiploActionType> actionTimeoutMap = new Object2LongOpenHashMap<FactionDiplomacyAction.DiploActionType>();
 	private final Int2ObjectOpenHashMap<DiplomacyConfigElement> map = new Int2ObjectOpenHashMap<DiplomacyConfigElement>();
 	public byte version = 0;
 
 	public FactionDiplomacyConfig() {
-		for(DiplActionType t : DiplActionType.values()) actionTimeoutMap.put(t, 60000 * 5);
-		for(DiplActionType t : DiplActionType.values()) {
+		for(FactionDiplomacyAction.DiploActionType t : FactionDiplomacyAction.DiploActionType.values()) actionTimeoutMap.put(t, 60000 * 5);
+		for(FactionDiplomacyAction.DiploActionType t : FactionDiplomacyAction.DiploActionType.values()) {
 			DiplomacyConfigElement c = new DiplomacyConfigElement();
 			c.actionType = t;
-			switch(t) {
-				case ALLIANCE_WITH_ENEMY:
-					c.upperLimit = - 10;
-					c.lowerLimit = 0;
-					c.value = - 10;
-					break;
-				case ALLIANCE_CANCEL:
-					c.upperLimit = - 10;
-					c.lowerLimit = 0;
-					c.value = - 10;
-					break;
-				case ALLIANCE_REQUEST:
-					c.upperLimit = 0;
-					c.lowerLimit = 0;
-				{
-					DiplomacyReaction dr = new DiplomacyReaction(- 1);
-					dr.reaction = ConditionReaction.ACCEPT_ALLIANCE_OFFER;
-					dr.condition = new DiplomacyConditionGroup();
-					dr.condition.mod = ConditionMod.AND;
-					{
-						DiplomacyCondition r = new DiplomacyCondition();
-						r.type = ConditionType.RAW_POINTS;
-						r.argumentValue = 1000;
-						dr.condition.conditions.add(r);
-					}
-					{
-						DiplomacyCondition r = new DiplomacyCondition();
-						r.type = ConditionType.STATUS_PERSISTED;
-						r.argumentStatus = DiplStatusType.NON_AGGRESSION;
-						r.argumentValue = 30 * 60 * 1000; //30 min
-						dr.condition.conditions.add(r);
-					}
-					c.reaction = dr;
-				}
-				break;
-				case ATTACK:
-					c.upperLimit = - 500;
-					c.lowerLimit = 0;
-					c.value = - 50;
-					break;
-				case ATTACK_ENEMY:
-					c.upperLimit = 500;
-					c.lowerLimit = 0;
-					c.value = 50;
-					break;
-				case DECLARATION_OF_WAR:
-					c.upperLimit = - 1000;
-					c.lowerLimit = 0;
-					c.value = - 1000;
-					break;
-				case MINING:
-					c.upperLimit = - 30;
-					c.lowerLimit = 0;
-					c.value = - 30;
-					break;
-				case PEACE_OFFER:
-					c.upperLimit = 0;
-					c.lowerLimit = 0;
-				{
-					DiplomacyReaction dr = new DiplomacyReaction(- 1);
-					dr.reaction = ConditionReaction.ACCEPT_PEACE_OFFER;
-					dr.condition = new DiplomacyConditionGroup();
-					dr.condition.mod = ConditionMod.AND;
-					{
-						DiplomacyCondition r = new DiplomacyCondition();
-						r.type = ConditionType.RAW_POINTS;
-						r.argumentValue = - 500;
-						dr.condition.conditions.add(r);
-					}
-					{
-						DiplomacyCondition r = new DiplomacyCondition();
-						r.type = ConditionType.STATUS_PERSISTED;
-						r.argumentStatus = DiplStatusType.NON_AGGRESSION;
-						r.argumentValue = 30 * 60 * 1000; //30 min
-						dr.condition.conditions.add(r);
-					}
-					c.reaction = dr;
-				}
-
-				break;
-				case TERRITORY:
-					c.upperLimit = - 300;
-					c.lowerLimit = 0;
-					c.value = - 1;
-					break;
-				case TRADING_WITH_US:
-					c.upperLimit = 300;
-					c.lowerLimit = 0;
-					c.value = 1;
-					break;
-				case TRADING_WITH_ENEMY:
-					c.upperLimit = 0;
-					c.lowerLimit = - 200;
-					c.value = - 1;
-					break;
-				default:
-					break;
-
-			}
+			c.value = FactionDiplomacyManager.getActionValue(t);
+			c.upperLimit = c.value; //Todo: Upper and lower modifier values
+			c.lowerLimit = c.value;
 			put(t, c);
 		}
 
-		for(DiplStatusType t : DiplStatusType.values()) {
+		for(FactionDiplomacyEntity.DiploStatusType t : FactionDiplomacyEntity.DiploStatusType.values()) {
 			DiplomacyConfigElement c = new DiplomacyConfigElement();
 			c.statusType = t;
-			switch(t) {
-				case ALLIANCE:
-					c.value = 1000;
-					break;
-				case ALLIANCE_WITH_ENEMY:
-					c.value = - 500;
-					break;
-				case CLOSE_TERRITORY:
-					c.value = - 100;
-					break;
-				case IN_WAR:
-					c.value = - 10000;
-					break;
-				case IN_WAR_WITH_ENEMY:
-					c.value = 500;
-					break;
-				case PIRATE:
-					//dont use this by default
-					continue;
-				case POWER:
-					c.value = 1;
-					break;
-				case NON_AGGRESSION:
-					c.value = 1;
-					break;
-				case ALLIANCE_WITH_FRIENDS:
-					c.value = 10;
-					break;
-				case IN_WAR_WITH_FRIENDS:
-					c.value = - 10;
-					break;
-				case FACTION_MEMBER_AT_WAR_WITH_US:
-					c.value = - 500;
-					break;
-				case FACTION_MEMBER_WE_DONT_LIKE:
-					c.value = - 50;
-					break;
-				default:
-					c.value = - 123;
-					break;
-
-			}
+			c.value = FactionDiplomacyManager.getDiplomacyValue(t);
+			c.upperLimit = c.value; //Todo: Upper and lower modifier values
+			c.lowerLimit = c.value;
 			put(t, c);
 		}
 	}
@@ -190,7 +53,7 @@ public class FactionDiplomacyConfig {
 						+ "which are executed on action/status turn.");
 		pp.appendChild(comment);
 		pp.appendChild(config.createComment("Status Types: " + DiplStatusType.list()));
-		pp.appendChild(config.createComment("Action Types: " + DiplActionType.list()));
+		pp.appendChild(config.createComment("Action Types: " + FactionDiplomacyAction.DiploActionType.list()));
 		pp.appendChild(config.createComment("Reaction Types: " + ConditionReaction.list()));
 		pp.appendChild(config.createComment("Condition Types: " + ConditionType.list()));
 
@@ -206,7 +69,7 @@ public class FactionDiplomacyConfig {
 
 		Element actTO = config.createElement("ActionTimeouts");
 		actTO.appendChild(config.createComment("How long actions are valid in milliseconds."));
-		for(DiplActionType b : DiplActionType.values()) {
+		for(FactionDiplomacyAction.DiploActionType b : FactionDiplomacyAction.DiploActionType.values()) {
 			Element cc = config.createElement(b.name().substring(0, 1) + b.name().substring(1).toLowerCase(Locale.ENGLISH));
 			cc.setTextContent(String.valueOf(actionTimeoutMap.get(b)));
 			actTO.appendChild(cc);
@@ -216,14 +79,14 @@ public class FactionDiplomacyConfig {
 		Element dpl = config.createElement("DiplomacyElement");
 
 		boolean has = false;
-		for(DiplActionType b : DiplActionType.values()) {
+		for(FactionDiplomacyAction.DiploActionType b : FactionDiplomacyAction.DiploActionType.values()) {
 			DiplomacyConfigElement elem = get(b);
 			if(elem != null) {
 				elem.appendXML(config, dpl, b);
 				has = true;
 			}
 		}
-		for(DiplStatusType b : DiplStatusType.values()) {
+		for(FactionDiplomacyEntity.DiploStatusType b : FactionDiplomacyEntity.DiploStatusType.values()) {
 			DiplomacyConfigElement elem = get(b);
 			if(elem != null) {
 				elem.appendXML(config, dpl, b);
@@ -264,7 +127,7 @@ public class FactionDiplomacyConfig {
 					Node item = diplChilds.item(c);
 					if(item.getNodeType() == Node.ELEMENT_NODE) {
 						try {
-							DiplActionType d = DiplActionType.valueOf(item.getNodeName().toUpperCase(Locale.ENGLISH));
+							FactionDiplomacyAction.DiploActionType d = FactionDiplomacyAction.DiploActionType.valueOf(item.getNodeName().toUpperCase(Locale.ENGLISH));
 							long ms = Long.parseLong(item.getTextContent());
 							actionTimeoutMap.put(d, ms);
 						} catch(Exception e) {
@@ -363,7 +226,6 @@ public class FactionDiplomacyConfig {
 				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.PROTECTING;
 				diplomacyReaction.condition.conditions.add(condition);
 			}
-
 			reactions.add(diplomacyReaction);
 		}
 
@@ -380,12 +242,85 @@ public class FactionDiplomacyConfig {
 				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.IN_WAR;
 				diplomacyReaction.condition.conditions.add(condition);
 			}
+			reactions.add(diplomacyReaction);
+		}
 
+		{ //Rescind peace deal
+			FactionDiplomacyReaction diplomacyReaction = new FactionDiplomacyReaction(i++);
+			diplomacyReaction.reaction = FactionDiplomacyReaction.ConditionReaction.REMOVE_PEACE_DEAL_OFFER;
+			diplomacyReaction.name = "Rescind Peace Deal";
+			diplomacyReaction.condition = new FactionDiplomacyConditionGroup();
+			diplomacyReaction.condition.mod = FactionDiplomacyConditionGroup.ConditionMod.AND;
+
+			{ //Has peace deal offer
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.type = FactionDiplomacyCondition.ConditionType.ACTION_COUNTER;
+				condition.argumentValue = 1;
+				condition.argumentAction = FactionDiplomacyAction.DiploActionType.PEACE_OFFER;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+			reactions.add(diplomacyReaction);
+		}
+
+		{ //Reject peace deal
+			FactionDiplomacyReaction diplomacyReaction = new FactionDiplomacyReaction(i++);
+			diplomacyReaction.reaction = FactionDiplomacyReaction.ConditionReaction.REJECT_PEACE_OFFER;
+			diplomacyReaction.name = "Reject Peace Deal";
+
+			{ //Has peace deal offer
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.type = FactionDiplomacyCondition.ConditionType.ACTION_COUNTER;
+				condition.argumentValue = 1;
+				condition.argumentAction = FactionDiplomacyAction.DiploActionType.PEACE_OFFER;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+
+			{ //Is at war
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.IN_WAR;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
 			reactions.add(diplomacyReaction);
 		}
 
 		{ //Improve relations
-			
+			FactionDiplomacyReaction diplomacyReaction = new FactionDiplomacyReaction(i++);
+			diplomacyReaction.reaction = FactionDiplomacyReaction.ConditionReaction.IMPROVE_RELATIONS;
+			diplomacyReaction.name = "Improve Relations";
+			diplomacyReaction.condition = new FactionDiplomacyConditionGroup();
+			diplomacyReaction.condition.mod = FactionDiplomacyConditionGroup.ConditionMod.AND;
+
+			{ //Not at war
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.IN_WAR;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+
+			{ //Relationship between -300 and 300
+				FactionDiplomacyConditionGroup conditionGroup = new FactionDiplomacyConditionGroup();
+				conditionGroup.mod = FactionDiplomacyConditionGroup.ConditionMod.AND;
+
+				{ //Relationship > -300
+					FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+					condition.type = FactionDiplomacyCondition.ConditionType.TOTAL_POINTS;
+					condition.argumentValue = -300;
+					conditionGroup.conditions.add(condition);
+				}
+
+				{ //Relationship < 300
+					FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+					condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+					condition.type = FactionDiplomacyCondition.ConditionType.TOTAL_POINTS;
+					condition.argumentValue = 300;
+					conditionGroup.conditions.add(condition);
+				}
+
+				diplomacyReaction.condition.conditions.add(conditionGroup);
+			}
+			reactions.add(diplomacyReaction);
 		}
 
 		{ //Offer non-aggression
@@ -429,6 +364,7 @@ public class FactionDiplomacyConfig {
 					conditionGroup.conditions.add(condition);
 				}
 			}
+			reactions.add(diplomacyReaction);
 		}
 
 		{ //Offer alliance
@@ -474,46 +410,90 @@ public class FactionDiplomacyConfig {
 
 				diplomacyReaction.condition.conditions.add(conditionGroup);
 			}
+			reactions.add(diplomacyReaction);
+		}
+
+		{ //Rescind Alliance Offer
+			FactionDiplomacyReaction diplomacyReaction = new FactionDiplomacyReaction(i++);
+			diplomacyReaction.reaction = FactionDiplomacyReaction.ConditionReaction.REMOVE_ALLIANCE_OFFER;
+			diplomacyReaction.name = "Rescind Alliance Offer";
+			diplomacyReaction.condition = new FactionDiplomacyConditionGroup();
+			diplomacyReaction.condition.mod = FactionDiplomacyConditionGroup.ConditionMod.AND;
+
+			{ //Has alliance offer
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_ACTION;
+				condition.argumentAction = FactionDiplomacyAction.DiploActionType.ALLIANCE_REQUEST;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+
+			{ //Not allied
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.ALLIANCE;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+
+			{ //Not in federation
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.IN_FEDERATION;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+			reactions.add(diplomacyReaction);
+		}
+
+		{ //Reject Alliance offer
+			FactionDiplomacyReaction diplomacyReaction = new FactionDiplomacyReaction(i++);
+			diplomacyReaction.reaction = FactionDiplomacyReaction.ConditionReaction.REJECT_ALLIANCE_OFFER;
+			diplomacyReaction.name = "Reject Alliance Offer";
+			diplomacyReaction.condition = new FactionDiplomacyConditionGroup();
+			diplomacyReaction.condition.mod = FactionDiplomacyConditionGroup.ConditionMod.AND;
+
+			{ //Not allied
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.ALLIANCE;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+
+			{ //Not in federation
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.IN_FEDERATION;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+			reactions.add(diplomacyReaction);
+		}
+
+		{ //Remove Alliance
+			FactionDiplomacyReaction diplomacyReaction = new FactionDiplomacyReaction(i++);
+			diplomacyReaction.reaction = FactionDiplomacyReaction.ConditionReaction.REMOVE_ALLIANCE;
+			diplomacyReaction.name = "Remove Alliance";
+			diplomacyReaction.condition = new FactionDiplomacyConditionGroup();
+			diplomacyReaction.condition.mod = FactionDiplomacyConditionGroup.ConditionMod.AND;
+
+			{ //Allied
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.ALLIANCE;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+
+			{ //Not in federation
+				FactionDiplomacyCondition condition = new FactionDiplomacyCondition();
+				condition.mod = FactionDiplomacyConditionGroup.ConditionMod.NOT;
+				condition.type = FactionDiplomacyCondition.ConditionType.EXISTS_STATUS;
+				condition.argumentStatus = FactionDiplomacyEntity.DiploStatusType.IN_FEDERATION;
+				diplomacyReaction.condition.conditions.add(condition);
+			}
+			reactions.add(diplomacyReaction);
 		}
 		/*
-		{
-			FactionDiplomacyReaction r = new FactionDiplomacyReaction(i++);
-			r.name = "Offer Alliance";
-			r.reaction = FactionDiplomacyReaction.ConditionReaction.OFFER_ALLIANCE;
-			r.condition = new FactionDiplomacyConditionGroup();
-			r.condition.mod = FactionDiplomacyConditionGroup.ConditionMod.AND;
-			{
-				FactionDiplomacyCondition d = new FactionDiplomacyCondition();
-				d.type = FactionDiplomacyCondition.ConditionType.TOTAL_POINTS;
-				d.argumentValue = 1000;
-				r.condition.conditions.add(d);
-			}
-			{
-				FactionDiplomacyCondition d = new FactionDiplomacyCondition();
-				d.type = FactionDiplomacyCondition.ConditionType.STATUS_PERSISTED;
-				d.argumentStatus = FactionDiplomacyEntity.DiploStatusType.NON_AGGRESSION;
-				d.argumentValue = 120 * 60 * 1000;
-				r.condition.conditions.add(d);
-			}
-			reactions.add(r);
-		}
-
-		{
-			FactionDiplomacyReaction r = new FactionDiplomacyReaction(i++);
-			r.reaction = FactionDiplomacyReaction.ConditionReaction.REMOVE_ALLIANCE_OFFER;
-			r.name = "Remove Alliance Offer";
-			r.condition = new FactionDiplomacyConditionGroup();
-			r.condition.mod = FactionDiplomacyConditionGroup.ConditionMod.AND;
-
-			{
-				FactionDiplomacyCondition d = new FactionDiplomacyCondition();
-				d.type = FactionDiplomacyCondition.ConditionType.ACTION_COUNTER;
-				d.argumentAction = DiplomacyAction.DiplActionType.ATTACK;
-				d.argumentValue = 1;
-				r.condition.conditions.add(d);
-			}
-			reactions.add(r);
-		}
 		{
 			FactionDiplomacyReaction r = new FactionDiplomacyReaction(i++);
 			r.name = "Remove Peace Deal Offer";
@@ -524,7 +504,7 @@ public class FactionDiplomacyConfig {
 			{
 				FactionDiplomacyCondition d = new FactionDiplomacyCondition();
 				d.type = FactionDiplomacyCondition.ConditionType.ACTION_COUNTER;
-				d.argumentAction = DiplActionType.ATTACK;
+				d.argumentAction = DiploActionType.ATTACK;
 				d.argumentValue = 1;
 				r.condition.conditions.add(d);
 			}
@@ -568,7 +548,7 @@ public class FactionDiplomacyConfig {
 			{
 				FactionDiplomacyCondition d = new FactionDiplomacyCondition();
 				d.type =FactionDiplomacyCondition.ConditionType.ACTION_COUNTER;
-				d.argumentAction = DiplActionType.ATTACK;
+				d.argumentAction = DiploActionType.ATTACK;
 				d.argumentValue = 1;
 				r.condition.conditions.add(d);
 			}
@@ -583,7 +563,7 @@ public class FactionDiplomacyConfig {
 			{
 				FactionDiplomacyCondition d = new FactionDiplomacyCondition();
 				d.type = FactionDiplomacyCondition.ConditionType.ACTION_COUNTER;
-				d.argumentAction = DiplActionType.ATTACK;
+				d.argumentAction = DiploActionType.ATTACK;
 				d.argumentValue = 3;
 				r.condition.conditions.add(d);
 			}
@@ -592,33 +572,33 @@ public class FactionDiplomacyConfig {
 		 */
 	}
 
-	public int getIndex(DiplActionType action) {
+	public int getIndex(FactionDiplomacyAction.DiploActionType action) {
 		return (1000 * (action.ordinal() + 1));
 	}
 
-	public int getIndex(DiplStatusType status) {
+	public int getIndex(FactionDiplomacyEntity.DiploStatusType status) {
 		return (1000000 * (status.ordinal() + 1));
 	}
 
-	public DiplomacyConfigElement get(DiplActionType action) {
+	public DiplomacyConfigElement get(FactionDiplomacyAction.DiploActionType action) {
 		return map.get(getIndex(action));
 	}
 
-	public DiplomacyConfigElement get(DiplStatusType status) {
+	public DiplomacyConfigElement get(FactionDiplomacyEntity.DiploStatusType status) {
 		return map.get(getIndex(status));
 	}
 
-	public DiplomacyConfigElement put(DiplActionType action, DiplomacyConfigElement p) {
+	public DiplomacyConfigElement put(FactionDiplomacyAction.DiploActionType action, DiplomacyConfigElement p) {
 		return map.put(getIndex(action), p);
 	}
 
-	public DiplomacyConfigElement put(DiplStatusType status, DiplomacyConfigElement p) {
+	public DiplomacyConfigElement put(FactionDiplomacyEntity.DiploStatusType status, DiplomacyConfigElement p) {
 		return map.put(getIndex(status), p);
 	}
 
 	public class DiplomacyConfigElement {
-		public DiplStatusType statusType;
-		public DiplActionType actionType;
+		public FactionDiplomacyEntity.DiploStatusType statusType;
+		public FactionDiplomacyAction.DiploActionType actionType;
 		public int upperLimit = 30;
 		public int lowerLimit = 0;
 		public int value = 0;
@@ -759,13 +739,7 @@ public class FactionDiplomacyConfig {
 										+ node.getParentNode().getNodeName());
 					}
 
-					DiplActionType t = DiplActionType.valueOf(name.toUpperCase(Locale.ENGLISH));
-					if(t == null) {
-						throw new ConfigParserException(
-								"Unknown DiplActionType: " + name + "; " + node.getNodeName() + "; "
-										+ node.getParentNode().getNodeName());
-					}
-					this.actionType = t;
+					this.actionType = FactionDiplomacyAction.DiploActionType.valueOf(name.toUpperCase(Locale.ENGLISH));
 					this.upperLimit = upperLim.intValue();
 					this.lowerLimit = lowerLim.intValue();
 					this.nonExistingModifier = nonExt.intValue();
@@ -828,13 +802,7 @@ public class FactionDiplomacyConfig {
 											+ node.getParentNode().getNodeName());
 						}
 
-						DiplStatusType t = DiplStatusType.valueOf(name.toUpperCase(Locale.ENGLISH));
-						if(t == null) {
-							throw new ConfigParserException(
-									"Unknown DiplStatusType: " + name + "; " + node.getNodeName() + "; "
-											+ node.getParentNode().getNodeName());
-						}
-						this.statusType = t;
+						this.statusType = FactionDiplomacyEntity.DiploStatusType.valueOf(name.toUpperCase(Locale.ENGLISH));
 						this.value = value;
 						this.staticTimeoutTurns = timeout;
 						put(statusType, this);
@@ -845,7 +813,7 @@ public class FactionDiplomacyConfig {
 			}
 		}
 
-		public void appendXML(Document config, Element dpl, DiplStatusType b) {
+		public void appendXML(Document config, Element dpl, FactionDiplomacyEntity.DiploStatusType b) {
 			Element s = config.createElement("DiplStatus");
 			Element name = config.createElement("Name");
 			Element to = config.createElement("Timeout");
@@ -865,7 +833,7 @@ public class FactionDiplomacyConfig {
 			dpl.appendChild(s);
 		}
 
-		public void appendXML(Document config, Element dpl, DiplActionType b) {
+		public void appendXML(Document config, Element dpl, FactionDiplomacyAction.DiploActionType b) {
 			Element s = config.createElement("DiplAction");
 			Element name = config.createElement("Name");
 			Element to = config.createElement("UpperLimit");

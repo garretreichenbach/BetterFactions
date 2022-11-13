@@ -1,11 +1,12 @@
 package thederpgamer.betterfactions.data.diplomacy.modifier;
 
-import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyAction.DiplActionType;
-import org.schema.schine.resource.tag.Tag;import org.schema.schine.resource.tag.FinishTag;
+import org.schema.schine.resource.tag.FinishTag;
+import org.schema.schine.resource.tag.Tag;
 import org.schema.schine.resource.tag.Tag.Type;
+import thederpgamer.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
 
 public class FactionDiplomacyTurnMod extends FactionDiplomacyMod {
-	public DiplActionType type;
+	public FactionDiplomacyAction.DiploActionType type;
 	public int pointsPerTurn;
 	public long elapsedTime;
 	public long totalElapsedTime;
@@ -26,7 +27,7 @@ public class FactionDiplomacyTurnMod extends FactionDiplomacyMod {
 
 		pointsPerTurn = t[1].getInt();
 		totalElapsedTime = t[2].getLong();
-		type = DiplActionType.values()[t[3].getByte()];
+		type = FactionDiplomacyAction.DiploActionType.values()[t[3].getByte()];
 	}
 
 	@Override

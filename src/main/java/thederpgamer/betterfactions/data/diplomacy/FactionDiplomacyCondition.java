@@ -2,9 +2,8 @@ package thederpgamer.betterfactions.data.diplomacy;
 
 import org.schema.common.config.ConfigParserException;
 import org.schema.common.util.StringTools;
-import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyAction;
-import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyAction.DiplActionType;
 import org.w3c.dom.*;
+import thederpgamer.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
 
 import java.util.Locale;
 
@@ -36,7 +35,7 @@ public class FactionDiplomacyCondition extends FactionDiplomacyConditionGroup {
 	}
 
 	public ConditionType type;
-	public DiplomacyAction.DiplActionType argumentAction;
+	public FactionDiplomacyAction.DiploActionType argumentAction;
 	public FactionDiplomacyEntity.DiploStatusType argumentStatus;
 	public double argumentValue;
 
@@ -69,7 +68,7 @@ public class FactionDiplomacyCondition extends FactionDiplomacyConditionGroup {
 		FactionDiplomacyCondition r = new FactionDiplomacyCondition();
 		NodeList childNodes = node.getChildNodes();
 
-		DiplomacyAction.DiplActionType act = null;
+		FactionDiplomacyAction.DiploActionType act = null;
 		FactionDiplomacyEntity.DiploStatusType stat = null;
 		Double argVal = null;
 
@@ -85,7 +84,7 @@ public class FactionDiplomacyCondition extends FactionDiplomacyConditionGroup {
 				}
 				if(item.getNodeName().toLowerCase(Locale.ENGLISH).equals("action")){
 					try{
-						act = DiplActionType.valueOf(item.getTextContent().toUpperCase(Locale.ENGLISH));
+						act = FactionDiplomacyAction.DiploActionType.valueOf(item.getTextContent().toUpperCase(Locale.ENGLISH));
 					}catch(Exception e){
 						e.printStackTrace();
 					}

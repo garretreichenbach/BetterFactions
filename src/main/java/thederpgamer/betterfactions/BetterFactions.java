@@ -3,6 +3,7 @@ package thederpgamer.betterfactions;
 import api.listener.events.controller.ClientInitializeEvent;
 import api.mod.StarLoader;
 import api.mod.StarMod;
+import org.apache.commons.io.IOUtils;
 import thederpgamer.betterfactions.data.commands.ForceDiploCommand;
 import thederpgamer.betterfactions.manager.ConfigManager;
 import thederpgamer.betterfactions.manager.EventManager;
@@ -11,9 +12,12 @@ import thederpgamer.betterfactions.utils.DataUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * Main class for BetterFactions mod.
@@ -32,6 +36,9 @@ public class BetterFactions extends StarMod {
 
 	//Data
 	public static Logger log;
+	private static final String[] overwrites = {
+			"FactionRelation"
+	};
 
 	@Override
 	public void onEnable() {
@@ -46,6 +53,14 @@ public class BetterFactions extends StarMod {
 	@Override
 	public void onClientCreated(ClientInitializeEvent event) {
 		super.onClientCreated(event);
+	}
+
+	@Override
+	public byte[] onClassTransform(String className, byte[] byteCode) {
+		for(String name : overwrites) {
+			if(className.endsWith(name)) return overwriteClass(className, byteCode);
+		}
+		return super.onClassTransform(className, byteCode);
 	}
 
 	private void initLogger() {
@@ -105,5 +120,22 @@ public class BetterFactions extends StarMod {
 
 	private void registerCommands() {
 		StarLoader.registerCommand(new ForceDiploCommand());
+	}
+
+	private byte[] overwriteClass(String className, byte[] byteCode) {
+		byte[] bytes = null;
+		try {
+			ZipInputStream file = new ZipInputStream(Files.newInputStream(this.getSkeleton().getJarFile().toPath()));
+			while(true) {
+				ZipEntry nextEntry = file.getNextEntry();
+				if(nextEntry == null) break;
+				if(nextEntry.getName().endsWith(className + ".class")) bytes = IOUtils.toByteArray(file);
+			}
+			file.close();
+		} catch(IOException e) {
+			e.printStackTrace();
+		}
+		if(bytes != null) return bytes;
+		else return byteCode;
 	}
 }

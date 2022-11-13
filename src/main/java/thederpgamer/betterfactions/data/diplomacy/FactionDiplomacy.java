@@ -13,11 +13,11 @@ import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionPermission;
 import org.schema.game.server.data.FactionState;
 import org.schema.game.server.data.GameServerState;
-import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyAction.DiplActionType;
 import org.schema.schine.resource.tag.FinishTag;
 import org.schema.schine.resource.tag.Tag;
 import org.schema.schine.resource.tag.Tag.Type;
 import thederpgamer.betterfactions.BetterFactions;
+import thederpgamer.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
 import thederpgamer.betterfactions.manager.ConfigManager;
 import thederpgamer.betterfactions.manager.FactionDiplomacyManager;
 import thederpgamer.betterfactions.manager.NetworkManager;
@@ -135,7 +135,7 @@ public class FactionDiplomacy extends Observable implements LogInterface {
 		return ConfigManager.getDiplomacyConfig();
 	}
 
-	public void diplomacyAction(DiplActionType type, long otherDbId) {
+	public void diplomacyAction(FactionDiplomacyAction.DiploActionType type, long otherDbId) {
 		FactionDiplomacyEntity e = entities.get(otherDbId);
 		if(e == null){
 			e = new FactionDiplomacyEntity((FactionState) faction.getState(), faction.getIdFaction(), otherDbId);

@@ -3,7 +3,6 @@ package thederpgamer.betterfactions.manager;
 import api.common.GameCommon;
 import api.common.GameServer;
 import api.utils.StarRunnable;
-import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyAction;
 import org.schema.schine.resource.tag.Tag;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.diplomacy.FactionDiplomacy;
@@ -136,9 +135,52 @@ public class FactionDiplomacyManager {
 		}
 	}
 
-	public static int getActionValue(FactionDiplomacyAction.DiplActionType action) {
-		return 0; //TODO: Implement
-	}
+	public static int getActionValue(FactionDiplomacyAction.DiploActionType action) {
+		switch(action) {
+			case ATTACK:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-attack");
+			case ATTACK_ENEMY:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-attack-enemy");
+			case ATTACK_ALLY:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-attack-friend");
+			case MINING:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-mining");
+			case TERRITORY:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-territory");
+			case PEACE_OFFER:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-peace-offer");
+			case ACCEPT_PEACE_OFFER:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-peace-offer-accepted");
+			case REJECT_PEACE_OFFER:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-peace-offer-rejected");
+			case DECLARATION_OF_WAR:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-declaration-of-war");
+			case ALLIANCE_REQUEST:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-alliance-request");
+			case ACCEPT_ALLIANCE:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-alliance-request-accepted");
+			case REJECT_ALLIANCE:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-alliance-request-rejected");
+			case ALLIANCE_CANCEL:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-alliance-cancel");
+			case ALLIANCE_WITH_ENEMY:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-alliance-with-enemy");
+			case ALLIANCE_WITH_FRIEND:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-alliance-with-friend");
+			case TRADING_WITH_US:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-trading-with-us");
+			case TRADING_WITH_ENEMY:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-trading-with-enemy");
+			case ACCEPT_FEDERATION_OFFER:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-federation-offer-accepted");
+			case REJECT_FEDERATION_OFFER:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-federation-offer-rejected");
+			case THREATENING:
+				return ConfigManager.getDiplomacyConfig().getInt("action-values-threatening");
+			default:
+				return 0;
+		}
+}
 
 	public static FactionDiplomacyReaction getReaction(FactionDiplomacyAction action) {
 		return null; //TODO: Implement
@@ -148,7 +190,7 @@ public class FactionDiplomacyManager {
 		return false; //TODO: Implement
 	}
 
-	public static void forceDiplomacyAction(int faction1, int faction2, DiplomacyAction.DiplActionType diplomacyAction) {
+	public static void forceDiplomacyAction(int faction1, int faction2, FactionDiplomacyAction.DiploActionType diplomacyAction) {
 		FactionDiplomacy diplomacy1 = getDiplomacy(faction1);
 		FactionDiplomacy diplomacy2 = getDiplomacy(faction2);
 		diplomacy1.diplomacyAction(diplomacyAction, diplomacy2.faction.getIdFaction());

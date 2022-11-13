@@ -50,7 +50,7 @@ public class ForceDiploCommand implements CommandInterface {
 			String action = args[2];
 			if(GameCommon.getGameState().getFactionManager().existsFaction(faction1) && GameCommon.getGameState().getFactionManager().existsFaction(faction2)) {
 				try {
-					DiplomacyAction.DiplActionType diplomacyAction = DiplomacyAction.DiplActionType.valueOf(action.toUpperCase(Locale.ROOT));
+					FactionDiplomacyAction.DiploActionType diplomacyAction = FactionDiplomacyAction.DiploActionType.valueOf(action.toUpperCase(Locale.ROOT));
 					FactionDiplomacyManager.forceDiplomacyAction(faction1, faction2, diplomacyAction);
 					return true;
 				} catch(IllegalArgumentException ignored) {}
