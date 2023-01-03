@@ -3,11 +3,13 @@ package thederpgamer.betterfactions;
 import api.listener.events.controller.ClientInitializeEvent;
 import api.mod.StarLoader;
 import api.mod.StarMod;
+import api.network.packets.PacketUtil;
 import org.apache.commons.io.IOUtils;
 import thederpgamer.betterfactions.data.commands.ForceDiploCommand;
 import thederpgamer.betterfactions.manager.ConfigManager;
 import thederpgamer.betterfactions.manager.EventManager;
 import thederpgamer.betterfactions.manager.FactionDiplomacyManager;
+import thederpgamer.betterfactions.network.ClientUpdatePacket;
 import thederpgamer.betterfactions.utils.DataUtils;
 
 import java.io.File;
@@ -48,6 +50,7 @@ public class BetterFactions extends StarMod {
 		EventManager.registerEvents(this);
 		FactionDiplomacyManager.initialize();
 		registerCommands();
+		registerPackets();
 	}
 
 	@Override
@@ -120,6 +123,10 @@ public class BetterFactions extends StarMod {
 
 	private void registerCommands() {
 		StarLoader.registerCommand(new ForceDiploCommand());
+	}
+
+	private void registerPackets() {
+		PacketUtil.registerPacket(ClientUpdatePacket.class);
 	}
 
 	private byte[] overwriteClass(String className, byte[] byteCode) {

@@ -4,8 +4,8 @@ import api.common.GameCommon;
 import api.mod.StarMod;
 import api.utils.game.chat.CommandInterface;
 import org.schema.game.common.data.player.PlayerState;
-import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyAction;
 import thederpgamer.betterfactions.BetterFactions;
+import thederpgamer.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
 import thederpgamer.betterfactions.manager.FactionDiplomacyManager;
 
 import javax.annotation.Nullable;

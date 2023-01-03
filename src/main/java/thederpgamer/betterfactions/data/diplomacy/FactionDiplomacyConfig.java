@@ -18,8 +18,8 @@ import java.util.Locale;
 public class FactionDiplomacyConfig {
 	public static final byte VERSION = 2;
 	public final List<FactionDiplomacyReaction> reactions = new ObjectArrayList<>();
-	public final Object2LongOpenHashMap<FactionDiplomacyAction.DiploActionType> actionTimeoutMap = new Object2LongOpenHashMap<FactionDiplomacyAction.DiploActionType>();
-	private final Int2ObjectOpenHashMap<DiplomacyConfigElement> map = new Int2ObjectOpenHashMap<DiplomacyConfigElement>();
+	public final Object2LongOpenHashMap<FactionDiplomacyAction.DiploActionType> actionTimeoutMap = new Object2LongOpenHashMap<>();
+	private final Int2ObjectOpenHashMap<DiplomacyConfigElement> map = new Int2ObjectOpenHashMap<>();
 	public byte version = 0;
 
 	public FactionDiplomacyConfig() {

@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 
@@ -27,7 +28,7 @@ import java.util.logging.Level;
  */
 public class FactionDiplomacyManager {
 
-	public static final ConcurrentLinkedQueue<FactionDiplomacy> diplomacyChanged = new ConcurrentLinkedQueue<>();
+	public static final Queue<FactionDiplomacy> diplomacyChanged = new ConcurrentLinkedQueue<>();
 	private static boolean initialized = false;
 
 	public static void initialize() {
@@ -48,7 +49,7 @@ public class FactionDiplomacyManager {
 					BetterFactions.log.log(Level.WARNING, "Failed to load diplomacy files!");
 				}
 			}
-		}.runTimer(BetterFactions.getInstance(), 1000);
+		}.runTimer(BetterFactions.getInstance(), 300);
 		new StarRunnable() {
 			@Override
 			public void run() {
@@ -65,7 +66,7 @@ public class FactionDiplomacyManager {
 					}
 				}
 			}
-		}.runTimer(BetterFactions.getInstance(), 1000);
+		}.runTimer(BetterFactions.getInstance(), 300);
 		initialized = true;
 	}
 
@@ -77,10 +78,6 @@ public class FactionDiplomacyManager {
 			BetterFactions.log.log(Level.WARNING, "Failed to initialize diplomacy data for faction " + factionId + "!", exception);
 		}
 	}
-
-	private static void initReactionData(int factionId, File file) {
-	}
-
 
 	public static FactionDiplomacy getDiplomacy(int factionId) {
 		if(!initialized) initialize();
@@ -180,7 +177,7 @@ public class FactionDiplomacyManager {
 			default:
 				return 0;
 		}
-}
+	}
 
 	public static FactionDiplomacyReaction getReaction(FactionDiplomacyAction action) {
 		return null; //TODO: Implement

@@ -17,15 +17,14 @@ import org.schema.game.common.data.world.SimpleTransformableSendableObject.Entit
 import org.schema.game.server.controller.EntityNotFountException;
 import org.schema.game.server.data.blueprintnw.BlueprintClassification;
 import org.schema.game.server.data.blueprintnw.BlueprintEntry;
-import org.schema.game.server.data.simulation.npc.diplomacy.FactionDiplomacyAction.DiploActionType;
 import org.schema.game.server.data.simulation.npc.diplomacy.DiplomacyReaction;
-import org.schema.game.server.data.simulation.npc.diplomacy.NPCDiplomacyEntity.DiplStatusType;
 import org.schema.game.server.data.simulation.npc.geo.NPCEntityContingent;
 import org.schema.game.server.data.simulation.npc.geo.NPCFactionPreset;
 import org.schema.game.server.data.simulation.npc.geo.NPCSystemFleetManager.FleetType;
 import org.schema.game.server.data.simulation.npc.geo.NPCSystemStructure;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
+import thederpgamer.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -1083,38 +1082,38 @@ public class FactionConfig {
 		return "Config";
 	}
 
-	public boolean existsAction(DiploActionType action) {
+	public boolean existsAction(FactionDiplomacyAction.DiploActionType action) {
 		return diplomacy.get(action) != null;
 	}
-	public boolean existsStatus(DiplStatusType status) {
+	public boolean existsStatus(FactionDiplomacyEntity.DiploStatusType status) {
 		return diplomacy.get(status) != null;
 	}
-	public int getDiplomacyUpperLimit(DiploActionType action) {
+	public int getDiplomacyUpperLimit(FactionDiplomacyAction.DiploActionType action) {
 		return diplomacy.get(action).upperLimit;
 	}
 
-	public int getDiplomacyLowerLimit(DiploActionType action) {
+	public int getDiplomacyLowerLimit(FactionDiplomacyAction.DiploActionType action) {
 		return diplomacy.get(action).lowerLimit;
 	}
-	public int getDiplomacyValue(DiploActionType action) {
+	public int getDiplomacyValue(FactionDiplomacyAction.DiploActionType action) {
 		return diplomacy.get(action).value;
 	}
-	public int getDiplomacyValue(DiplStatusType action) {
+	public int getDiplomacyValue(FactionDiplomacyEntity.DiploStatusType action) {
 		return diplomacy.get(action).value;
 	}
-	public DiplomacyReaction getDiplomacyActionRequired(DiploActionType action) {
+	public DiplomacyReaction getDiplomacyActionRequired(FactionDiplomacyAction.DiploActionType action) {
 		return  diplomacy.get(action).reaction;
 	}
-	public int getDiplomacyExistingActionModifier(DiploActionType action) {
+	public int getDiplomacyExistingActionModifier(FactionDiplomacyAction.DiploActionType action) {
 		return diplomacy.get(action).existingModifier;
 	}
-	public int getDiplomacyNonExistingActionModifier(DiploActionType action) {
+	public int getDiplomacyNonExistingActionModifier(FactionDiplomacyAction.DiploActionType action) {
 		return diplomacy.get(action).nonExistingModifier;
 	}
-	public long getDiplomacyTurnTimeout(DiploActionType action) {
+	public long getDiplomacyTurnTimeout(FactionDiplomacyAction.DiploActionType action) {
 		return (long) ((double)diplomacy.get(action).turnsActionDuration * (double)timeBetweenTurnsMS);
 	}
-	public long getDiplomacyStaticTimpout(DiplStatusType action) {
+	public long getDiplomacyStaticTimpout(FactionDiplomacyEntity.DiploStatusType action) {
 		return (long) ((double)diplomacy.get(action).staticTimeoutTurns * (double)timeBetweenTurnsMS);
 	}
 	public BlueprintClassification[] getFleetClasses(FleetType type) {
@@ -1216,12 +1215,10 @@ public class FactionConfig {
 	public List<FactionDiplomacyReaction> getDiplomacyReactions() {
 		return diplomacy.reactions;
 	}
-	public long getDiplomacyActionTimeout(DiploActionType type) {
+	public long getDiplomacyActionTimeout(FactionDiplomacyAction.DiploActionType type) {
 		if(diplomacy.actionTimeoutMap.containsKey(type)){
 			return diplomacy.actionTimeoutMap.getLong(type);
 		}
 		return diplomacyTurnEffectChangeDelay*3;
 	}
-
-
 }

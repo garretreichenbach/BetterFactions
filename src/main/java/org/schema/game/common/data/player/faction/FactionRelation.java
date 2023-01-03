@@ -39,12 +39,14 @@ public class FactionRelation implements TagSerializable {
 		if (string.toLowerCase(Locale.ENGLISH).equals("enemy")) {
 			return RType.ENEMY.code;
 		}
-		if (string.toLowerCase(Locale.ENGLISH).equals("fiend") || string.toLowerCase(Locale.ENGLISH).equals("ally")) {
+		if (string.toLowerCase(Locale.ENGLISH).equals("friend") || string.toLowerCase(Locale.ENGLISH).equals("ally")) {
 			return RType.FRIEND.code;
 		}
 		if (string.toLowerCase(Locale.ENGLISH).equals("neutral")) {
 			return RType.NEUTRAL.code;
 		}
+		if(string.toLowerCase(Locale.ENGLISH).equals("federation")) return RType.FEDERATION.code;
+		if(string.toLowerCase(Locale.ENGLISH).equals("non-aggression")) return RType.NON_AGGRESSION.code;
 		throw new IllegalArgumentException();
 	}
 
@@ -130,12 +132,15 @@ public class FactionRelation implements TagSerializable {
 		return rel == RType.NEUTRAL.code;
 	}
 
+	public boolean isRelation(RType type) {
+		return rel == type.code;
+	}
+
 	public void set(int a, int b) {
 		assert (a != b);
 		assert (a != 0 && b != 0);
 		this.a = Math.min(a, b);
 		this.b = Math.max(a, b);
-
 	}
 
 	public void setEnemy() {
@@ -148,6 +153,10 @@ public class FactionRelation implements TagSerializable {
 
 	public void setNeutral() {
 		rel = RType.NEUTRAL.code;
+	}
+
+	public void setRelation(RType type) {
+		rel = type.code;
 	}
 	public enum AttackType{
 		NONE(0),
@@ -204,12 +213,18 @@ public class FactionRelation implements TagSerializable {
 				return Lng.str("FRIEND");
 			}
 		}, 1, new Vector3f(0, 1, 0), (byte) 2),
-		NON_AGGRESSION_PACT(new Translatable() {
+		NON_AGGRESSION(new Translatable() {
 			@Override
 			public String getName(Enum anEnum) {
-				return Lng.str("NEUTRAL (NO-AGGRESSION)");
+				return Lng.str("NEUTRAL (NO AGGRESSION)");
 			}
-		}, 2, new Vector3f(0.19f, 0.65f, 0.55f), (byte) 3);
+		}, 3, new Vector3f(0.81f, 0.81f, 0.36f), (byte) 3),
+		FEDERATION(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("FEDERATION");
+			}
+		}, 2, new Vector3f(0.19f, 0.65f, 0.55f), (byte) 4);
 
 
 		private final Translatable name;

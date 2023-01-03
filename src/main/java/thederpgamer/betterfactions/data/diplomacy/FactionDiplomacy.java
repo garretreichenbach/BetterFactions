@@ -137,7 +137,7 @@ public class FactionDiplomacy extends Observable implements LogInterface {
 
 	public void diplomacyAction(FactionDiplomacyAction.DiploActionType type, long otherDbId) {
 		FactionDiplomacyEntity e = entities.get(otherDbId);
-		if(e == null){
+		if(e == null) {
 			e = new FactionDiplomacyEntity((FactionState) faction.getState(), faction.getIdFaction(), otherDbId);
 			e.setPoints(getConfig().getInt("diplomacy-start-points"));
 			entities.put(otherDbId, e);

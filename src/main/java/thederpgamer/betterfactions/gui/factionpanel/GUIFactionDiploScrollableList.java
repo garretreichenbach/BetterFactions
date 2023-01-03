@@ -134,14 +134,12 @@ public class GUIFactionDiploScrollableList extends ScrollableTableList<FactionDi
 	}
 
 	@Override
-	public void updateListEntries(GUIElementList mainList,
-	                              Set<FactionDiplomacyMod> collection) {
+	public void updateListEntries(GUIElementList mainList, Set<FactionDiplomacyMod> collection) {
 		mainList.deleteObservers();
 		mainList.addObserver(this);
 		final PlayerState player = ((GameClientState) getState()).getPlayer();
 		int i = 0;
 		for(final FactionDiplomacyMod f : collection) {
-
 			GUITextOverlayTable nameText = new GUITextOverlayTable(10, 10, getState());
 			GUITextOverlayTable valueText = new GUITextOverlayTable(10, 10, getState());
 
@@ -167,13 +165,10 @@ public class GUIFactionDiploScrollableList extends ScrollableTableList<FactionDi
 
 			sysAnchorP.attach(valueText);
 
-
 			nameText.getPos().y = 5;
 			valueText.getPos().y = 5;
 
-
 			final FactionDiplomacyModRow r = new FactionDiplomacyModRow(getState(), f, nameAnchorP, sysAnchorP);
-
 
 			r.onInit();
 			mainList.addWithoutUpdate(r);

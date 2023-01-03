@@ -10,7 +10,7 @@ def starmadeDirectory = 'C:/Program Files (x86)/Steam/steamapps/common/StarMade/
 def jarName = 'BetterFactions'
 def mainClassName = 'thederpgamer.betterfactions.BetterFactions'
 group 'thederpgamer.betterfactions'
-version '1.0.0'
+version '0.1.0b - Dev'
 
 repositories {
 	mavenCentral()

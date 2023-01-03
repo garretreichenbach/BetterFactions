@@ -4,7 +4,6 @@ import org.schema.game.client.data.GameClientState;
 import org.schema.game.client.view.gui.faction.newfaction.FactionMemberScrollableListNew;
 import org.schema.game.client.view.gui.faction.newfaction.FactionNewsScrollableListNew;
 import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;
-import org.schema.game.client.view.gui.faction.newfaction.FactionScrollableListNew;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionRelation;
@@ -34,7 +33,7 @@ public class BFFactionPanelNew extends FactionPanelNew {
 	private GUIContentPane membersTab;
 	private GUIContentPane diplomacyTab;
 	private GUIContentPane optionTab;
-	private FactionScrollableListNew fList;
+	private BFFactionScrollableListNew fList;
 	private boolean init;
 	private int fid;
 	private boolean flagFactionTabRecreate;
@@ -152,7 +151,7 @@ public class BFFactionPanelNew extends FactionPanelNew {
 
 	public void createFactionListPane() {
 		if(fList != null) fList.cleanUp();
-		fList = new FactionScrollableListNew(getState(), listTab.getContent(0));
+		fList = new BFFactionScrollableListNew(getState(), listTab.getContent(0));
 		fList.onInit();
 		listTab.getContent(0).attach(fList);
 	}

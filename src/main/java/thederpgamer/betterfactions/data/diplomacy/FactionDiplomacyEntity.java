@@ -1,5 +1,6 @@
 package thederpgamer.betterfactions.data.diplomacy;
 
+import api.common.GameCommon;
 import api.mod.config.FileConfiguration;
 import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
@@ -29,6 +30,7 @@ import thederpgamer.betterfactions.data.diplomacy.modifier.FactionDiplomacyStati
 import thederpgamer.betterfactions.data.diplomacy.modifier.FactionDiplomacyTurnMod;
 import thederpgamer.betterfactions.manager.ConfigManager;
 import thederpgamer.betterfactions.manager.FactionDiplomacyManager;
+import thederpgamer.betterfactions.utils.FactionUtils;
 
 import java.io.DataInputStream;
 import java.io.DataOutput;
@@ -276,7 +278,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 						FactionRelationOffer offer = new FactionRelationOffer();
 						offer.a = getFaction().getIdFaction();
 						offer.b = (int) dbId;
-						offer.rel = RType.NON_AGGRESSION_PACT.code;
+						offer.rel = RType.NON_AGGRESSION.code;
 						state.getFactionManager().getRelationOffersToAdd().add(offer);
 					}
 				}
@@ -656,7 +658,6 @@ public class FactionDiplomacyEntity implements LogInterface {
 					}
 				}
 				return warsWFriends;
-
 			case NON_AGGRESSION:
 				DiplomacyAction diplomacyAction = actions.get((byte) FactionDiplomacyAction.DiploActionType.ATTACK.ordinal());
 				if(diplomacyAction == null || diplomacyAction.counter < 1) {
@@ -674,6 +675,10 @@ public class FactionDiplomacyEntity implements LogInterface {
 
 	private Faction getFaction() {
 		return getDiplomacy().faction;
+	}
+
+	private Faction getOtherFaction() {
+		return GameCommon.getGameState().getFactionManager().getFaction((int) dbId);
 	}
 
 	private void calculateDynamicModifier(long timeElapsed, Object2ObjectOpenHashMap<FactionDiplomacyAction.DiploActionType, FactionDiplomacyTurnMod> dynamicMap2, FactionDiplomacyAction.DiploActionType action) {
@@ -783,6 +788,17 @@ public class FactionDiplomacyEntity implements LogInterface {
 		action.counter++;
 
 		setChanged();
+	}
+
+	public boolean canDoAction(FactionDiplomacyAction.DiploActionType actionType, Object... args) {
+		switch(actionType) {
+			case ATTACK:
+				return FactionUtils.canAttack(getFaction(), getOtherFaction());
+			case PEACE_OFFER:
+				return FactionUtils.canPeace(getFaction(), getOtherFaction());
+			default:
+				return false;
+		}
 	}
 
 	@Override
@@ -1138,6 +1154,4 @@ public class FactionDiplomacyEntity implements LogInterface {
 			return description.getName(this);
 		}
 	}
-
-
 }
