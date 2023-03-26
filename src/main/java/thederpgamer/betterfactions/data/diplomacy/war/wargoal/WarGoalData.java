@@ -41,11 +41,15 @@ public class WarGoalData {
 	private final WarGoalType warGoalType;
 	private final int from;
 	private final int to;
+	private final float score;
+	private boolean demanded;
 
-	public WarGoalData(WarGoalType warGoalType, Faction from, Faction to) {
+	public WarGoalData(WarGoalType warGoalType, Faction from, Faction to, float score) {
 		this.warGoalType = warGoalType;
 		this.from = from.getIdFaction();
 		this.to = to.getIdFaction();
+		this.score = score;
+		this.demanded = false;
 	}
 
 	public WarGoalType getWarGoalType() {
@@ -58,5 +62,13 @@ public class WarGoalData {
 
 	public Faction getTo() {
 		return GameCommon.getGameState().getFactionManager().getFaction(to);
+	}
+
+	public float getScore() {
+		return score;
+	}
+
+	public void setDemanded(boolean demanded) {
+		this.demanded = demanded;
 	}
 }

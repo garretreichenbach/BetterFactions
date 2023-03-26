@@ -16,8 +16,8 @@ public class WarData {
 
 	private final long id;
 	private String name;
-	private final HashMap<WarGoalData, Float> attackers = new HashMap<>();
-	private final HashMap<WarGoalData, Float> defenders = new HashMap<>();
+	private final HashMap<WarGoalData, Float[]> attackers = new HashMap<>();
+	private final HashMap<WarGoalData, Float[]> defenders = new HashMap<>();
 
 	public WarData(String name) {
 		this.id = System.currentTimeMillis();
@@ -26,7 +26,7 @@ public class WarData {
 
 	@Override
 	public boolean equals(Object object) {
-		if(object instanceof WarData) return ((WarData) object).getId() == id;
+		if(object instanceof WarData) return ((WarData) object).id == id;
 		else return false;
 	}
 
@@ -42,21 +42,21 @@ public class WarData {
 		this.name = name;
 	}
 
-	public HashMap<WarGoalData, Float> getAttackers() {
+	public HashMap<WarGoalData, Float[]> getAttackers() {
 		return attackers;
 	}
 
-	public HashMap<WarGoalData, Float> getDefenders() {
+	public HashMap<WarGoalData, Float[]> getDefenders() {
 		return defenders;
 	}
 
 	public void addAttacker(WarGoalData warGoalData, float score) {
-		attackers.put(warGoalData, score);
+		attackers.put(warGoalData, new Float[] {score, 0.0f});
 		sendUpdate();
 	}
 
 	public void addDefender(WarGoalData warGoalData, float score) {
-		defenders.put(warGoalData, score);
+		defenders.put(warGoalData, new Float[] {score, 0.0f});
 	}
 
 	public void removeAttacker(WarGoalData warGoalData) {
@@ -69,10 +69,10 @@ public class WarData {
 
 	public boolean isInvolved(Faction faction) {
 		for(WarGoalData warGoalData : attackers.keySet()) {
-			if(warGoalData.getFaction().equals(faction)) return true;
+			if(warGoalData.getFrom().equals(faction)) return true;
 		}
 		for(WarGoalData warGoalData : defenders.keySet()) {
-			if(warGoalData.getFaction().equals(faction)) return true;
+			if(warGoalData.getTo().equals(faction)) return true;
 		}
 		return false;
 	}
@@ -80,15 +80,39 @@ public class WarData {
 	public ArrayList<WarGoalData> getGoals(Faction faction) {
 		ArrayList<WarGoalData> goals = new ArrayList<>();
 		for(WarGoalData warGoalData : attackers.keySet()) {
-			if(warGoalData.getFaction().equals(faction)) goals.add(warGoalData);
+			if(warGoalData.getFrom().equals(faction)) goals.add(warGoalData);
 		}
 		for(WarGoalData warGoalData : defenders.keySet()) {
-			if(warGoalData.getFaction().equals(faction)) goals.add(warGoalData);
+			if(warGoalData.getTo().equals(faction)) goals.add(warGoalData);
 		}
 		return goals;
 	}
 
 	public void sendUpdate() {
 		UpdateManager.sendUpdate(UpdateManager.UpdateType.UPDATE_WAR_DATA, this);
+	}
+
+	public float getTotalProgress(Faction faction) {
+		if(!isInvolved(faction)) return 0;
+		else {
+			float progress = 0;
+			for(WarGoalData warGoalData : getGoals(faction)) {
+				if(attackers.containsKey(warGoalData)) progress += attackers.get(warGoalData)[0];
+				else progress += defenders.get(warGoalData)[0];
+			}
+			return progress;
+		}
+	}
+
+	public int getTotalExhaustion(Faction faction) {
+		if(!isInvolved(faction)) return 0;
+		else {
+			int exhaustion = 0;
+			for(WarGoalData warGoalData : getGoals(faction)) {
+				if(attackers.containsKey(warGoalData)) exhaustion += attackers.get(warGoalData)[1];
+				else exhaustion += defenders.get(warGoalData)[1];
+			}
+			return exhaustion;
+		}
 	}
 }

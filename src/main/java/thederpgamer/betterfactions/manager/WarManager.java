@@ -33,4 +33,12 @@ public class WarManager {
 		}
 		return wars;
 	}
+
+	public static boolean isOpposingSides(Faction from, Faction to, WarData warData) {
+		if(from.getIdFaction() == to.getIdFaction()) return false;
+		for(WarGoalData warGoal : warData.getGoals(from)) {
+			if(warGoal.getTo().getIdFaction() == to.getIdFaction()) return true;
+		}
+		return false;
+	}
 }

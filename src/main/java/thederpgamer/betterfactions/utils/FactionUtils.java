@@ -8,9 +8,13 @@ import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionRelation;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.diplomacy.FactionDiplomacy;
+import thederpgamer.betterfactions.data.diplomacy.FactionDiplomacyEntity;
 import thederpgamer.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
+import thederpgamer.betterfactions.data.diplomacy.modifier.FactionDiplomacyStaticMod;
+import thederpgamer.betterfactions.data.diplomacy.war.WarData;
 import thederpgamer.betterfactions.data.diplomacy.war.wargoal.WarGoalData;
 import thederpgamer.betterfactions.manager.FactionDiplomacyManager;
+import thederpgamer.betterfactions.manager.WarManager;
 
 import java.util.ArrayList;
 
@@ -66,10 +70,43 @@ public class FactionUtils {
 		} else return false;
 	}
 
-	public static boolean canPeace(Faction from, Faction to) {
+	public static boolean canPeace(Faction from, Faction to, String reason, WarData warData) {
 		if(isAtWar(from, to)) {
-			if(from.isNPC()) return NPCFactionUtils.isWillingToDoAction(to, from, FactionDiplomacyAction.DiploActionType.ACCEPT_PEACE_OFFER);
+			StringBuilder builder = new StringBuilder();
+			boolean willing = NPCFactionUtils.isWillingToAcceptPeaceOffer(to, from, warData, builder);
+			reason = builder.toString();
+			if(from.isNPC()) return willing;
 			else return true;
 		} else return false;
+	}
+
+	public static int getPower(Faction from) {
+
+	}
+
+	public static ArrayList<Faction> getAllies(Faction from) {
+		ArrayList<Faction> allies = new ArrayList<>();
+		allies.addAll(from.getFriends());
+		FactionDiplomacy diplomacy = getDiplomacy(from);
+		for(FactionDiplomacyEntity entity : diplomacy.entities.values()) {
+			if(entity.getDbId() != from.getIdFaction()) {
+				for(FactionDiplomacyStaticMod mod : entity.getStaticMap().values()) {
+					switch(mod.type) {
+						case PROTECTING:
+						case BEING_PROTECTED:
+						case IN_FEDERATION:
+						case FEDERATION_ALLY:
+						case ALLIANCE:
+							allies.add(GameCommon.getGameState().getFactionManager().getFaction(entity.getDbId()));
+							break;
+					}
+				}
+			}
+		}
+		return allies;
+	}
+
+	public static int getOpinion(Faction from, Faction to) {
+
 	}
 }

@@ -28,6 +28,7 @@ import org.schema.schine.resource.tag.Tag.Type;
 import thederpgamer.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
 import thederpgamer.betterfactions.data.diplomacy.modifier.FactionDiplomacyStaticMod;
 import thederpgamer.betterfactions.data.diplomacy.modifier.FactionDiplomacyTurnMod;
+import thederpgamer.betterfactions.data.diplomacy.war.WarData;
 import thederpgamer.betterfactions.manager.ConfigManager;
 import thederpgamer.betterfactions.manager.FactionDiplomacyManager;
 import thederpgamer.betterfactions.utils.FactionUtils;
@@ -790,14 +791,19 @@ public class FactionDiplomacyEntity implements LogInterface {
 		setChanged();
 	}
 
-	public boolean canDoAction(FactionDiplomacyAction.DiploActionType actionType, Object... args) {
-		switch(actionType) {
-			case ATTACK:
-				return FactionUtils.canAttack(getFaction(), getOtherFaction());
-			case PEACE_OFFER:
-				return FactionUtils.canPeace(getFaction(), getOtherFaction());
-			default:
-				return false;
+	public boolean canDoAction(FactionDiplomacyAction.DiploActionType actionType, String reason, Object... args) {
+		try {
+			switch(actionType) {
+				case ATTACK:
+					return FactionUtils.canAttack(getFaction(), getOtherFaction());
+				case PEACE_OFFER:
+					return FactionUtils.canPeace(getFaction(), getOtherFaction(), reason, (WarData) args[0]);
+				default:
+					return false;
+			}
+		} catch(Exception exception) {
+			exception.printStackTrace();
+			return false;
 		}
 	}
 

@@ -13,8 +13,6 @@ import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
-import thederpgamer.betterfactions.data.diplomacy.FactionDiplomacy;
-import thederpgamer.betterfactions.manager.FactionDiplomacyManager;
 
 import java.util.*;
 
@@ -147,7 +145,7 @@ public class BFFactionScrollableListNew extends ScrollableTableList<Faction> imp
 			relationText.setTextSimple(new Object() {
 				@Override
 				public String toString() {
-					return faction.getIdFaction() == player.getFactionId() ? Lng.str("OWN") : factionManager.getRelation(player.getName(), player.getFactionId(), f.getIdFaction()).getName();
+					return faction.getIdFaction() == player.getFactionId() ? Lng.str("OWN") : factionManager.getRelation(player.getName(), player.getFactionId(), faction.getIdFaction()).getName();
 				}
 			});
 
@@ -225,7 +223,7 @@ public class BFFactionScrollableListNew extends ScrollableTableList<Faction> imp
 				@Override
 				public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
 					if(mouseEvent.pressedLeftMouse()) {
-						final PlayerGameOkCancelInput c = new PlayerGameOkCancelInput("FactionScrollableListNew_VIEW_REL", (GameClientState) getState(), 540, 400, Lng.str("Relations for %s",  f.getName()), "") {
+						final PlayerGameOkCancelInput c = new PlayerGameOkCancelInput("FactionScrollableListNew_VIEW_REL", (GameClientState) getState(), 540, 400, Lng.str("Relations for %s",  faction.getName()), "") {
 
 							@Override
 							public boolean isOccluded() {
@@ -243,7 +241,7 @@ public class BFFactionScrollableListNew extends ScrollableTableList<Faction> imp
 						};
 						c.getInputPanel().setCancelButton(false);
 						c.getInputPanel().onInit();
-						FactionScrollableListRelation factionScrollableListRelation = new FactionScrollableListRelation(getState(), c.getInputPanel().getContent(), f) {
+						FactionScrollableListRelation factionScrollableListRelation = new FactionScrollableListRelation(getState(), c.getInputPanel().getContent(), faction) {
 							@Override
 							public boolean isActive() {
 								return super.isActive() && (getState().getController().getPlayerInputs().isEmpty() || getState().getController().getPlayerInputs().get(getState().getController().getPlayerInputs().size() - 1) == c);
@@ -273,9 +271,6 @@ public class BFFactionScrollableListNew extends ScrollableTableList<Faction> imp
 
 
 			GUIHorizontalButtonExpandable actionsButton = new GUIHorizontalButtonExpandable((GameClientState) getState(), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, Lng.str("ACTIONS"), buttonPane.activeInterface);
-			{
-				if(canDoAction())
-			}
 			buttonPane.addButton(actionsButton, 1, 0);
 
 			buttonPane.addButton(2, 0, Lng.str("MAIL"), GUIHorizontalArea.HButtonColor.PINK, new GUICallback() {
@@ -303,11 +298,6 @@ public class BFFactionScrollableListNew extends ScrollableTableList<Faction> imp
 			});
 			c.attach(buttonPane);
 		}
-	}
-
-	private boolean canDoAction(int otherFactionId) {
-		FactionDiplomacy diplomacy = FactionDiplomacyManager.getDiplomacy(((GameClientState) getState()).getPlayer().getFactionId());
-		diplomacy.entities.get(otherFactionId).act;
 	}
 
 	private class FactionRow extends Row {

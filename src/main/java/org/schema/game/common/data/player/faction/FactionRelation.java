@@ -226,7 +226,6 @@ public class FactionRelation implements TagSerializable {
 			}
 		}, 2, new Vector3f(0.19f, 0.65f, 0.55f), (byte) 4);
 
-
 		private final Translatable name;
 		public final int sortWeight;
 		public final Vector3f defaultColor;
