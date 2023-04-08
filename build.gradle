@@ -1,5 +1,5 @@
 plugins {
-		id 'java'
+    id 'java'
 }
 def starmadeDirectory = 'C:/Program Files (x86)/Steam/steamapps/common/StarMade/StarMade/'
 def jarName = 'BetterFactions'
@@ -8,25 +8,25 @@ group 'thederpgamer.betterfactions'
 version '0.2.0 - Beta'
 
 repositories {
-	mavenCentral()
+    mavenCentral()
 }
 
 dependencies {
-	implementation(files(starmadeDirectory + "StarMade.jar"))
-	implementation(fileTree(dir: (starmadeDirectory + "lib"), include: "*.jar"))
+    implementation(files(starmadeDirectory + "StarMade.jar"))
+    implementation(fileTree(dir: (starmadeDirectory + "lib"), include: "*.jar"))
 }
 
 compileJava.options.encoding = 'UTF-8'
 
 jar {
-	duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
-	destinationDirectory.set(file(starmadeDirectory + "mods"))
-	archiveFileName = jarName + 'v' + version + '.jar'
-	manifest.attributes('Main-Class': mainClassName)
-	from {
-		configurations.runtimeClasspath.collect {
-			if(!it.getPath().contains("StarMade") && it.getName().endsWith(".jar")) it.isDirectory() ? it : zipTree(it)
-			else return null;
-		}
-	}
+    duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
+    destinationDirectory.set(file(starmadeDirectory + "mods"))
+    archiveFileName = jarName + 'v' + version + '.jar'
+    manifest.attributes('Main-Class': mainClassName)
+    from {
+        configurations.runtimeClasspath.collect {
+            if(!it.getPath().contains("StarMade") && it.getName().endsWith(".jar")) it.isDirectory() ? it : zipTree(it)
+            else return null;
+        }
+    }
 }
