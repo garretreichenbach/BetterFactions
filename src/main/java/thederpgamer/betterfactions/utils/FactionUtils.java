@@ -9,14 +9,13 @@ import org.schema.game.common.data.player.faction.FactionRelation;
 import thederpgamer.betterfactions.BetterFactions;
 import thederpgamer.betterfactions.data.diplomacy.FactionDiplomacy;
 import thederpgamer.betterfactions.data.diplomacy.FactionDiplomacyEntity;
-import thederpgamer.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
 import thederpgamer.betterfactions.data.diplomacy.modifier.FactionDiplomacyStaticMod;
 import thederpgamer.betterfactions.data.diplomacy.war.WarData;
 import thederpgamer.betterfactions.data.diplomacy.war.wargoal.WarGoalData;
 import thederpgamer.betterfactions.manager.FactionDiplomacyManager;
-import thederpgamer.betterfactions.manager.WarManager;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 /**
  * [Description]
@@ -80,16 +79,16 @@ public class FactionUtils {
 		} else return false;
 	}
 
-	public static int getPower(Faction from) {
-
+	public static int getPower(Faction faction) {
+		return 0; //Todo
 	}
 
-	public static ArrayList<Faction> getAllies(Faction from) {
+	public static ArrayList<Faction> getAllies(Faction faction) {
 		ArrayList<Faction> allies = new ArrayList<>();
-		allies.addAll(from.getFriends());
-		FactionDiplomacy diplomacy = getDiplomacy(from);
+		allies.addAll(faction.getFriends());
+		FactionDiplomacy diplomacy = getDiplomacy(faction);
 		for(FactionDiplomacyEntity entity : diplomacy.entities.values()) {
-			if(entity.getDbId() != from.getIdFaction()) {
+			if(entity.getDbId() != faction.getIdFaction()) {
 				for(FactionDiplomacyStaticMod mod : entity.getStaticMap().values()) {
 					switch(mod.type) {
 						case PROTECTING:
@@ -97,7 +96,7 @@ public class FactionUtils {
 						case IN_FEDERATION:
 						case FEDERATION_ALLY:
 						case ALLIANCE:
-							allies.add(GameCommon.getGameState().getFactionManager().getFaction(entity.getDbId()));
+							allies.add(Objects.requireNonNull(GameCommon.getGameState()).getFactionManager().getFaction((int) entity.getDbId()));
 							break;
 					}
 				}
@@ -107,6 +106,6 @@ public class FactionUtils {
 	}
 
 	public static int getOpinion(Faction from, Faction to) {
-
+		return 0; //Todo
 	}
 }

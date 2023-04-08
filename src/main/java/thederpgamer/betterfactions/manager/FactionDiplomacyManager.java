@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
@@ -29,7 +30,7 @@ import java.util.logging.Level;
 public class FactionDiplomacyManager {
 
 	public static final Queue<FactionDiplomacy> diplomacyChanged = new ConcurrentLinkedQueue<>();
-	private static boolean initialized = false;
+	private static boolean initialized;
 
 	public static void initialize() {
 		final File file = new File(DataUtils.getWorldDataPath() + "/diplomacy");
@@ -38,7 +39,7 @@ public class FactionDiplomacyManager {
 			@Override
 			public void run() {
 				try {
-					for(File f : file.listFiles()) {
+					for(File f : Objects.requireNonNull(file.listFiles())) {
 						if(f.getName().endsWith(".smdat")) {
 							FactionDiplomacy diplomacy = new FactionDiplomacy(GameCommon.getGameState().getFactionManager().getFaction(Integer.parseInt(f.getName().split("\\.")[0])));
 							diplomacy.fromTag(Tag.readFrom(Files.newInputStream(f.toPath()), true, false));
@@ -71,7 +72,7 @@ public class FactionDiplomacyManager {
 	}
 
 	private static void initDiplomacyData(int factionId, File file) {
-		FactionDiplomacy diplomacy = new FactionDiplomacy(GameCommon.getGameState().getFactionManager().getFaction(factionId));
+		FactionDiplomacy diplomacy = new FactionDiplomacy(Objects.requireNonNull(GameCommon.getGameState()).getFactionManager().getFaction(factionId));
 		try {
 			diplomacy.toTag().writeTo(Files.newOutputStream(file.toPath()), true);
 		} catch(IOException exception) {
@@ -83,7 +84,7 @@ public class FactionDiplomacyManager {
 		if(!initialized) initialize();
 		File file = new File(DataUtils.getWorldDataPath() + "/diplomacy/" + factionId + ".smdat");
 		if(!file.exists()) initDiplomacyData(factionId, file);
-		FactionDiplomacy diplomacy = new FactionDiplomacy(GameCommon.getGameState().getFactionManager().getFaction(factionId));
+		FactionDiplomacy diplomacy = new FactionDiplomacy(Objects.requireNonNull(GameCommon.getGameState()).getFactionManager().getFaction(factionId));
 		try {
 			diplomacy.fromTag(Tag.readFrom(Files.newInputStream(file.toPath()), true, false));
 		} catch(IOException exception) {

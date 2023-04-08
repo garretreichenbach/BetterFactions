@@ -27,7 +27,6 @@ import thederpgamer.betterfactions.manager.FactionDiplomacyManager;
  * @author TheDerpGamer (MrGoose#0027)
  */
 public class BFFactionPanelNew extends FactionPanelNew {
-
 	public GUIMainWindow factionPanel;
 	private GUIContentPane newsTab;
 	private GUIContentPane membersTab;
@@ -49,7 +48,6 @@ public class BFFactionPanelNew extends FactionPanelNew {
 	private GUIAncor infoPanel;
 	private GUIContentPane listTab;
 
-
 	public BFFactionPanelNew(InputState inputState) {
 		super(inputState);
 	}
@@ -58,7 +56,6 @@ public class BFFactionPanelNew extends FactionPanelNew {
 	public void onInit() {
 		factionPanel = new GUIMainWindow(getState(), 850, 550, "FactionPanelNew");
 		factionPanel.onInit();
-
 		factionPanel.setCloseCallback(new GUICallback() {
 			@Override
 			public void callback(GUIElement callingGuiElement, MouseEvent event) {
@@ -70,13 +67,9 @@ public class BFFactionPanelNew extends FactionPanelNew {
 				return !getState().getController().getPlayerInputs().isEmpty();
 			}
 		});
-
 		factionPanel.orientate(ORIENTATION_HORIZONTAL_MIDDLE | ORIENTATION_VERTICAL_MIDDLE);
-
 		recreateTabs();
-
 		this.fid = getOwnPlayer().getFactionId();
-
 		init = true;
 	}
 
@@ -86,10 +79,8 @@ public class BFFactionPanelNew extends FactionPanelNew {
 		factionPanel.clearTabs();
 		newsTab = factionPanel.addTab(Lng.str("NEWS"));
 		diplomacyTab = factionPanel.addTab(Lng.str("DIPLOMACY"));
-
 		createNewsPane();
 		createDiplomacyPane();
-
 		if(getOwnFaction() != null) {
 			newsTab = factionPanel.addTab(Lng.str("FACTION NEWS"));
 			membersTab = factionPanel.addTab(Lng.str("MEMBERS"));
@@ -98,14 +89,12 @@ public class BFFactionPanelNew extends FactionPanelNew {
 		}
 		listTab = factionPanel.addTab(Lng.str("LIST"));
 		optionTab = factionPanel.addTab(Lng.str("OPTIONS"));
-
 		createFactionListPane();
 		createOptionPane();
-
 		factionPanel.activeInterface = this;
-		if (beforeTab != null) {
-			for (int i = 0; i < factionPanel.getTabs().size(); i++) {
-				if (factionPanel.getTabs().get(i).getTabName().equals(beforeTab)) {
+		if(beforeTab != null) {
+			for(int i = 0; i < factionPanel.getTabs().size(); i++) {
+				if(factionPanel.getTabs().get(i).getTabName().equals(beforeTab)) {
 					factionPanel.setSelectedTab(i);
 					break;
 				}
@@ -125,17 +114,14 @@ public class BFFactionPanelNew extends FactionPanelNew {
 		diplomacyTab.setTextBoxHeightLast(270);
 		diplomacyTab.addNewTextBox(28);
 		infoPanel = diplomacyTab.getContent(0, 1);
-
 		factionDiploList = new GUIFactionsScrollableList(getState(), diplomacyTab.getContent(0, 0), this);
 		factionDiploList.onInit();
 		diplomacyTab.getContent(0, 0).attach(factionDiploList);
-
 		diplomacyTab.addDivider(290);
 		diplomacyTab.setTextBoxHeightLast(1, 48);
 		diplomacyTab.addNewTextBox(1, 190);
 		diplomacyTab.addNewTextBox(1, 48);
 		diplomacyTab.addNewTextBox(1, 200);
-
 		topHead = diplomacyTab.getContent(1, 0);
 		topList = diplomacyTab.getContent(1, 1);
 		bottomHead = diplomacyTab.getContent(1, 2);
@@ -167,7 +153,6 @@ public class BFFactionPanelNew extends FactionPanelNew {
 		optionTab.setContent(1, c1);
 	}
 
-
 	@Override
 	public void draw() {
 		if(!init) onInit();
@@ -187,18 +172,16 @@ public class BFFactionPanelNew extends FactionPanelNew {
 					this.fid = getOwnPlayer().getFactionId();
 				}
 			}
-
 		}
 	}
 
 	@Override
 	public void cleanUp() {
-
 	}
 
 	@Override
 	public GameClientState getState() {
-		return ((GameClientState) super.getState());
+		return super.getState();
 	}
 
 	@Override
@@ -217,11 +200,11 @@ public class BFFactionPanelNew extends FactionPanelNew {
 	}
 
 	public PlayerState getOwnPlayer() {
-		return BFFactionPanelNew.this.getState().getPlayer();
+		return getState().getPlayer();
 	}
 
 	public Faction getOwnFaction() {
-		return BFFactionPanelNew.this.getState().getFactionManager().getFaction(getOwnPlayer().getFactionId());
+		return getState().getFactionManager().getFaction(getOwnPlayer().getFactionId());
 	}
 
 	public void onSelectFaction(final Faction f) {
@@ -229,26 +212,22 @@ public class BFFactionPanelNew extends FactionPanelNew {
 		if(gFaction != null) gFaction.cleanUp();
 		bottomList.getChilds().clear();
 		topList.getChilds().clear();
-
 		gPlayer = new GUIFactionDiploScrollableList(getState(), getState().getPlayer().getDbId(), f, topList);
 		gPlayer.onInit();
 		topList.attach(gPlayer);
-
 		gFaction = new GUIFactionDiploScrollableList(getState(), getState().getPlayer().getFactionId(), f, bottomList);
 		gFaction.onInit();
 		bottomList.attach(gFaction);
-
 		GUIScrollablePanel topScroll = new GUIScrollablePanel(10, 10, topHead, getState());
-
 		GUITextOverlayTable lTop = new GUITextOverlayTable(2, 2, getState());
 		lTop.autoWrapOn = topHead;
 		lTop.autoHeight = true;
-		lTop.setTextSimple(new Object(){
+		lTop.setTextSimple(new Object() {
 			@Override
 			public String toString() {
 				FactionRelation.RType ownRelationTo = getOwnRelationTo(f);
 				String rel = "";
-				switch(ownRelationTo){
+				switch(ownRelationTo) {
 					case ENEMY:
 						rel = Lng.str("They consider you an enemy");
 						break;
@@ -262,28 +241,24 @@ public class BFFactionPanelNew extends FactionPanelNew {
 				FactionDiplomacyEntity ent = FactionDiplomacyManager.getDiplomacy(fid).entities.get(getOwnPlayer().getDbId());
 				int points = 0;
 				int raw = 0;
-				if(ent != null){
+				if(ent != null) {
 					points = ent.getPoints();
 					raw = ent.getRawPoints();
 				}
-
-				return Lng.str("Personal Relation Status: %s (%s w/o status)", points, raw)+"\n"+rel;
+				return Lng.str("Personal Relation Status: %s (%s w/o status)", points, raw) + "\n" + rel;
 			}
-
 		});
 		lTop.onInit();
 		GUIScrollablePanel bottomScroll = new GUIScrollablePanel(10, 10, bottomHead, getState());
-
 		GUITextOverlayTable lBottom = new GUITextOverlayTable(2, 2, getState());
 		lBottom.autoHeight = true;
 		lBottom.autoWrapOn = bottomHead;
-		lBottom.setTextSimple(new Object(){
+		lBottom.setTextSimple(new Object() {
 			@Override
 			public String toString() {
 				FactionRelation.RType ownRelationTo = getOwnRelationTo(f);
-
 				String rel = "";
-				switch(ownRelationTo){
+				switch(ownRelationTo) {
 					case ENEMY:
 						rel = Lng.str("They consider your faction enemy");
 						break;
@@ -294,30 +269,23 @@ public class BFFactionPanelNew extends FactionPanelNew {
 						rel = Lng.str("Neutral relation to your faction");
 						break;
 				}
-				FactionDiplomacyEntity ent =FactionDiplomacyManager.getDiplomacy(fid).entities.get(getState().getPlayer().getFactionId());
+				FactionDiplomacyEntity ent = FactionDiplomacyManager.getDiplomacy(fid).entities.get(getState().getPlayer().getFactionId());
 				int points = 0;
 				int raw = 0;
-				if(ent != null){
+				if(ent != null) {
 					points = ent.getPoints();
 					raw = ent.getRawPoints();
 				}
-
-				return Lng.str("Faction Relation Status: %s (%s w/o status)", points, raw)+"\n"+rel;
+				return Lng.str("Faction Relation Status: %s (%s w/o status)", points, raw) + "\n" + rel;
 			}
-
 		});
 		lBottom.onInit();
-
-
 		topScroll.setContent(lTop);
 		bottomScroll.setContent(lBottom);
-
 		topScroll.onInit();
 		bottomScroll.onInit();
-
 		topHead.getChilds().clear();
 		bottomHead.getChilds().clear();
-
 		topHead.attach(topScroll);
 		bottomHead.attach(bottomScroll);
 		putinInfoPanel(f);
@@ -328,24 +296,20 @@ public class BFFactionPanelNew extends FactionPanelNew {
 		GUITextOverlayTable lBottom = new GUITextOverlayTable(2, 2, getState());
 		lBottom.autoHeight = true;
 		lBottom.autoWrapOn = infoPanel;
-		lBottom.setTextSimple(new Object(){
+		lBottom.setTextSimple(new Object() {
 			@Override
 			public String toString() {
-				return f.getName()+"\n"+f.getDescription();
+				return f.getName() + "\n" + f.getDescription();
 			}
-
 		});
 		lBottom.onInit();
-
-
 		sc.setContent(lBottom);
-
 		sc.onInit();
 		infoPanel.getChilds().clear();
 		infoPanel.attach(sc);
 	}
 
-	public FactionRelation.RType getOwnRelationTo(Faction f){
+	public FactionRelation.RType getOwnRelationTo(Faction f) {
 		return getState().getFactionManager().getRelation(getState().getPlayerName(), getState().getPlayer().getFactionId(), f.getIdFaction());
 	}
 }
