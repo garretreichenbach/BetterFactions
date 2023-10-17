@@ -274,7 +274,7 @@ public class FactionActionsPanel extends GUIAncor {
                                         if(mouseEvent.pressedLeftMouse()) {
                                             getState().getController().queueUIAudio("0022_menu_ui - select 2");
                                             PeaceDealDialog dialog = new PeaceDealDialog();
-                                            dialog.getInputPanel().createPanel(FactionManager.getFactionData(faction));
+                                            dialog.getInputPanel().createPanel();
                                             dialog.activate();
                                         }
                                     }

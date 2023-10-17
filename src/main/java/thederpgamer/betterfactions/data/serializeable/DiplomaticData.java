@@ -20,10 +20,11 @@ public class DiplomaticData implements SerializeableData {
         OFFER_CREDITS("Offer Credits", "Offer to pay the attacker credits in exchange for peace.", true, false, 0.12f, -0.07f, 0.12f, Integer.class),
         OFFER_RESOURCES("Offer Resources", "Offer to pay the attacker resources in exchange for peace.", true, false, 0.15f, -0.1f, 0.15f, Short.class, Integer.class),
         OFFER_DILPO("Offer Diplomatic Change", "Offer to realign your faction's relations (like breaking an alliance or leaving a federation) in exchange for peace.", true, false, 0.1f, -0.15f, 0.23f, DiplomaticChangeData.class),
-        DEMAND_TERRITORY("Demand Territory", "Demand a system currently owned by the defender to be transfered to your faction in exchange for peace.", false, true, ),
-        DEMAND_CREDITS(),
-        DEMAND_RESOURCES(),
-        DEMAND_DIPLO();
+        ;
+//        DEMAND_TERRITORY("Demand Territory", "Demand a system currently owned by the defender to be transfered to your faction in exchange for peace.", false, true, ),
+//        DEMAND_CREDITS(),
+//        DEMAND_RESOURCES(),
+//        DEMAND_DIPLO();
 
         public final String display;
         public final String description;
@@ -66,6 +67,6 @@ public class DiplomaticData implements SerializeableData {
 
     @Override
     public String toString() {
-
+        return "DiplomaticData{}"; //Todo
     }
 }

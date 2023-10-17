@@ -34,7 +34,7 @@ public class FactionDiplomacyReaction {
 
 		public final String desc;
 
-		private ConditionReaction(String desc){
+		ConditionReaction(String desc){
 			this.desc = desc;
 		}
 		public static String list() {
