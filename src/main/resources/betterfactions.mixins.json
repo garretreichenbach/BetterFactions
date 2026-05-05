@@ -3,7 +3,11 @@
   "package": "videogoose.betterfactions.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "MixinFactionRelation"
+    "MixinFactionRelation",
+    "MixinFaction",
+    "BetterFactionAccessor",
+    "MixinFactionPermission",
+    "BetterMemberAccessor"
   ],
   "client": [
     "PlayerPanelAccessor"

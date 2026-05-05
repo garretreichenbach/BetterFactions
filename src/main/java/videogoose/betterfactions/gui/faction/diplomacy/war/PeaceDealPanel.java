@@ -14,7 +14,6 @@ import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActivatableTextBar;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIDialogWindow;
 import org.schema.schine.input.InputState;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
 import videogoose.betterfactions.data.persistent.federation.PeaceOfferMessage;
 import videogoose.betterfactions.data.serializeable.DiplomaticData;
 import videogoose.betterfactions.data.serializeable.DiplomaticData.DiplomaticDataType;
@@ -32,8 +31,8 @@ import java.util.ArrayList;
 public class PeaceDealPanel extends GUIInputDialogPanel {
 
     private WarData warData;
-    private FactionData from;
-    private FactionData to;
+    private Faction from;
+    private Faction to;
     private boolean isAttacker;
     private final ArrayList<DiplomaticData> selectedDemands = new ArrayList<>();
 
@@ -49,20 +48,18 @@ public class PeaceDealPanel extends GUIInputDialogPanel {
 
     public void createPanel(WarData warData) {
         this.warData = warData;
-        FactionData playerFaction = FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName());
-        if (playerFaction == null || !warData.isInvolved(playerFaction.getFactionId())) return;
+        Faction playerFaction = FactionManager.getFaction(GameClient.getClientPlayerState());
+        if (playerFaction == null || !warData.isInvolved(playerFaction.getIdFaction())) return;
 
         // Determine sides
-        isAttacker = warData.attackers.containsKey(playerFaction.getFactionId());
+        isAttacker = warData.attackers.containsKey(playerFaction.getIdFaction());
         this.from = playerFaction;
 
         // Find opponent leader
         if (isAttacker) {
-            Faction leaderFaction = warData.getDefenderLeaderFaction();
-            this.to = leaderFaction != null ? FactionManager.getFactionData(leaderFaction) : null;
+            this.to = warData.getDefenderLeaderFaction();
         } else {
-            Faction leaderFaction = warData.getAttackerLeaderFaction();
-            this.to = leaderFaction != null ? FactionManager.getFactionData(leaderFaction) : null;
+            this.to = warData.getAttackerLeaderFaction();
         }
         if (to == null) return;
 
@@ -231,8 +228,8 @@ public class PeaceDealPanel extends GUIInputDialogPanel {
     }
 
     private void updateWarScoreDisplay() {
-        float ourScore = warData.getTotalProgress(from.getFactionId());
-        float theirScore = to != null ? warData.getTotalProgress(to.getFactionId()) : 0;
+        float ourScore = warData.getTotalProgress(from.getIdFaction());
+        float theirScore = to != null ? warData.getTotalProgress(to.getIdFaction()) : 0;
         float totalCost = 0;
         for (DiplomaticData d : selectedDemands) totalCost += d.getWarScoreCost();
 
@@ -249,8 +246,8 @@ public class PeaceDealPanel extends GUIInputDialogPanel {
         }
         String title = from.getName() + " proposes peace to " + to.getName();
         String msg = messageBar != null ? messageBar.getText() : "";
-        PeaceOfferData offerData = new PeaceOfferData(from, to, selectedDemands);
-        PeaceOfferMessage message = new PeaceOfferMessage(from.getFaction(), to.getFaction(), title, offerData);
+        PeaceOfferData offerData = new PeaceOfferData(from.getIdFaction(), to.getIdFaction(), selectedDemands);
+        PeaceOfferMessage message = new PeaceOfferMessage(from, to, title, offerData);
         message.message = msg;
         PacketUtil.sendPacketToServer(new SendFactionMessagePacket(message));
     }

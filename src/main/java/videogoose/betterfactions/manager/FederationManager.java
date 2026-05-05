@@ -1,17 +1,18 @@
 package videogoose.betterfactions.manager;
 
 import api.common.GameClient;
+import api.common.GameCommon;
 import api.mod.ModSkeleton;
 import api.mod.config.PersistentObjectUtil;
+import org.schema.game.common.data.player.faction.Faction;
 import videogoose.betterfactions.BetterFactions;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
 import videogoose.betterfactions.data.persistent.federation.FederationData;
+import videogoose.betterfactions.mixin.BetterFactionAccessor;
 import videogoose.betterfactions.utils.FactionNewsUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Objects;
 
 /**
  * <Description>
@@ -23,23 +24,33 @@ public class FederationManager {
 
     private static final ModSkeleton instance = BetterFactions.getInstance().getSkeleton();
 
-    public static void createNewFederation(String federationName, final FactionData fromFaction, final FactionData toFaction) {
+    public static void createNewFederation(String federationName, final Faction fromFaction, final Faction toFaction) {
         ArrayList<FederationData> toRemove = new ArrayList<>();
-        for(Object obj : PersistentObjectUtil.getObjects(instance, FactionData.class)) {
+        for(Object obj : PersistentObjectUtil.getObjects(instance, FederationData.class)) {
             if(((FederationData) obj).getName() == federationName) toRemove.add((FederationData) obj);
         }
         for(FederationData oldData : toRemove) PersistentObjectUtil.removeObject(instance, oldData);
 
         FederationData federationData = new FederationData(federationName, fromFaction, toFaction);
-        fromFaction.setFederationId(federationData.getId());
-        toFaction.setFederationId(federationData.getId());
+        ((BetterFactionAccessor) fromFaction).setFederationId(federationData.getId());
+        ((BetterFactionAccessor) toFaction).setFederationId(federationData.getId());
+        FactionManager.saveStore(fromFaction.getIdFaction());
+        FactionManager.saveStore(toFaction.getIdFaction());
         FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationCreateNews(federationData));
         PersistentObjectUtil.addObject(instance, federationData);
         BetterFactions.getInstance().newFactionPanel.factionDiplomacyTab.updateTab();
-        if(FactionManager.inFaction(GameClient.getClientPlayerState()) && (Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getFederationId() == federationData.getId())) {
+        Faction playerFaction = FactionManager.getFaction(GameClient.getClientPlayerState());
+        if(FactionManager.inFaction(GameClient.getClientPlayerState()) && playerFaction != null && ((BetterFactionAccessor) playerFaction).getFederationId() == federationData.getId()) {
             BetterFactions.getInstance().newFactionPanel.factionManagementTab.updateTab();
             BetterFactions.getInstance().newFactionPanel.federationManagementTab.updateTab();
         }
+    }
+
+    public static void createNewFederation(String federationName, int fromFactionId, int toFactionId) {
+        Faction fromFaction = GameCommon.getGameState().getFactionManager().getFaction(fromFactionId);
+        Faction toFaction = GameCommon.getGameState().getFactionManager().getFaction(toFactionId);
+        if (fromFaction == null || toFaction == null) return;
+        createNewFederation(federationName, fromFaction, toFaction);
     }
 
     public static void removeFederation(FederationData federationData) {
@@ -63,8 +74,12 @@ public class FederationManager {
         return federationDataMap;
     }
 
-    public static FederationData getFederation(FactionData factionData) {
-        return getFederationDataMap().get(factionData.getFederationId());
+    public static FederationData getFederation(Faction faction) {
+        return getFederationDataMap().get(((BetterFactionAccessor) faction).getFederationId());
+    }
+
+    public static FederationData getFederation(int federationId) {
+        return getFederationDataMap().get(federationId);
     }
 
     public static int getNewId() {

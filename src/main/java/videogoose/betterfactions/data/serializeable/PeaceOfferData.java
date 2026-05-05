@@ -2,7 +2,6 @@ package videogoose.betterfactions.data.serializeable;
 
 import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -15,13 +14,13 @@ import java.util.ArrayList;
  */
 public class PeaceOfferData implements SerializeableData {
 
-    public FactionData from;
-    public FactionData to;
+    public int fromFactionId;
+    public int toFactionId;
     public ArrayList<DiplomaticData> dataList = new ArrayList<>();
 
-    public PeaceOfferData(FactionData from, FactionData to, ArrayList<DiplomaticData> dataList) {
-        this.from = from;
-        this.to = to;
+    public PeaceOfferData(int fromFactionId, int toFactionId, ArrayList<DiplomaticData> dataList) {
+        this.fromFactionId = fromFactionId;
+        this.toFactionId = toFactionId;
         this.dataList = dataList;
         //Todo: Multi-faction wars
     }
@@ -32,16 +31,16 @@ public class PeaceOfferData implements SerializeableData {
 
     @Override
     public void deserialize(PacketReadBuffer readBuffer) throws IOException {
-        from = new FactionData(readBuffer);
-        to = new FactionData(readBuffer);
+        fromFactionId = readBuffer.readInt();
+        toFactionId = readBuffer.readInt();
         int size = readBuffer.readInt();
         for(int i = 0; i < size; i ++) dataList.add(new DiplomaticData(readBuffer));
     }
 
     @Override
     public void serialize(PacketWriteBuffer writeBuffer) throws IOException {
-        from.serialize(writeBuffer);
-        to.serialize(writeBuffer);
+        writeBuffer.writeInt(fromFactionId);
+        writeBuffer.writeInt(toFactionId);
         writeBuffer.writeInt(dataList.size());
         for(DiplomaticData data : dataList) data.serialize(writeBuffer);
     }

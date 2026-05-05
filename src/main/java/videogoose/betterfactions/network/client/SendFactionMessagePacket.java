@@ -14,7 +14,6 @@ import videogoose.betterfactions.data.diplomacy.FactionDiplomacy;
 import videogoose.betterfactions.data.diplomacy.FactionDiplomacyEntity;
 import videogoose.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
 import videogoose.betterfactions.data.diplomacy.war.CasusBelli;
-import videogoose.betterfactions.data.persistent.faction.FactionMember;
 import videogoose.betterfactions.data.persistent.federation.FactionMessage;
 import videogoose.betterfactions.manager.CasusBelliManager;
 import videogoose.betterfactions.mixin.CustomRelationType;
@@ -23,6 +22,8 @@ import videogoose.betterfactions.data.serializeable.war.WarGoalData;
 import videogoose.betterfactions.manager.FactionDiplomacyManager;
 import videogoose.betterfactions.manager.FactionManager;
 import videogoose.betterfactions.utils.FactionMessageUtils;
+import videogoose.betterfactions.utils.PermissionUtils;
+import org.schema.game.common.data.player.faction.FactionPermission;
 
 import java.io.IOException;
 
@@ -82,7 +83,7 @@ public class SendFactionMessagePacket extends Packet {
         }
 
         // Check faction permissions
-	    FactionMember member = FactionManager.getPlayerFactionMember(playerState.getName());
+	    FactionPermission member = FactionManager.getPlayerMember(playerState.getName());
         FactionMessage.MessageType type = FactionMessage.MessageType.valueOf(messageType);
         if (member != null && !hasPermissionForType(member, type)) {
             BetterFactions.getInstance().logWarning("Player " + playerState.getName() + " lacks permission for " + type.name());
@@ -107,17 +108,17 @@ public class SendFactionMessagePacket extends Packet {
         }
     }
 
-    private boolean hasPermissionForType(videogoose.betterfactions.data.persistent.faction.FactionMember member, FactionMessage.MessageType type) {
+    private boolean hasPermissionForType(FactionPermission member, FactionMessage.MessageType type) {
         return switch (type) {
-            case DECLARE_WAR, OFFER_PEACE -> member.hasPermission("diplomacy.war");
-            case ALLIANCE_OFFER, ALLIANCE_BREAK -> member.hasPermission("diplomacy.alliance");
-            case NON_AGGRESSION_PACT, CANCEL_NON_AGGRESSION_PACT -> member.hasPermission("diplomacy.nap");
-	        case DEMAND_CONCESSION -> member.hasPermission("diplomacy.demand");
-            case OFFER_TRADE, CANCEL_TRADE -> member.hasPermission("trade.offer");
-            case FEDERATION_INVITE, FEDERATION_REQUEST -> member.hasPermission("federation.invite");
+            case DECLARE_WAR, OFFER_PEACE -> PermissionUtils.hasPermission(member, "diplomacy.war");
+            case ALLIANCE_OFFER, ALLIANCE_BREAK -> PermissionUtils.hasPermission(member, "diplomacy.alliance");
+            case NON_AGGRESSION_PACT, CANCEL_NON_AGGRESSION_PACT -> PermissionUtils.hasPermission(member, "diplomacy.nap");
+            case DEMAND_CONCESSION -> PermissionUtils.hasPermission(member, "diplomacy.demand");
+            case OFFER_TRADE, CANCEL_TRADE -> PermissionUtils.hasPermission(member, "trade.offer");
+            case FEDERATION_INVITE, FEDERATION_REQUEST -> PermissionUtils.hasPermission(member, "federation.invite");
             case IMPROVE_RELATIONS, DECREASE_RELATIONS, INSULT, EMBARGO, CANCEL_EMBARGO, BAN_DIPLOMATS, SEND_GIFT,
-                 GUARANTEE_INDEPENDENCE, CANCEL_GUARANTEE -> member.hasPermission("diplomacy.[ANY]");
-	        default -> true; // General messages don't need special permissions
+                 GUARANTEE_INDEPENDENCE, CANCEL_GUARANTEE -> PermissionUtils.hasPermission(member, "diplomacy.[ANY]");
+            default -> true; // General messages don't need special permissions
         };
     }
 
@@ -183,7 +184,7 @@ public class SendFactionMessagePacket extends Packet {
         String cleanMessage = message != null && message.contains("]") ? message.substring(message.indexOf(']') + 1) : "";
         String justification = hasCB ? " (Justified)" : " (Unjustified)";
         FactionMessage warMessage = new FactionMessage(from, to, title + justification, cleanMessage, FactionMessage.MessageType.DECLARE_WAR);
-        FactionManager.getFactionData(to).addMessage(warMessage);
+        FactionManager.addMessage(to.getIdFaction(),warMessage);
 
         BetterFactions.getInstance().logInfo(from.getName() + " declared war on " + to.getName()
             + " with goal: " + warGoalType.displayName + (hasCB ? " (justified)" : " (UNJUSTIFIED)"));
@@ -199,7 +200,7 @@ public class SendFactionMessagePacket extends Packet {
 
         // Send message to target faction
         FactionMessage napMessage = new FactionMessage(from, to, title, message, FactionMessage.MessageType.NON_AGGRESSION_PACT);
-        FactionManager.getFactionData(to).addMessage(napMessage);
+        FactionManager.addMessage(to.getIdFaction(),napMessage);
 
         BetterFactions.getInstance().logInfo(from.getName() + " offered non-aggression pact to " + to.getName());
     }
@@ -207,7 +208,7 @@ public class SendFactionMessagePacket extends Packet {
     private void processGuarantee(Faction from, Faction to) {
         // Guarantee independence: notify the guaranteed faction
         FactionMessage guaranteeMsg = new FactionMessage(from, to, title, message, FactionMessage.MessageType.GUARANTEE_INDEPENDENCE);
-        FactionManager.getFactionData(to).addMessage(guaranteeMsg);
+        FactionManager.addMessage(to.getIdFaction(),guaranteeMsg);
 
         // Fire diplomacy action — positive opinion modifier
         FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.GUARANTEE_INDEPENDENCE);
@@ -217,14 +218,14 @@ public class SendFactionMessagePacket extends Packet {
     private void processCounterOffer(Faction from, Faction to) {
         // Counter-offers are delivered as messages with modified terms
         FactionMessage counterMessage = new FactionMessage(from, to, title, message, FactionMessage.MessageType.COUNTER_OFFER);
-        FactionManager.getFactionData(to).addMessage(counterMessage);
+        FactionManager.addMessage(to.getIdFaction(),counterMessage);
         BetterFactions.getInstance().logInfo(from.getName() + " sent counter-offer to " + to.getName());
     }
 
     private void processDemand(Faction from, Faction to) {
         // Deliver demand message to target faction
         FactionMessage demandMessage = new FactionMessage(from, to, title, message, FactionMessage.MessageType.DEMAND_CONCESSION);
-        FactionManager.getFactionData(to).addMessage(demandMessage);
+        FactionManager.addMessage(to.getIdFaction(),demandMessage);
 
         // Fire diplomacy action — demands cause opinion penalty
         FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.SEND_DEMAND);
@@ -234,7 +235,7 @@ public class SendFactionMessagePacket extends Packet {
     private void processPeaceOffer(Faction from, Faction to) {
         // Peace offers carry their demands in the message — deliver to target faction
         FactionMessage peaceMessage = new FactionMessage(from, to, title, message, FactionMessage.MessageType.OFFER_PEACE);
-        FactionManager.getFactionData(to).addMessage(peaceMessage);
+        FactionManager.addMessage(to.getIdFaction(),peaceMessage);
 
         // Fire diplomacy action
         FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.PEACE_OFFER);
@@ -245,7 +246,7 @@ public class SendFactionMessagePacket extends Packet {
         FactionMessage msg = new FactionMessage(from, to,
             from.getName() + " revoked their guarantee of your independence",
             message, FactionMessage.MessageType.CANCEL_GUARANTEE);
-        FactionManager.getFactionData(to).addMessage(msg);
+        FactionManager.addMessage(to.getIdFaction(),msg);
         FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.BREAK_GUARANTEE);
         BetterFactions.getInstance().logInfo(from.getName() + " broke guarantee of " + to.getName());
     }
@@ -263,7 +264,7 @@ public class SendFactionMessagePacket extends Packet {
         FactionMessage msg = new FactionMessage(from, to,
             from.getName() + " is improving relations with you",
             message, FactionMessage.MessageType.IMPROVE_RELATIONS);
-        FactionManager.getFactionData(to).addMessage(msg);
+        FactionManager.addMessage(to.getIdFaction(),msg);
         BetterFactions.getInstance().logInfo(from.getName() + " improving relations with " + to.getName());
     }
 
@@ -272,7 +273,7 @@ public class SendFactionMessagePacket extends Packet {
         FactionMessage msg = new FactionMessage(from, to,
             from.getName() + " is actively worsening relations with you",
             message, FactionMessage.MessageType.DECREASE_RELATIONS);
-        FactionManager.getFactionData(to).addMessage(msg);
+        FactionManager.addMessage(to.getIdFaction(),msg);
         BetterFactions.getInstance().logInfo(from.getName() + " decreasing relations with " + to.getName());
     }
 
@@ -281,7 +282,7 @@ public class SendFactionMessagePacket extends Packet {
         FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.INSULT);
         String insultTitle = from.getName() + " has insulted " + to.getName();
         FactionMessage msg = new FactionMessage(from, to, insultTitle, message, FactionMessage.MessageType.INSULT);
-        FactionManager.getFactionData(to).addMessage(msg);
+        FactionManager.addMessage(to.getIdFaction(),msg);
         // Insults grant the insulted faction a rivalry CB
         CasusBelliManager.addCB(new CasusBelli(CasusBelli.CBType.RIVALRY, to.getIdFaction(), from.getIdFaction()));
         BetterFactions.getInstance().logInfo(from.getName() + " insulted " + to.getName());
@@ -310,7 +311,7 @@ public class SendFactionMessagePacket extends Packet {
                 FactionMessage msg = new FactionMessage(from, to,
                     from.getName() + " sent you a gift of " + amount + " credits",
                     cleanMsg, FactionMessage.MessageType.SEND_GIFT);
-                FactionManager.getFactionData(to).addMessage(msg);
+                FactionManager.addMessage(to.getIdFaction(),msg);
                 BetterFactions.getInstance().logInfo(from.getName() + " sent " + amount + " credits to " + to.getName());
             } else {
                 BetterFactions.getInstance().logWarning(from.getName() + " tried to send gift but insufficient credits");
@@ -327,7 +328,7 @@ public class SendFactionMessagePacket extends Packet {
             from.getName() + " has banned your diplomats",
             "Your faction's diplomats have been expelled. Improving relations is blocked for a period of time.",
             FactionMessage.MessageType.BAN_DIPLOMATS);
-        FactionManager.getFactionData(to).addMessage(msg);
+        FactionManager.addMessage(to.getIdFaction(),msg);
         BetterFactions.getInstance().logInfo(from.getName() + " banned diplomats from " + to.getName());
     }
 
@@ -336,7 +337,7 @@ public class SendFactionMessagePacket extends Packet {
         FactionMessage msg = new FactionMessage(from, to,
             from.getName() + " has placed an embargo on " + to.getName(),
             message, FactionMessage.MessageType.EMBARGO);
-        FactionManager.getFactionData(to).addMessage(msg);
+        FactionManager.addMessage(to.getIdFaction(),msg);
         BetterFactions.getInstance().logInfo(from.getName() + " embargoed " + to.getName());
     }
 
@@ -344,10 +345,10 @@ public class SendFactionMessagePacket extends Packet {
         if (org.schema.game.common.data.player.faction.FactionManager.isNPCFactionOrPirateOrTrader(toId)) {
             String response = FactionMessageUtils.getResponseMessage(type, to, from);
             FactionMessage factionMessage = new FactionMessage(to, from, "Reply from " + to.getName(), response, FactionMessage.MessageType.REPLY);
-            FactionManager.getFactionData(from).addMessage(factionMessage);
+            FactionManager.addMessage(from.getIdFaction(),factionMessage);
         } else {
             FactionMessage factionMessage = new FactionMessage(from, to, title, message, type);
-            FactionManager.getFactionData(to).addMessage(factionMessage);
+            FactionManager.addMessage(to.getIdFaction(),factionMessage);
         }
     }
 }

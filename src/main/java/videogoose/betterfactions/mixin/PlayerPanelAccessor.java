@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
  * Accessor mixin for PlayerPanel to access the private factionPanelNew field
  * without reflection.
  */
-@Mixin(PlayerPanel.class)
+@Mixin(value = PlayerPanel.class, remap = false)
 public interface PlayerPanelAccessor {
 
 	@Accessor("factionPanelNew")

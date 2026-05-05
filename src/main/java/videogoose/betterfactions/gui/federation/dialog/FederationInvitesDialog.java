@@ -10,10 +10,11 @@ import org.schema.schine.graphicsengine.forms.font.FontLibrary;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.input.InputState;
 import org.schema.schine.network.client.ClientState;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
+import org.schema.game.common.data.player.faction.Faction;
 import videogoose.betterfactions.data.persistent.federation.FactionMessage;
 import videogoose.betterfactions.manager.FactionManager;
 import videogoose.betterfactions.manager.FederationManager;
+import videogoose.betterfactions.mixin.BetterFactionAccessor;
 
 import javax.vecmath.Vector4f;
 
@@ -54,8 +55,9 @@ public class FederationInvitesDialog extends PlayerGameOkCancelInput {
         protected void updateInvitationList(GUIElementList elementList) {
             elementList.clear();
             int i = 0;
-            FactionData factionData = FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName());
-            for(FactionMessage message : factionData.getInbox()) {
+            Faction playerFaction = FactionManager.getFaction(GameClient.getClientPlayerState());
+            if(playerFaction == null) return;
+            for(FactionMessage message : ((BetterFactionAccessor) playerFaction).getInbox()) {
                 if(message.messageType.equals(FactionMessage.MessageType.FEDERATION_INVITE)) {
                     elementList.add(new IncomingInvitationListElement(getState(), message, i));
                     i ++;
@@ -110,16 +112,18 @@ public class FederationInvitesDialog extends PlayerGameOkCancelInput {
             public void callback(GUIElement element, MouseEvent mouseEvent) {
                 if(mouseEvent.pressedLeftMouse()) {
                     if("ACCEPT".equals(element.getUserPointer())) {
-                        if(FactionManager.getFactionData(invite.getRecipient()).getFederationId() != -1) {
+                        Faction recipientFaction = invite.getRecipient();
+                        int fedId = ((BetterFactionAccessor) recipientFaction).getFederationId();
+                        if(fedId != -1) {
                             new SimplePopup(getState(), Lng.str("Cannot accept invitation"), Lng.str("Your faction is already part of a federation and cannot join another one."));
                         } else {
-                            FederationManager.getFederation(FactionManager.getFactionData(invite.getRecipient())).addMember(FactionManager.getFactionData(invite.getRecipient()));
+                            FederationManager.getFederation(recipientFaction).addMember(recipientFaction);
                         }
                         return;
                     }
 
                     if("DECLINE".equals(element.getUserPointer())) {
-                        FactionManager.getFactionData(invite.getSender()).getInbox().remove(invite);
+                        ((BetterFactionAccessor) invite.getSender()).getInbox().remove(invite);
                     }
                 }
             }

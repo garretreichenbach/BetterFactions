@@ -6,7 +6,6 @@ import api.network.PacketWriteBuffer;
 import org.schema.game.common.data.player.PlayerState;
 import videogoose.betterfactions.data.persistent.PersistentData;
 import videogoose.betterfactions.data.persistent.diplomacy.DiplomaticDataOld;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
 import videogoose.betterfactions.data.persistent.federation.FederationData;
 import videogoose.betterfactions.BetterFactions;
 import videogoose.betterfactions.manager.NetworkSyncManager;
@@ -41,7 +40,6 @@ public class ServerSyncDataPacket extends Packet {
         for(int i = 0; i < data.length; i ++) {
             int dataType = packetReadBuffer.readInt();
             data[i] = switch(dataType) {
-                case NetworkSyncManager.FACTION_DATA -> packetReadBuffer.readObject(FactionData.class);
                 case NetworkSyncManager.FEDERATION_DATA -> packetReadBuffer.readObject(FederationData.class);
                 case NetworkSyncManager.DIPLOMATIC_DATA -> packetReadBuffer.readObject(DiplomaticDataOld.class);
                 default -> {

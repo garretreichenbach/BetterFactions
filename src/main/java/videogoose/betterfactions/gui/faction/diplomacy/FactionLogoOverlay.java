@@ -10,9 +10,8 @@ import org.schema.schine.graphicsengine.forms.gui.GUICallback;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.GUIOverlay;
 import org.schema.schine.input.InputState;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
-import videogoose.betterfactions.manager.FactionManager;
 import videogoose.betterfactions.manager.ResourceManager;
+import videogoose.betterfactions.mixin.BetterFactionAccessor;
 
 /**
  * FactionLogoOverlay.java
@@ -52,8 +51,7 @@ public class FactionLogoOverlay extends GUIOverlay implements GUICallback {
                     public boolean onInput(String s) {
                         if((s.startsWith("https://")) && (s.toLowerCase().endsWith(".png") || s.toLowerCase().endsWith(".jpg") || s.toLowerCase().endsWith(".jpeg"))) {
                             Sprite sprite = ResourceManager.getSprite(s);
-                            FactionData factionData = FactionManager.getFactionData(faction);
-                            factionData.setFactionLogo(ResourceManager.getSprite(s));
+                            ((BetterFactionAccessor) faction).setFactionLogo(s);
                             infoPanel.updateLogo(sprite);
                             return true;
                         } else return false;

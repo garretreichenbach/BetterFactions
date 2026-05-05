@@ -11,11 +11,11 @@ import org.schema.schine.graphicsengine.forms.gui.GUIElementList;
 import org.schema.schine.graphicsengine.forms.gui.GUIListElement;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
+import org.schema.game.common.data.player.faction.FactionPermission;
 import videogoose.betterfactions.data.serializeable.FactionEntityData;
-import videogoose.betterfactions.data.persistent.faction.FactionMember;
 import videogoose.betterfactions.manager.ClientCacheManager;
 import videogoose.betterfactions.manager.FactionManager;
+import videogoose.betterfactions.utils.PermissionUtils;
 import videogoose.betterfactions.BetterFactions;
 
 import java.util.ArrayList;
@@ -126,7 +126,7 @@ public class FactionAssetsList extends ScrollableTableList<FactionEntityData> {
     public void updateListEntries(GUIElementList guiElementList, Set<FactionEntityData> set) {
         guiElementList.deleteObservers();
         guiElementList.addObserver(this);
-        FactionMember playerFactionMember = FactionManager.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
+        FactionPermission playerFactionMember = FactionManager.getPlayerMember(GameClient.getClientPlayerState().getName());
         assert playerFactionMember != null;
         for(FactionEntityData entityData : set) {
             try {
@@ -151,7 +151,7 @@ public class FactionAssetsList extends ScrollableTableList<FactionEntityData> {
                 (statusRowElement = new GUIClippedRow(this.getState())).attach(statusTextElement);
 
                 FactionAssetsListRow row = new FactionAssetsListRow(getState(), entityData, nameRowElement, typeRowElement, locationRowElement, statusRowElement);
-                if(playerFactionMember.hasPermission("manage.assets.[ANY]")) {
+                if(PermissionUtils.hasPermission(playerFactionMember, "manage.assets.[ANY]")) {
                     GUIAncor anchor = new GUIAncor(getState(), this.anchor.getWidth() - 28.0f, 28.0f);
                     anchor.attach(redrawButtonPane(entityData, playerFactionMember, anchor));
                     row.expanded = new GUIElementList(getState());
@@ -167,10 +167,9 @@ public class FactionAssetsList extends ScrollableTableList<FactionEntityData> {
         guiElementList.updateDim();
     }
 
-    private GUIHorizontalButtonTablePane redrawButtonPane(final FactionEntityData entityData, final FactionMember playerFactionMember, GUIAncor anchor) {
+    private GUIHorizontalButtonTablePane redrawButtonPane(final FactionEntityData entityData, final FactionPermission playerFactionMember, GUIAncor anchor) {
         GUIHorizontalButtonTablePane buttonPane = new GUIHorizontalButtonTablePane(getState(), 0, 1, anchor);
         buttonPane.onInit();
-        final FactionData factionData = playerFactionMember.getFactionData();
         int buttonIndex = 0;
 
         return buttonPane;

@@ -15,13 +15,15 @@ import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalButtonTablePane;
 import org.schema.schine.input.InputState;
 import videogoose.betterfactions.BetterFactions;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
-import videogoose.betterfactions.data.persistent.faction.FactionMember;
 import videogoose.betterfactions.data.persistent.faction.FactionRank;
 import videogoose.betterfactions.data.persistent.federation.FactionMessage;
 import videogoose.betterfactions.gui.faction.diplomacy.war.PeaceDealDialog;
 import videogoose.betterfactions.gui.faction.diplomacy.war.WarDeclarationDialog;
 import videogoose.betterfactions.manager.FactionManager;
+import videogoose.betterfactions.mixin.BetterFactionAccessor;
+import videogoose.betterfactions.mixin.BetterMemberAccessor;
+import videogoose.betterfactions.utils.PermissionUtils;
+import org.schema.game.common.data.player.faction.FactionPermission;
 
 import javax.annotation.Nullable;
 
@@ -168,17 +170,17 @@ public class FactionActionsPanel extends GUIAncor {
         }
 
         if(GameClient.getClientPlayerState().getFactionId() != 0) {
-            final FactionMember player = FactionManager.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
-            if(player != null && faction.getIdFaction() != player.getFactionId()) {
-                final Faction playerFaction = player.getFactionData().getFaction();
+            final FactionPermission player = FactionManager.getPlayerMember(GameClient.getClientPlayerState().getName());
+            final Faction playerFaction = FactionManager.getFaction(GameClient.getClientPlayerState());
+            if(player != null && playerFaction != null && faction.getIdFaction() != playerFaction.getIdFaction()) {
                 if(playerFaction.getMembersUID().size() == 1) { //Todo: Temp fix for events not firing
                     FactionRank founderRank = new FactionRank("Founder", 4, "*");
-                    player.getFactionData().addRank(founderRank);
-                    player.setRank(founderRank);
+                    ((BetterFactionAccessor) playerFaction).getRanks().add(founderRank);
+                    ((BetterMemberAccessor) player).setCustomRank(founderRank);
                 }
-                if(player.hasPermission("diplomacy.[ANY]")) {
-                    if(player.hasPermission("diplomacy.ally")) {
-                        if(faction.getFriends().contains(player.getFactionData().getFaction())) {
+                if(PermissionUtils.hasPermission(player, "diplomacy.[ANY]")) {
+                    if(PermissionUtils.hasPermission(player, "diplomacy.ally")) {
+                        if(faction.getFriends().contains(playerFaction)) {
                             buttonPane.addRow();
                             buttonPane.addButton(0, pos, "REMOVE ALLY", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
                                 @Override
@@ -197,7 +199,7 @@ public class FactionActionsPanel extends GUIAncor {
 
                                             public void pressedOK() {
                                                 getState().getController().queueUIAudio("0022_menu_ui - cancel");
-                                                Objects.requireNonNull(GameCommon.getGameState()).getFactionManager().setRelationServer(player.getFactionId(), faction.getIdFaction(), FactionRelation.RType.NEUTRAL.code);
+                                                Objects.requireNonNull(GameCommon.getGameState()).getFactionManager().setRelationServer(playerFaction.getIdFaction(), faction.getIdFaction(), FactionRelation.RType.NEUTRAL.code);
                                                 BetterFactions.getInstance().newFactionPanel.factionDiplomacyTab.updateTab();
                                                 deactivate();
                                             }
@@ -266,7 +268,7 @@ public class FactionActionsPanel extends GUIAncor {
                     }
 
                     // Non-Aggression Pact: show when neutral (not allied, not at war)
-                    if(player.hasPermission("diplomacy.nap")) {
+                    if(PermissionUtils.hasPermission(player, "diplomacy.nap")) {
                         if(!faction.getFriends().contains(playerFaction)
                             && !faction.getEnemies().contains(playerFaction)) {
                             buttonPane.addRow();
@@ -306,7 +308,7 @@ public class FactionActionsPanel extends GUIAncor {
                     }
 
                     // Improve/Decrease Relations + Insult + Gift + Embargo
-                    if(player.hasPermission("diplomacy.[ANY]") && faction.getIdFaction() != player.getFactionId()) {
+                    if(PermissionUtils.hasPermission(player, "diplomacy.[ANY]") && faction.getIdFaction() != playerFaction.getIdFaction()) {
                         // Improve Relations
                         buttonPane.addRow();
                         buttonPane.addButton(0, pos, "IMPROVE RELATIONS", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
@@ -444,9 +446,9 @@ public class FactionActionsPanel extends GUIAncor {
                         pos++;
                     }
 
-                    if(player.hasPermission("diplomacy.war")) {
-                        if(!faction.getFriends().contains(player.getFactionData().getFaction())) {
-                            if(faction.getEnemies().contains(player.getFactionData().getFaction())) {
+                    if(PermissionUtils.hasPermission(player, "diplomacy.war")) {
+                        if(!faction.getFriends().contains(playerFaction)) {
+                            if(faction.getEnemies().contains(playerFaction)) {
                                 //Todo: Handle peace deals and options
                                 buttonPane.addRow();
                                 buttonPane.addButton(0, pos, "OFFER PEACE", GUIHorizontalArea.HButtonColor.RED, new GUICallback() {
@@ -489,7 +491,7 @@ public class FactionActionsPanel extends GUIAncor {
                                         if(mouseEvent.pressedLeftMouse()) {
                                             getState().getController().queueUIAudio("0022_menu_ui - select 2");
                                             WarDeclarationDialog dialog = new WarDeclarationDialog();
-                                            dialog.setFactions(player.getFaction(), faction);
+                                            dialog.setFactions(playerFaction, faction);
                                             dialog.activate();
                                         }
                                     }
@@ -522,7 +524,7 @@ public class FactionActionsPanel extends GUIAncor {
             }
 
             // Demand button: show when not at war and not allied (demands are non-hostile)
-            if(player.hasPermission("diplomacy.demand") && faction.getIdFaction() != player.getFactionId()) {
+            if(PermissionUtils.hasPermission(player, "diplomacy.demand") && faction.getIdFaction() != playerFaction.getIdFaction()) {
                 if(!faction.getEnemies().contains(playerFaction) && !faction.getFriends().contains(playerFaction)) {
                     buttonPane.addRow();
                     buttonPane.addButton(0, pos, "SEND DEMAND", GUIHorizontalArea.HButtonColor.YELLOW, new GUICallback() {
@@ -561,7 +563,7 @@ public class FactionActionsPanel extends GUIAncor {
             }
 
             // Rivalry: show when not allied, not at war, and not already a rival (max 3 rivals)
-            if(player.hasPermission("diplomacy.[ANY]") && faction.getIdFaction() != player.getFactionId()) {
+            if(PermissionUtils.hasPermission(player, "diplomacy.[ANY]") && faction.getIdFaction() != playerFaction.getIdFaction()) {
                 if(!faction.getFriends().contains(playerFaction) && !faction.getEnemies().contains(playerFaction)) {
                     buttonPane.addRow();
                     buttonPane.addButton(0, pos, "DECLARE RIVAL", GUIHorizontalArea.HButtonColor.PINK, new GUICallback() {
@@ -625,11 +627,11 @@ public class FactionActionsPanel extends GUIAncor {
                 }
             }
 
-            if(player.hasPermission("federation.[ANY]") && faction.getIdFaction() != player.getFactionId() && player.getFactionData().getFederationId() != -1) {
+            if(PermissionUtils.hasPermission(player, "federation.[ANY]") && faction.getIdFaction() != playerFaction.getIdFaction() && ((BetterFactionAccessor) playerFaction).getFederationId() != -1) {
 
             }
 
-            if(player.hasPermission("trade.[ANY]") && faction.getIdFaction() != player.getFactionId()) {
+            if(PermissionUtils.hasPermission(player, "trade.[ANY]") && faction.getIdFaction() != playerFaction.getIdFaction()) {
 
             }
         }
@@ -1159,7 +1161,7 @@ public class FactionActionsPanel extends GUIAncor {
     }
      */
 
-    private String getFedDialogString(FactionData fromFaction, FactionData toFaction) {
-        return "Form a new Federation between " + fromFaction.getFactionName() + " and " + toFaction.getFactionName() + ".\nIf both factions accept the proposal, they will become members of the new Federation and will be able to closely collaborate with each other.";
+    private String getFedDialogString(Faction fromFaction, Faction toFaction) {
+        return "Form a new Federation between " + fromFaction.getName() + " and " + toFaction.getName() + ".\nIf both factions accept the proposal, they will become members of the new Federation and will be able to closely collaborate with each other.";
     }
 }

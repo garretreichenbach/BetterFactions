@@ -9,11 +9,13 @@ import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
-import videogoose.betterfactions.data.persistent.faction.FactionMember;
+import org.schema.game.common.data.player.faction.Faction;
+import org.schema.game.common.data.player.faction.FactionPermission;
 import videogoose.betterfactions.data.persistent.federation.FactionMessage;
 import videogoose.betterfactions.gui.faction.diplomacy.FactionMessageSendDialog;
 import videogoose.betterfactions.manager.FactionManager;
+import videogoose.betterfactions.mixin.BetterFactionAccessor;
+import videogoose.betterfactions.utils.PermissionUtils;
 import videogoose.betterfactions.BetterFactions;
 import videogoose.betterfactions.network.client.ModifyFactionMessagePacket;
 import videogoose.betterfactions.utils.DateUtils;
@@ -50,7 +52,8 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
     public ArrayList<FactionMessage> getElementList() {
         ArrayList<FactionMessage> messageList = new ArrayList<>();
         try {
-            messageList.addAll(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName()).getInbox());
+            Faction faction = FactionManager.getFaction(GameClient.getClientPlayerState());
+            if(faction != null) messageList.addAll(((BetterFactionAccessor) faction).getInbox());
         } catch(Exception exception) {
             BetterFactions.getInstance().logWarning("Failed to fetch faction message inbox: " + exception.getMessage());
         }
@@ -126,7 +129,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
     public void updateListEntries(GUIElementList guiElementList, Set<FactionMessage> set) {
         guiElementList.deleteObservers();
         guiElementList.addObserver(this);
-        FactionMember playerFactionMember = FactionManager.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
+        FactionPermission playerFactionMember = FactionManager.getPlayerMember(GameClient.getClientPlayerState().getName());
         assert playerFactionMember != null;
         for(FactionMessage message : set) {
             try {
@@ -152,7 +155,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
                     (dateRowElement = new GUIClippedRow(this.getState())).attach(dateTextElement);
 
                     FactionMessageListRow row = new FactionMessageListRow(getState(), message, titleRowElement, typeRowElement, fromRowElement, dateRowElement);
-                    if(playerFactionMember.hasPermission("manage.messages.[ANY]")) {
+                    if(PermissionUtils.hasPermission(playerFactionMember, "manage.messages.[ANY]")) {
                         GUIAncor anchor = new GUIAncor(getState(), this.anchor.getWidth() - 28.0f, 28.0f);
                         anchor.attach(redrawButtonPane(message, playerFactionMember, anchor));
                         row.expanded = new GUIElementList(getState());
@@ -169,12 +172,12 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
         guiElementList.updateDim();
     }
 
-    private GUIHorizontalButtonTablePane redrawButtonPane(final FactionMessage message, final FactionMember playerFactionMember, GUIAncor anchor) {
+    private GUIHorizontalButtonTablePane redrawButtonPane(final FactionMessage message, final FactionPermission playerFactionMember, GUIAncor anchor) {
         GUIHorizontalButtonTablePane buttonPane = new GUIHorizontalButtonTablePane(getState(), 0, 1, anchor);
         buttonPane.onInit();
-        final FactionData factionData = FactionManager.getFactionData(message.fromId);
+        final Faction fromFaction = GameCommon.getGameState().getFactionManager().getFaction(message.fromId);
         int buttonIndex = 0;
-        if(playerFactionMember.hasPermission("manage.messages.view")) {
+        if(PermissionUtils.hasPermission(playerFactionMember, "manage.messages.view")) {
             buttonPane.addColumn();
             buttonPane.addButton(buttonIndex, 0, "VIEW", GUIHorizontalArea.HButtonColor.BLUE, new GUICallback() {
                 @Override
@@ -205,7 +208,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
             buttonIndex ++;
         }
 
-        if(playerFactionMember.hasPermission("manage.messages.mark_read")) {
+        if(PermissionUtils.hasPermission(playerFactionMember, "manage.messages.mark_read")) {
             buttonPane.addColumn();
             String buttonName = (message.read) ? "MARK AS UNREAD" : "MARK AS READ";
             buttonPane.addButton(buttonIndex, 0, buttonName, GUIHorizontalArea.HButtonColor.PINK, new GUICallback() {
@@ -237,7 +240,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
             buttonIndex ++;
         }
 
-        if(playerFactionMember.hasPermission("manage.messages.delete")) {
+        if(PermissionUtils.hasPermission(playerFactionMember, "manage.messages.delete")) {
             buttonPane.addColumn();
             buttonPane.addButton(buttonIndex, 0, "DELETE", GUIHorizontalArea.HButtonColor.ORANGE, new GUICallback() {
                 @Override
@@ -266,16 +269,16 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
             buttonIndex ++;
         }
 
-        if(playerFactionMember.hasPermission("manage.messages.reply")) {
+        if(PermissionUtils.hasPermission(playerFactionMember, "manage.messages.reply")) {
             buttonPane.addColumn();
             buttonPane.addButton(buttonIndex, 0, "REPLY", GUIHorizontalArea.HButtonColor.YELLOW, new GUICallback() {
                 @Override
                 public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                     if(mouseEvent.pressedLeftMouse()) {
                         FactionMessageSendDialog dialog = new FactionMessageSendDialog();
-                        dialog.getInputPanel().createPanel(playerFactionMember.getFactionData().getFaction(), factionData.getFaction(), FactionMessage.MessageType.REPLY);
+                        Faction playerFaction = FactionManager.getFaction(GameClient.getClientPlayerState());
+                        dialog.getInputPanel().createPanel(playerFaction, fromFaction, FactionMessage.MessageType.REPLY);
                         dialog.activate();
-                        //(new FactionMessageSendDialog("REPLY TO MESSAGE", playerFactionMember.getFactionData().getFaction(), factionData.getFaction(), FactionMessage.MessageType.REPLY)).activate();
                     }
                 }
 

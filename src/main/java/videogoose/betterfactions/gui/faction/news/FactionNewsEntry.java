@@ -2,7 +2,7 @@ package videogoose.betterfactions.gui.faction.news;
 
 import org.schema.common.util.StringTools;
 import org.schema.schine.common.language.Lng;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
+import org.schema.game.common.data.player.faction.Faction;
 import videogoose.betterfactions.data.persistent.federation.FederationData;
 import java.io.Serializable;
 import java.util.Date;
@@ -41,7 +41,7 @@ public class FactionNewsEntry implements Serializable {
         this.subject = null;
     }
 
-    public FactionNewsEntry(FactionNewsType type, FactionData subject, String title, String text) {
+    public FactionNewsEntry(FactionNewsType type, Faction subject, String title, String text) {
         this.date = new Date().toString();
         this.type = type;
         this.title = Lng.str(title);
@@ -73,12 +73,10 @@ public class FactionNewsEntry implements Serializable {
 
     public Object getSubject() {
         if(subject != null) {
-            if (subject instanceof FactionData) {
-                FactionData factionData = (FactionData) subject;
-                return factionData;
+            if (subject instanceof Faction) {
+                return subject;
             } else if (subject instanceof FederationData) {
-                FederationData federationData = (FederationData) subject;
-                return federationData;
+                return subject;
             }
         }
         return null;

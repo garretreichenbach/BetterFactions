@@ -4,7 +4,6 @@ import api.common.GameCommon;
 import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
 import org.schema.game.common.data.player.faction.Faction;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
 import videogoose.betterfactions.data.serializeable.SerializeableData;
 import videogoose.betterfactions.manager.UpdateManager;
 
@@ -75,10 +74,6 @@ public class WarData implements SerializeableData {
 
     public boolean isInvolved(Faction faction) {
         return isInvolved(faction.getIdFaction());
-    }
-
-    public boolean isInvolved(FactionData factionData) {
-        return isInvolved(factionData.getFactionId());
     }
 
     public boolean isOpposingSides(int factionA, int factionB) {

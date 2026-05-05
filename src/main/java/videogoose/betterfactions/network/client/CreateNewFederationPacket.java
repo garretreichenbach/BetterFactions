@@ -5,8 +5,7 @@ import api.network.Packet;
 import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
 import org.schema.game.common.data.player.PlayerState;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
-import videogoose.betterfactions.manager.FactionManager;
+import org.schema.game.common.data.player.faction.Faction;
 import videogoose.betterfactions.manager.FederationManager;
 
 import java.io.IOException;
@@ -29,10 +28,10 @@ public class CreateNewFederationPacket extends Packet {
 
     }
 
-    public CreateNewFederationPacket(String federationName, FactionData fromFaction, FactionData toFaction) {
+    public CreateNewFederationPacket(String federationName, Faction fromFaction, Faction toFaction) {
         this.federationName = federationName;
-        this.fromFactionId = fromFaction.getFactionId();
-        this.toFactionId = toFaction.getFactionId();
+        this.fromFactionId = fromFaction.getIdFaction();
+        this.toFactionId = toFaction.getIdFaction();
     }
 
     @Override
@@ -60,8 +59,9 @@ public class CreateNewFederationPacket extends Packet {
 
     @Override
     public void processPacketOnServer(PlayerState playerState) {
-        FactionData fromFaction = FactionManager.getFactionData(fromFactionId);
-        FactionData toFaction = FactionManager.getFactionData(toFactionId);
-        FederationManager.createNewFederation(federationName, fromFaction, toFaction);
+        Faction fromFaction = GameCommon.getGameState().getFactionManager().getFaction(fromFactionId);
+        Faction toFaction = GameCommon.getGameState().getFactionManager().getFaction(toFactionId);
+        if (fromFaction == null || toFaction == null) return;
+        FederationManager.createNewFederation(federationName, fromFactionId, toFactionId);
     }
 }

@@ -1,9 +1,9 @@
 package videogoose.betterfactions.utils;
 
-import videogoose.betterfactions.data.persistent.faction.FactionData;
+import api.common.GameCommon;
+import org.schema.game.common.data.player.faction.Faction;
 import videogoose.betterfactions.data.serializeable.war.WarData;
 import videogoose.betterfactions.data.serializeable.war.WarParticipantData;
-import videogoose.betterfactions.manager.FactionManager;
 
 /**
  * <Description>
@@ -13,16 +13,20 @@ import videogoose.betterfactions.manager.FactionManager;
  */
 public class FactionDiplomacyUtils {
 
-	public static FactionData getAttackerLeader(WarData warData) {
+	public static Faction getAttackerLeader(WarData warData) {
 		for(WarParticipantData participantData : warData.attackers.values()) {
-			if(participantData.warGoal.warGoalType.warLeader) return FactionManager.getFactionData(participantData.factionId);
+			if(participantData.warGoal.warGoalType.warLeader) {
+				return GameCommon.getGameState().getFactionManager().getFaction(participantData.factionId);
+			}
 		}
 		return null;
 	}
 
-	public static FactionData getDefenderLeader(WarData warData) {
+	public static Faction getDefenderLeader(WarData warData) {
 		for(WarParticipantData participantData : warData.defenders.values()) {
-			if(participantData.warGoal.warGoalType.warLeader) return FactionManager.getFactionData(participantData.factionId);
+			if(participantData.warGoal.warGoalType.warLeader) {
+				return GameCommon.getGameState().getFactionManager().getFaction(participantData.factionId);
+			}
 		}
 		return null;
 	}

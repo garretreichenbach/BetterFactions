@@ -12,7 +12,7 @@ import java.util.Locale;
  * Mixin for FactionRelation to handle custom relation types (NON_AGGRESSION, FEDERATION)
  * in the string parsing method. The actual enum values are injected at runtime via ReflectionUtils.
  */
-@Mixin(FactionRelation.class)
+@Mixin(value = FactionRelation.class, remap = false)
 public abstract class MixinFactionRelation {
 
 	@Inject(method = "getRelationFromString", at = @At("HEAD"), cancellable = true)

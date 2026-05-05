@@ -9,10 +9,11 @@ import org.schema.schine.graphicsengine.forms.font.FontLibrary;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
+import org.schema.game.common.data.player.faction.Faction;
 import videogoose.betterfactions.data.persistent.federation.FederationData;
 import videogoose.betterfactions.utils.FactionNewsUtils;
 import videogoose.betterfactions.manager.FactionManager;
+import videogoose.betterfactions.mixin.BetterFactionAccessor;
 import java.util.*;
 
 /**
@@ -41,13 +42,14 @@ public class FactionNewsScrollableList extends ScrollableTableList<FactionNewsEn
         } else if(newsType.equals(FactionNewsEntry.FactionNewsType.RELEVANT)) {
             if(newsEntry.hasSubject() && playerState.getFactionId() != 0) {
                 Object subject = newsEntry.getSubject();
-                if(subject instanceof FactionData) {
-                    FactionData factionData = (FactionData) subject;
-                    return playerState.getFactionId() == factionData.getFactionId();
+                if(subject instanceof Faction) {
+                    Faction factionSubject = (Faction) subject;
+                    return playerState.getFactionId() == factionSubject.getIdFaction();
                 } else if(subject instanceof FederationData) {
-                    if(Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getFederationId() != -1) {
+                    Faction playerFaction = FactionManager.getFaction(playerState);
+                    if(playerFaction != null && ((BetterFactionAccessor) playerFaction).getFederationId() != -1) {
                         FederationData federationData = (FederationData) subject;
-                        return federationData.getId() == Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getFederationId();
+                        return federationData.getId() == ((BetterFactionAccessor) playerFaction).getFederationId();
                     }
                 }
             }

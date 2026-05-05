@@ -17,8 +17,9 @@ import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalButtonTablePane;
 import org.schema.schine.input.InputState;
-import videogoose.betterfactions.data.persistent.faction.FactionMember;
+import org.schema.game.common.data.player.faction.FactionPermission;
 import videogoose.betterfactions.manager.FactionManager;
+import videogoose.betterfactions.utils.PermissionUtils;
 
 /**
  * <Description>
@@ -38,7 +39,7 @@ public class FactionOptionsPane extends GUIAncor {
 
     @Override
     public void onInit() {
-        final FactionMember playerFactionMember = FactionManager.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
+        final FactionPermission playerFactionMember = FactionManager.getPlayerMember(GameClient.getClientPlayerState().getName());
         (buttonPane = new GUIHorizontalButtonTablePane(getState(), 2, 3, this)).onInit();
         buttonPane.addButton(0, 0, "INVITE", GUIHorizontalArea.HButtonColor.BLUE, new GUICallback() {
             @Override
@@ -51,7 +52,7 @@ public class FactionOptionsPane extends GUIAncor {
 
             @Override
             public boolean isOccluded() {
-                return !playerFactionMember.hasPermission("manage.members.invite") || !canActivate();
+                return !PermissionUtils.hasPermission(playerFactionMember, "manage.members.invite") || !canActivate();
             }
         }, new GUIActivationCallback() {
             @Override
@@ -61,7 +62,7 @@ public class FactionOptionsPane extends GUIAncor {
 
             @Override
             public boolean isActive(InputState inputState) {
-                return playerFactionMember.hasPermission("manage.members.invite") && canActivate();
+                return PermissionUtils.hasPermission(playerFactionMember, "manage.members.invite") && canActivate();
             }
         });
 
@@ -81,7 +82,7 @@ public class FactionOptionsPane extends GUIAncor {
 
             @Override
             public boolean isOccluded() {
-                return !playerFactionMember.hasPermission("manage.members.invite") || !canActivate();
+                return !PermissionUtils.hasPermission(playerFactionMember, "manage.members.invite") || !canActivate();
             }
         }, new GUIActivationCallback() {
             @Override
@@ -91,7 +92,7 @@ public class FactionOptionsPane extends GUIAncor {
 
             @Override
             public boolean isActive(InputState inputState) {
-                return playerFactionMember.hasPermission("manage.members.invite") && canActivate();
+                return PermissionUtils.hasPermission(playerFactionMember, "manage.members.invite") && canActivate();
             }
         });
 
@@ -111,7 +112,7 @@ public class FactionOptionsPane extends GUIAncor {
 
             @Override
             public boolean isOccluded() {
-                return !playerFactionMember.hasPermission("manage.fp") || !canActivate();
+                return !PermissionUtils.hasPermission(playerFactionMember, "manage.fp") || !canActivate();
             }
         }, new GUIActivationCallback() {
             @Override
@@ -121,7 +122,7 @@ public class FactionOptionsPane extends GUIAncor {
 
             @Override
             public boolean isActive(InputState inputState) {
-                return playerFactionMember.hasPermission("manage.fp") && canActivate();
+                return PermissionUtils.hasPermission(playerFactionMember, "manage.fp") && canActivate();
             }
         });
 
@@ -130,7 +131,7 @@ public class FactionOptionsPane extends GUIAncor {
             public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                 if(mouseEvent.pressedLeftMouse()) {
                     getState().getController().queueUIAudio("0022_menu_ui - select 3");
-                    Faction ownFaction = playerFactionMember.getFactionData().getFaction();
+                    Faction ownFaction = FactionManager.getFaction(GameClient.getClientPlayerState());
                     PlayerTextAreaInput t = new PlayerTextAreaInput("FactionOptionFactionContent_EDIT_FACTION_DESC", GameClient.getClientState(), 140, 5, Lng.str("Edit Faction Description"), "", (ownFaction != null) ? ownFaction.getDescription() : Lng.str("ERROR: NO FACTION")) {
                         @Override
                         public String[] getCommandPrefixes() {
@@ -172,7 +173,7 @@ public class FactionOptionsPane extends GUIAncor {
 
             @Override
             public boolean isOccluded() {
-                return !playerFactionMember.hasPermission("manage.info") || !canActivate();
+                return !PermissionUtils.hasPermission(playerFactionMember, "manage.info") || !canActivate();
             }
         }, new GUIActivationCallback() {
             @Override
@@ -182,7 +183,7 @@ public class FactionOptionsPane extends GUIAncor {
 
             @Override
             public boolean isActive(InputState inputState) {
-                return playerFactionMember.hasPermission("manage.info") && canActivate();
+                return PermissionUtils.hasPermission(playerFactionMember, "manage.info") && canActivate();
             }
         });
 
@@ -197,7 +198,7 @@ public class FactionOptionsPane extends GUIAncor {
 
             @Override
             public boolean isOccluded() {
-                return !playerFactionMember.hasPermission("manage.members.ranks") || !canActivate();
+                return !PermissionUtils.hasPermission(playerFactionMember, "manage.members.ranks") || !canActivate();
             }
         }, new GUIActivationCallback() {
             @Override
@@ -207,7 +208,7 @@ public class FactionOptionsPane extends GUIAncor {
 
             @Override
             public boolean isActive(InputState inputState) {
-                return playerFactionMember.hasPermission("manage.members.ranks") && canActivate();
+                return PermissionUtils.hasPermission(playerFactionMember, "manage.members.ranks") && canActivate();
             }
         });
 
@@ -222,7 +223,7 @@ public class FactionOptionsPane extends GUIAncor {
 
             @Override
             public boolean isOccluded() {
-                return !playerFactionMember.hasPermission("manage.members.ranks") || !canActivate();
+                return !PermissionUtils.hasPermission(playerFactionMember, "manage.members.ranks") || !canActivate();
             }
         }, new GUIActivationCallback() {
             @Override
@@ -232,7 +233,7 @@ public class FactionOptionsPane extends GUIAncor {
 
             @Override
             public boolean isActive(InputState inputState) {
-                return playerFactionMember.hasPermission("manage.members.ranks") && canActivate();
+                return PermissionUtils.hasPermission(playerFactionMember, "manage.members.ranks") && canActivate();
             }
         });
 

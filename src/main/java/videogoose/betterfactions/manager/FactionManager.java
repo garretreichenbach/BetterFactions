@@ -1,169 +1,166 @@
 package videogoose.betterfactions.manager;
 
 import api.common.GameCommon;
-import api.mod.ModSkeleton;
 import api.mod.config.PersistentObjectUtil;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionPermission;
 import videogoose.betterfactions.BetterFactions;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
-import videogoose.betterfactions.data.persistent.faction.FactionMember;
+import videogoose.betterfactions.data.persistent.faction.BetterFactionStore;
+import videogoose.betterfactions.data.persistent.faction.FactionRank;
 import videogoose.betterfactions.data.persistent.federation.FactionMessage;
+import videogoose.betterfactions.mixin.BetterFactionAccessor;
+import videogoose.betterfactions.mixin.BetterMemberAccessor;
+import videogoose.betterfactions.utils.PermissionUtils;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
+/**
+ * Manages BetterFactions data on top of the game's native Faction system.
+ * Uses mixin accessors for runtime access and BetterFactionStore for persistence.
+ */
 public class FactionManager {
 
-    private static final ModSkeleton instance = BetterFactions.getInstance().getSkeleton();
+    /**
+     * Cast a Faction to its BetterFactions accessor interface.
+     */
+    public static BetterFactionAccessor getBetterFaction(Faction faction) {
+        return (BetterFactionAccessor) faction;
+    }
 
-    private static final String defaultDescription = "A Faction";
-    private static final String piratesDescription = "Small clans of ravaging space pirates that attack and loot everything in sight. Despite their savagery, they are currently quite weak due to their lack of an organized leadership.";
-    private static final String tradingGuildDescription = "A friendly organization made up of wealthy trading guilds spread across the galaxy. They boast a large navy made up of the combined forces of their many guild members and may sometimes defend weaker factions from larger aggressors.";
+    /**
+     * Get the BetterFactions accessor for a faction by ID.
+     */
+    public static BetterFactionAccessor getBetterFaction(int factionId) {
+        if (GameCommon.getGameState() == null) return null;
+        Faction faction = GameCommon.getGameState().getFactionManager().getFaction(factionId);
+        return faction != null ? (BetterFactionAccessor) faction : null;
+    }
 
     public static boolean inFaction(PlayerState playerState) {
         return playerState != null && playerState.getFactionId() > 0;
     }
 
     public static Faction getFaction(PlayerState playerState) {
-        if(playerState == null || playerState.getFactionId() <= 0) return null;
-        if(GameCommon.getGameState() == null) return null;
+        if (playerState == null || playerState.getFactionId() <= 0) return null;
+        if (GameCommon.getGameState() == null) return null;
         return GameCommon.getGameState().getFactionManager().getFaction(playerState.getFactionId());
     }
 
-    public static HashMap<Integer, FactionData> getFactionDataMap() {
-        HashMap<Integer, FactionData> factionDataMap = new HashMap<>();
-        if(NetworkSyncManager.onServer()) {
-            for(Object factionDataObject : PersistentObjectUtil.getObjects(instance, FactionData.class)) {
-                if(factionDataObject instanceof FactionData factionData) {
-                    factionDataMap.put(factionData.getFactionId(), factionData);
-                }
-            }
-        } else factionDataMap = NetworkSyncManager.getFactionDataCache();
-        return factionDataMap;
-    }
-
-    public static FactionData getPlayerFactionData(String playerName) {
+    /**
+     * Get the FactionPermission (member data) for a player by name.
+     */
+    public static FactionPermission getPlayerMember(String playerName) {
         PlayerState player = GameCommon.getPlayerFromName(playerName);
-        if(player == null) return null;
+        if (player == null) return null;
         Faction faction = getFaction(player);
-        if(faction == null) return null;
-        return getFactionData(faction);
+        if (faction == null) return null;
+        return faction.getMembersUID().get(playerName);
     }
 
-    public static FactionMember getPlayerFactionMember(String playerName) {
-        try {
-            PlayerState player = GameCommon.getPlayerFromName(playerName);
-            if(player == null) return null;
-            Faction faction = getFaction(player);
-            if(faction == null) return null;
-            FactionData factionData = getFactionData(faction);
-            if(factionData == null) return null;
-            FactionMember member = factionData.getMember(playerName);
-            if(member == null) return null;
-            if(member.getFactionData().getMembers().size() == 1 && member.getFactionData().getMembers().get(0).equals(member)) member.getRank().addPermission("*");
-            return member;
-        } catch(NullPointerException | IllegalStateException exception) {
-            BetterFactions.getInstance().logException("Failed to get faction member for player '" + playerName + "'", exception);
+    /**
+     * Check if a member has a BetterFactions permission via their custom rank.
+     */
+    public static boolean hasPermission(FactionPermission member, String... permissions) {
+        return PermissionUtils.hasPermission(member, permissions);
+    }
+
+    /**
+     * Add a message to a faction's inbox.
+     */
+    public static void addMessage(int factionId, FactionMessage message) {
+        BetterFactionAccessor accessor = getBetterFaction(factionId);
+        if (accessor == null) return;
+        accessor.getInbox().add(message);
+        saveStore(factionId);
+    }
+
+    /**
+     * Remove a message from a faction's inbox.
+     */
+    public static void removeMessage(int factionId, FactionMessage message) {
+        BetterFactionAccessor accessor = getBetterFaction(factionId);
+        if (accessor == null) return;
+        accessor.getInbox().removeIf(m -> m.date == message.date && m.fromId == message.fromId);
+        saveStore(factionId);
+    }
+
+    /**
+     * Load all BetterFactionStore objects from persistence and inject into Faction mixin fields.
+     */
+    public static void loadStores() {
+        for (Object obj : PersistentObjectUtil.getObjects(BetterFactions.getInstance().getSkeleton(), BetterFactionStore.class)) {
+            if (obj instanceof BetterFactionStore store) {
+                Faction faction = GameCommon.getGameState().getFactionManager().getFaction(store.factionId);
+                if (faction == null) continue;
+                BetterFactionAccessor accessor = (BetterFactionAccessor) faction;
+                accessor.setFederationId(store.federationId);
+                accessor.setFactionLogo(store.factionLogo);
+                accessor.setInbox(store.inbox);
+                accessor.setRanks(store.ranks);
+
+                // Assign custom ranks to members
+                for (FactionPermission member : faction.getMembersUID().values()) {
+                    BetterMemberAccessor memberAccessor = (BetterMemberAccessor) member;
+                    if (memberAccessor.getCustomRank() == null && !store.ranks.isEmpty()) {
+                        memberAccessor.setCustomRank(store.ranks.get(store.ranks.size() - 1)); // Lowest rank
+                    }
+                }
+            }
         }
-        return null;
     }
 
-    public static void removeFactionData(FactionData factionData) {
-        PersistentObjectUtil.removeObject(instance, factionData);
-    }
-
-    public static FactionData getFactionData(int factionId) {
-        if(GameCommon.getGameState() == null) return null;
+    /**
+     * Save a faction's BetterFactions data to persistence.
+     */
+    public static void saveStore(int factionId) {
+        if (!NetworkSyncManager.onServer()) return;
         Faction faction = GameCommon.getGameState().getFactionManager().getFaction(factionId);
-        return getFactionData(faction);
+        if (faction == null) return;
+        BetterFactionAccessor accessor = (BetterFactionAccessor) faction;
+
+        // Remove old store
+        for (Object obj : PersistentObjectUtil.getObjects(BetterFactions.getInstance().getSkeleton(), BetterFactionStore.class)) {
+            if (obj instanceof BetterFactionStore store && store.factionId == factionId) {
+                PersistentObjectUtil.removeObject(BetterFactions.getInstance().getSkeleton(), obj);
+                break;
+            }
+        }
+
+        // Create new store from current mixin state
+        BetterFactionStore store = new BetterFactionStore();
+        store.factionId = factionId;
+        store.federationId = accessor.getFederationId();
+        store.factionLogo = accessor.getFactionLogo();
+        store.inbox = accessor.getInbox();
+        store.ranks = accessor.getRanks();
+
+        PersistentObjectUtil.addObject(BetterFactions.getInstance().getSkeleton(), store);
+        PersistentObjectUtil.save(BetterFactions.getInstance().getSkeleton());
     }
 
-    public static FactionData getFactionData(Faction faction) {
-        if(faction != null) {
-            try {
-                FactionData factionData = getFactionDataMap().get(faction.getIdFaction());
-                if(factionData == null) factionData = createFactionData(faction.getIdFaction());
-                return factionData;
-            } catch(RuntimeException exception) {
-                BetterFactions.getInstance().logException("Failed to retrieve faction data for faction " + faction.getIdFaction() + ", creating new data", exception);
-                return createFactionData(faction.getIdFaction());
-            }
-        } else return null;
-    }
-
-    public static void updateData(Object data) {
-        if(data instanceof FactionMessage message) {
-            FactionData recipientData = getFactionData(message.toId);
-            if(recipientData == null) {
-                BetterFactions.getInstance().logWarning("Cannot update message data: no faction data found for faction " + message.toId);
-                return;
-            }
-            FactionMessage toDelete = null;
-            for(FactionMessage m : recipientData.getInbox()) {
-                if(m.date == message.date) {
-                    toDelete = m;
-                    break;
-                }
-            }
-            if(toDelete != null) recipientData.removeMessage(toDelete);
-            recipientData.addMessage(message);
-            updateData(recipientData);
-        } else if(data instanceof FactionData factionData) {
-            FactionData toDelete = null;
-            for(FactionData fData : getFactionDataMap().values()) {
-                if(fData.getFactionId() == factionData.getFactionId()) {
-                    toDelete = fData;
-                    break;
-                }
-            }
-            if(toDelete != null) removeFactionData(toDelete);
-            PersistentObjectUtil.addObject(instance, factionData);
+    /**
+     * Save all faction stores.
+     */
+    public static void saveAllStores() {
+        if (GameCommon.getGameState() == null) return;
+        for (Faction faction : GameCommon.getGameState().getFactionManager().getFactionCollection()) {
+            saveStore(faction.getIdFaction());
         }
     }
 
-    public static void initializeFactions() {
-        if(GameCommon.getGameState() == null) {
-            BetterFactions.getInstance().logWarning("Cannot initialize factions: game state is null");
-            return;
+    /**
+     * Ensure a faction has BetterFactions data initialized.
+     * Creates a store if one doesn't exist.
+     */
+    public static void ensureInitialized(Faction faction) {
+        if (faction == null) return;
+        BetterFactionAccessor accessor = (BetterFactionAccessor) faction;
+        if (accessor.getRanks() == null || accessor.getRanks().isEmpty()) {
+            accessor.setRanks(new ArrayList<>());
+            accessor.getRanks().add(FactionRank.getDefaultRank());
         }
-        for(Faction faction : GameCommon.getGameState().getFactionManager().getFactionCollection()) {
-            if(!org.schema.game.common.data.player.faction.FactionManager.isNPCFactionOrPirateOrTrader(faction.getIdFaction())) getFactionData(faction);
-        }
-        HashMap<Integer, FactionData> factionDataMap = getFactionDataMap();
-        if(!factionDataMap.containsKey(org.schema.game.common.data.player.faction.FactionManager.PIRATES_ID)) createFactionData(org.schema.game.common.data.player.faction.FactionManager.PIRATES_ID);
-        if(!factionDataMap.containsKey(org.schema.game.common.data.player.faction.FactionManager.TRAIDING_GUILD_ID)) createFactionData(org.schema.game.common.data.player.faction.FactionManager.TRAIDING_GUILD_ID);
-    }
-
-    private static FactionData createFactionData(int factionId) {
-        if(NetworkSyncManager.onServer()) {
-            ArrayList<FactionData> toRemove = new ArrayList<>();
-            for(Object obj : PersistentObjectUtil.getObjects(instance, FactionData.class)) {
-                if(obj instanceof FactionData existingData && existingData.getFactionId() == factionId) toRemove.add(existingData);
-            }
-            for(FactionData oldData : toRemove) PersistentObjectUtil.removeObject(instance, oldData);
-
-            if(GameCommon.getGameState() == null) return null;
-            Faction faction = GameCommon.getGameState().getFactionManager().getFaction(factionId);
-            FactionData fData = new FactionData(faction);
-
-            if(factionId == org.schema.game.common.data.player.faction.FactionManager.PIRATES_ID) {
-                fData.setFactionLogo(ResourceManager.getSprite("pirates-logo"));
-                fData.setFactionDescription(piratesDescription);
-            } else if(factionId == org.schema.game.common.data.player.faction.FactionManager.TRAIDING_GUILD_ID) {
-                fData.setFactionLogo(ResourceManager.getSprite("traders-logo"));
-                fData.setFactionDescription(tradingGuildDescription);
-            } else {
-                fData.setFactionLogo(ResourceManager.getSprite("default-logo"));
-                fData.setFactionDescription(defaultDescription);
-                for(FactionPermission fp : faction.getMembersUID().values()) {
-                    if(!fData.hasMember(fp.playerUID)) fData.addMember(fp.playerUID);
-                }
-            }
-            PersistentObjectUtil.addObject(instance, fData);
-            BetterFactions.getInstance().updateClientData();
-            return fData;
-        } else return null;
+        if (accessor.getInbox() == null) accessor.setInbox(new ArrayList<>());
+        if (accessor.getFactionLogo() == null) accessor.setFactionLogo("");
     }
 }

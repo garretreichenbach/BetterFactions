@@ -6,7 +6,7 @@ import org.schema.schine.common.InputChecker;
 import org.schema.schine.common.TextCallback;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.settings.PrefixNotFoundException;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
+import org.schema.game.common.data.player.faction.Faction;
 import videogoose.betterfactions.manager.FederationManager;
 import java.util.regex.Pattern;
 
@@ -21,10 +21,10 @@ public class CreateFederationDialog extends PlayerGameTextInput {
 
     private final int minNameLength = 1;
     private final int maxNameLength = 60;
-    private final FactionData from;
-    private final FactionData to;
+    private final Faction from;
+    private final Faction to;
 
-    public CreateFederationDialog(FactionData from, FactionData to, String descriptionString) {
+    public CreateFederationDialog(Faction from, Faction to, String descriptionString) {
         super("CreateFederationDialog", GameClient.getClientState(), 420, 210, 23, Lng.str("Create Federation"), descriptionString, null);
         this.from = from;
         this.to = to;

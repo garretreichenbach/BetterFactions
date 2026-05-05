@@ -1,11 +1,13 @@
 package videogoose.betterfactions.data.persistent.federation;
 
+import api.common.GameCommon;
+import org.schema.game.common.data.player.faction.Faction;
 import videogoose.betterfactions.data.persistent.PersistentData;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
-import videogoose.betterfactions.data.persistent.faction.FactionScore;
 import videogoose.betterfactions.manager.FederationManager;
+import videogoose.betterfactions.manager.FactionManager;
 import videogoose.betterfactions.manager.GUIManager;
 import videogoose.betterfactions.manager.NetworkSyncManager;
+import videogoose.betterfactions.mixin.BetterFactionAccessor;
 import videogoose.betterfactions.utils.FactionNewsUtils;
 
 import java.util.ArrayList;
@@ -17,18 +19,18 @@ import java.util.ArrayList;
  * @since 01/30/2021
  * @author TheDerpGamer
  */
-public class FederationData implements PersistentData, FactionScore {
+public class FederationData implements PersistentData {
 
     private final int id;
     private String name;
-    private final ArrayList<FactionData> members;
+    private final ArrayList<Integer> memberIds;
     private transient boolean needsUpdate = true;
 
-    public FederationData(String name, FactionData fromFaction, FactionData toFaction) {
+    public FederationData(String name, Faction fromFaction, Faction toFaction) {
         this.name = name;
-        this.members = new ArrayList<>();
-        this.members.add(fromFaction);
-        this.members.add(toFaction);
+        this.memberIds = new ArrayList<>();
+        this.memberIds.add(fromFaction.getIdFaction());
+        this.memberIds.add(toFaction.getIdFaction());
         this.id = FederationManager.getNewId();
         queueUpdate(true);
     }
@@ -46,30 +48,50 @@ public class FederationData implements PersistentData, FactionScore {
         queueUpdate(true);
     }
 
-    public ArrayList<FactionData> getMembers() {
-        return members;
+    public ArrayList<Integer> getMemberIds() {
+        return memberIds;
     }
 
-    public void addMember(FactionData factionData) {
-        members.add(factionData);
-        factionData.setFederationId(id);
-        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationJoinNews(this, factionData));
+    /**
+     * Get the name of a member faction by index.
+     * Returns "Unknown" if the faction cannot be resolved.
+     */
+    public String getMemberName(int index) {
+        if (index < 0 || index >= memberIds.size()) return "Unknown";
+        if (GameCommon.getGameState() == null) return "Unknown";
+        Faction faction = GameCommon.getGameState().getFactionManager().getFaction(memberIds.get(index));
+        return faction != null ? faction.getName() : "Unknown";
+    }
+
+    public void addMember(Faction faction) {
+        memberIds.add(faction.getIdFaction());
+        ((BetterFactionAccessor) faction).setFederationId(id);
+        FactionManager.saveStore(faction.getIdFaction());
+        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationJoinNews(this, faction));
         GUIManager.updateTabs();
         queueUpdate(true);
     }
 
-    public void removeMember(FactionData factionData) {
-        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationLeaveNews(this, factionData));
-        members.remove(factionData);
-        factionData.setFederationId(-1);
-        if(members.isEmpty()) disband();
+    public void removeMember(Faction faction) {
+        FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationLeaveNews(this, faction));
+        memberIds.remove(Integer.valueOf(faction.getIdFaction()));
+        ((BetterFactionAccessor) faction).setFederationId(-1);
+        FactionManager.saveStore(faction.getIdFaction());
+        if(memberIds.isEmpty()) disband();
         GUIManager.updateTabs();
         queueUpdate(true);
     }
 
     public void disband() {
         FactionNewsUtils.addNewsEntry(FactionNewsUtils.getFederationDisbandNews(this));
-        for(FactionData factionData : members) factionData.setFederationId(-1);
+        for(int factionId : memberIds) {
+            if (GameCommon.getGameState() == null) continue;
+            Faction faction = GameCommon.getGameState().getFactionManager().getFaction(factionId);
+            if (faction != null) {
+                ((BetterFactionAccessor) faction).setFederationId(-1);
+                FactionManager.saveStore(factionId);
+            }
+        }
         FederationManager.removeFederation(this);
         queueUpdate(true);
     }
@@ -80,9 +102,9 @@ public class FederationData implements PersistentData, FactionScore {
         dataArray[1] = "ID: " + id;
         StringBuilder membersBuilder = new StringBuilder();
         membersBuilder.append(" {");
-        for(int i = 0; i < members.size(); i ++) {
-            membersBuilder.append(members.get(i).getFactionName());
-            if(i < members.size() - 1) membersBuilder.append(", ");
+        for(int i = 0; i < memberIds.size(); i ++) {
+            membersBuilder.append(getMemberName(i));
+            if(i < memberIds.size() - 1) membersBuilder.append(", ");
         }
         membersBuilder.append("}");
         dataArray[2] = "MEMBERS: " + membersBuilder.toString();
@@ -90,14 +112,8 @@ public class FederationData implements PersistentData, FactionScore {
     }
 
     public String[] getScoreArray() {
-        String[] scoreArray = new String[6];
-        scoreArray[0] = "FP: " + factionPoints;
-        scoreArray[1] = "INFL: " + influenceScore;
-        scoreArray[2] = "TER: " + territoryScore;
-        scoreArray[3] = "ECON: " + economicScore;
-        scoreArray[4] = "MIL: " + militaryScore;
-        scoreArray[5] = "AGR: " + aggressionScore;
-        return scoreArray;
+        //TODO: Implement real scoring
+        return new String[]{"FP: 0", "INFL: 0", "TER: 0", "ECON: 0", "MIL: 0", "AGR: 0"};
     }
 
     public String[] getInfoArray() {

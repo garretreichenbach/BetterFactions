@@ -1,17 +1,22 @@
 package videogoose.betterfactions.gui.faction.management;
 
 import api.common.GameClient;
+import api.common.GameCommon;
 import org.hsqldb.lib.StringComparator;
 import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.client.data.GameClientState;
+import org.schema.game.common.data.player.PlayerState;
+import org.schema.game.common.data.player.faction.Faction;
+import org.schema.game.common.data.player.faction.FactionPermission;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
-import videogoose.betterfactions.data.persistent.faction.FactionMember;
 import videogoose.betterfactions.data.persistent.faction.FactionRank;
 import videogoose.betterfactions.manager.FactionManager;
+import videogoose.betterfactions.mixin.BetterFactionAccessor;
+import videogoose.betterfactions.mixin.BetterMemberAccessor;
+import videogoose.betterfactions.utils.PermissionUtils;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -25,7 +30,7 @@ import java.util.Set;
  * @author TheDerpGamer
  * @since 04/15/2021
  */
-public class FactionMembersList extends ScrollableTableList<FactionMember> {
+public class FactionMembersList extends ScrollableTableList<FactionPermission> {
 
     private GUIAncor anchor;
     private FactionManagementTab managementTab;
@@ -39,62 +44,71 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
     }
 
     @Override
-    public ArrayList<FactionMember> getElementList() {
-        return FactionManager.getFactionData(FactionManager.getFaction(GameClient.getClientPlayerState())).getMembers();
+    public ArrayList<FactionPermission> getElementList() {
+        Faction faction = FactionManager.getFaction(GameClient.getClientPlayerState());
+        if(faction == null) return new ArrayList<>();
+        return new ArrayList<>(faction.getMembersUID().values());
     }
 
     @Override
     public void initColumns() {
         new StringComparator();
 
-        addColumn("Name", 7.5f, new Comparator<FactionMember>() {
+        addColumn("Name", 7.5f, new Comparator<FactionPermission>() {
             @Override
-            public int compare(FactionMember o1, FactionMember o2) {
-                return o1.getName().compareTo(o2.getName());
+            public int compare(FactionPermission o1, FactionPermission o2) {
+                return o1.playerUID.compareTo(o2.playerUID);
             }
         });
 
-        addColumn("Rank", 8.0f, new Comparator<FactionMember>() {
+        addColumn("Rank", 8.0f, new Comparator<FactionPermission>() {
             @Override
-            public int compare(FactionMember o1, FactionMember o2) {
-                return Integer.compare(o1.getRank().getRankLevel(), o2.getRank().getRankLevel());
+            public int compare(FactionPermission o1, FactionPermission o2) {
+                FactionRank r1 = ((BetterMemberAccessor) o1).getCustomRank();
+                FactionRank r2 = ((BetterMemberAccessor) o2).getCustomRank();
+                int level1 = r1 != null ? r1.getRankLevel() : 0;
+                int level2 = r2 != null ? r2.getRankLevel() : 0;
+                return Integer.compare(level1, level2);
             }
         });
 
-        addColumn("Status", 6.5f, new Comparator<FactionMember>() {
+        addColumn("Status", 6.5f, new Comparator<FactionPermission>() {
             @Override
-            public int compare(FactionMember o1, FactionMember o2) {
-                return Boolean.compare(o1.isOnline(), o2.isOnline());
+            public int compare(FactionPermission o1, FactionPermission o2) {
+                boolean online1 = GameCommon.getPlayerFromName(o1.playerUID) != null;
+                boolean online2 = GameCommon.getPlayerFromName(o2.playerUID) != null;
+                return Boolean.compare(online1, online2);
             }
         });
 
-        addColumn("Location", 7.0f, new Comparator<FactionMember>() {
+        addColumn("Location", 7.0f, new Comparator<FactionPermission>() {
             @Override
-            public int compare(FactionMember o1, FactionMember o2) {
-                Vector3i homebaseSector = o1.getFactionData().getHomebaseSector();
-                Vector3i o1Location = o1.getLocation();
-                Vector3i o2Location = o2.getLocation();
+            public int compare(FactionPermission o1, FactionPermission o2) {
+                PlayerState p1 = GameCommon.getPlayerFromName(o1.playerUID);
+                PlayerState p2 = GameCommon.getPlayerFromName(o2.playerUID);
+                Vector3i o1Location = p1 != null ? p1.getCurrentSector() : null;
+                Vector3i o2Location = p2 != null ? p2.getCurrentSector() : null;
 
                 double distance1 = -1;
                 double distance2 = -1;
-                if(homebaseSector != null) {
-                    if(o1Location != null) distance1 = Math.abs(Vector3i.getDisatance(o1Location, homebaseSector));
-                    if(o2Location != null) distance2 = Math.abs(Vector3i.getDisatance(o2Location, homebaseSector));
-                }
+                // Compare by distance from origin as a simple fallback
+                if(o1Location != null) distance1 = Math.abs(Vector3i.getDisatance(o1Location, new Vector3i()));
+                if(o2Location != null) distance2 = Math.abs(Vector3i.getDisatance(o2Location, new Vector3i()));
                 return Double.compare(distance1, distance2);
             }
         });
 
-        addTextFilter(new GUIListFilterText<FactionMember>() {
-            public boolean isOk(String s, FactionMember factionMember) {
-                return factionMember.getName().toLowerCase().contains(s.toLowerCase());
+        addTextFilter(new GUIListFilterText<FactionPermission>() {
+            public boolean isOk(String s, FactionPermission factionMember) {
+                return factionMember.playerUID.toLowerCase().contains(s.toLowerCase());
             }
         }, ControllerElement.FilterRowStyle.LEFT);
 
-        this.addDropdownFilter(new GUIListFilterDropdown<FactionMember, String>(getFactionRanksString()) {
-            public boolean isOk(String s, FactionMember factionMember) {
+        this.addDropdownFilter(new GUIListFilterDropdown<FactionPermission, String>(getFactionRanksString()) {
+            public boolean isOk(String s, FactionPermission factionMember) {
                 if(s.equalsIgnoreCase("ALL")) return true;
-                else return s.equalsIgnoreCase(factionMember.getRank().getRankName());
+                FactionRank rank = ((BetterMemberAccessor) factionMember).getCustomRank();
+                return rank != null && s.equalsIgnoreCase(rank.getRankName());
             }
 
         }, new CreateGUIElementInterface<String>() {
@@ -121,41 +135,49 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
     private String[] getFactionRanksString() {
         ArrayList<String> ranksStringList = new ArrayList<>();
         ranksStringList.add("ALL");
-        for(FactionRank rank : Objects.requireNonNull(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName())).getRanks()) {
-            ranksStringList.add(rank.getRankName().toUpperCase());
+        Faction faction = FactionManager.getFaction(GameClient.getClientPlayerState());
+        if(faction != null) {
+            for(FactionRank rank : ((BetterFactionAccessor) faction).getRanks()) {
+                ranksStringList.add(rank.getRankName().toUpperCase());
+            }
         }
         return ranksStringList.toArray(new String[0]);
     }
 
     @Override
-    public void updateListEntries(GUIElementList guiElementList, Set<FactionMember> set) {
+    public void updateListEntries(GUIElementList guiElementList, Set<FactionPermission> set) {
         guiElementList.deleteObservers();
         guiElementList.addObserver(this);
-        FactionMember playerFactionMember = FactionManager.getPlayerFactionMember(GameClient.getClientPlayerState().getName());
+        FactionPermission playerFactionMember = FactionManager.getPlayerMember(GameClient.getClientPlayerState().getName());
         assert playerFactionMember != null;
-        for(FactionMember factionMember : set) {
+        for(FactionPermission factionMember : set) {
             GUITextOverlayTable nameTextElement;
-            (nameTextElement = new GUITextOverlayTable(10, 10, getState())).setTextSimple(factionMember.getName());
+            (nameTextElement = new GUITextOverlayTable(10, 10, getState())).setTextSimple(factionMember.playerUID);
             GUIClippedRow nameRowElement;
             (nameRowElement = new GUIClippedRow(getState())).attach(nameTextElement);
 
+            FactionRank rank = ((BetterMemberAccessor) factionMember).getCustomRank();
             GUITextOverlayTable rankTextElement;
-            (rankTextElement = new GUITextOverlayTable(10, 10, getState())).setTextSimple(factionMember.getRank().getRankName() + "[" + factionMember.getRank().getRankLevel() + "]");
+            String rankStr = rank != null ? rank.getRankName() + "[" + rank.getRankLevel() + "]" : "None";
+            (rankTextElement = new GUITextOverlayTable(10, 10, getState())).setTextSimple(rankStr);
             GUIClippedRow rankRowElement;
             (rankRowElement = new GUIClippedRow(getState())).attach(rankTextElement);
 
+            boolean isOnline = GameCommon.getPlayerFromName(factionMember.playerUID) != null;
             GUITextOverlayTable statusTextElement;
-            (statusTextElement = new GUITextOverlayTable(10, 10, getState())).setTextSimple((factionMember.isOnline()) ? "ONLINE" : "OFFLINE");
+            (statusTextElement = new GUITextOverlayTable(10, 10, getState())).setTextSimple(isOnline ? "ONLINE" : "OFFLINE");
             GUIClippedRow statusRowElement;
             (statusRowElement = new GUIClippedRow(getState())).attach(statusTextElement);
 
+            PlayerState memberPlayer = GameCommon.getPlayerFromName(factionMember.playerUID);
+            Vector3i location = memberPlayer != null ? memberPlayer.getCurrentSector() : null;
             GUITextOverlayTable locationTextElement;
-            (locationTextElement = new GUITextOverlayTable(10, 10, getState())).setTextSimple((factionMember.getLocation() != null) ? factionMember.getLocation().toString() : "");
+            (locationTextElement = new GUITextOverlayTable(10, 10, getState())).setTextSimple(location != null ? location.toString() : "");
             GUIClippedRow locationRowElement;
             (locationRowElement = new GUIClippedRow(getState())).attach(locationTextElement);
 
             FactionMembersListRow factionMembersListRow = new FactionMembersListRow(getState(), factionMember, nameRowElement, rankRowElement, statusRowElement, locationRowElement);
-            if(playerFactionMember.hasPermission("manage.members.[ANY]")) {
+            if(PermissionUtils.hasPermission(playerFactionMember, "manage.members.[ANY]")) {
                 GUIAncor anchor = new GUIAncor(getState(), this.anchor.getWidth() - 28.0f, 28.0f);
                 anchor.attach(redrawButtonPane(factionMember, playerFactionMember, anchor));
                 factionMembersListRow.expanded = new GUIElementList(getState());
@@ -173,19 +195,22 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
         handleDirty();
     }
 
-    private GUIHorizontalButtonTablePane redrawButtonPane(final FactionMember factionMember, FactionMember playerFactionMember, GUIAncor anchor) {
+    private GUIHorizontalButtonTablePane redrawButtonPane(final FactionPermission factionMember, FactionPermission playerFactionMember, GUIAncor anchor) {
         GUIHorizontalButtonTablePane buttonPane = new GUIHorizontalButtonTablePane(getState(), 0, 1, anchor);
         buttonPane.onInit();
-        final FactionData factionData = playerFactionMember.getFactionData();
         int buttonIndex = 0;
-        if(playerFactionMember.getRank().getRankLevel() >= factionMember.getRank().getRankLevel()) {
-            if(playerFactionMember.hasPermission("manage.members.kick") && factionMember != playerFactionMember) {
+        FactionRank playerRank = ((BetterMemberAccessor) playerFactionMember).getCustomRank();
+        FactionRank memberRank = ((BetterMemberAccessor) factionMember).getCustomRank();
+        int playerRankLevel = playerRank != null ? playerRank.getRankLevel() : 0;
+        int memberRankLevel = memberRank != null ? memberRank.getRankLevel() : 0;
+        if(playerRankLevel >= memberRankLevel) {
+            if(PermissionUtils.hasPermission(playerFactionMember, "manage.members.kick") && factionMember != playerFactionMember) {
                 buttonPane.addColumn();
                 buttonPane.addButton(buttonIndex, 0, "KICK", GUIHorizontalArea.HButtonColor.RED, new GUICallback() {
                     @Override
                     public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                         getState().getController().queueUIAudio("0022_menu_ui - cancel");
-                        factionData.removeMember(factionMember.getName());
+                        //Todo: Send kick packet to server
                         redrawList();
                     }
 
@@ -207,7 +232,7 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
                 buttonIndex ++;
             }
 
-            if(playerFactionMember.hasPermission("manage.members.ranks")) {
+            if(PermissionUtils.hasPermission(playerFactionMember, "manage.members.ranks")) {
                 buttonPane.addColumn();
                 buttonPane.addButton(buttonIndex, 0, "EDIT RANK", GUIHorizontalArea.HButtonColor.YELLOW, new GUICallback() {
                     @Override
@@ -236,9 +261,9 @@ public class FactionMembersList extends ScrollableTableList<FactionMember> {
         return buttonPane;
     }
 
-    public class FactionMembersListRow extends ScrollableTableList<FactionMember>.Row {
+    public class FactionMembersListRow extends ScrollableTableList<FactionPermission>.Row {
 
-        public FactionMembersListRow(InputState inputState, FactionMember factionMember, GUIElement... guiElements) {
+        public FactionMembersListRow(InputState inputState, FactionPermission factionMember, GUIElement... guiElements) {
             super(inputState, factionMember, guiElements);
             highlightSelect = true;
             highlightSelectSimple = true;

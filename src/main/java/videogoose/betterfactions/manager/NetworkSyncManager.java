@@ -6,7 +6,6 @@ import api.network.packets.PacketUtil;
 import org.schema.game.common.data.player.PlayerState;
 import videogoose.betterfactions.data.persistent.PersistentData;
 import videogoose.betterfactions.data.persistent.diplomacy.DiplomaticDataOld;
-import videogoose.betterfactions.data.persistent.faction.FactionData;
 import videogoose.betterfactions.data.persistent.federation.FederationData;
 import videogoose.betterfactions.network.server.ServerSyncDataPacket;
 
@@ -17,14 +16,15 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages and syncs data from the server to clients.
+ * Faction data is now stored via game's native Faction + mixin accessors.
+ * Only FederationData and DiplomaticData need network sync.
  *
  * @author TheDerpGamer
- * @version 1.0 - [09/15/2021]
+ * @version 2.0 - [09/15/2021]
  */
 public class NetworkSyncManager {
 
     //Data Types
-    public static final short FACTION_DATA = 0;
     public static final short FEDERATION_DATA = 1;
     public static final short DIPLOMATIC_DATA = 2;
 
@@ -61,9 +61,6 @@ public class NetworkSyncManager {
 
     public static HashMap<Integer, PersistentData> getDataUpdateQueue() {
         HashMap<Integer, PersistentData> updateQueue = new HashMap<>();
-        for(Map.Entry<Integer, FactionData> entry : FactionManager.getFactionDataMap().entrySet()) {
-            if(entry.getValue().needsUpdate()) updateQueue.put(entry.getKey(), entry.getValue());
-        }
 
         for(Map.Entry<Integer, FederationData> entry : FederationManager.getFederationDataMap().entrySet()) {
             if(entry.getValue().needsUpdate()) updateQueue.put(entry.getKey(), entry.getValue());
@@ -75,21 +72,6 @@ public class NetworkSyncManager {
 
     //Clientside
     private static final ConcurrentHashMap<Integer, PersistentData> clientDataCache = new ConcurrentHashMap<>();
-
-    /**
-     * Returns a map of all the Faction Data currently stored in the client data cache.
-     * @return A map of all stored Faction Data
-     */
-    public static HashMap<Integer, FactionData> getFactionDataCache() {
-        assert onClient() : "Server cannot be here.";
-        HashMap<Integer, FactionData> dataCache = new HashMap<>();
-        for(Map.Entry<Integer, PersistentData> entry : clientDataCache.entrySet()) {
-            if(entry.getValue().getDataType() == FACTION_DATA && entry.getValue() instanceof FactionData factionData) {
-                dataCache.put(entry.getKey(), factionData);
-            }
-        }
-        return dataCache;
-    }
 
     /**
      * Returns a map of all the Federation Data currently stored in the client data cache.
