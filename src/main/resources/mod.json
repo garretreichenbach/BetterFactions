@@ -1,17 +1,14 @@
 {
   "name": "BetterFactions",
-  "author": "TheDerpGamer",
+  "author": "VideoGoose",
   "description": "Reworks faction interaction and diplomacy for a more immersive experience.",
   "version": "0.2.0 - Beta",
-  "starmade_version": "0.203.156",
+  "starmade_version": "0.303.10",
   "client_mod": false,
   "server_mod": false,
-  "main_class": "thederpgamer.betterfactions.BetterFactions",
+  "main_class": "videogoose.betterfactions.BetterFactions",
   "smd_resource_id": 8504,
   "dependencies": [
     -1
-  ],
-  "core_mod": false,
-  "requires_class_resize": false,
-  "hard_load_all_classes": false
+  ]
 }

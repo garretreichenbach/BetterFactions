@@ -1,32 +1,53 @@
 plugins {
     id 'java'
+    id 'application'
 }
-def starmadeDirectory = 'C:/Program Files (x86)/Steam/steamapps/common/StarMade/StarMade/'
-def jarName = 'BetterFactions'
-def mainClassName = 'thederpgamer.betterfactions.BetterFactions'
-group 'thederpgamer.betterfactions'
-version '0.2.0 - Beta'
+
+def starmadeDirectory = project.property("starmade_root")
+def modName = project.property("mod_name")
+group = project.property('mod_org_id')
+version = project.property('mod_version')
+def mainClassName = group + modName
 
 repositories {
     mavenCentral()
+    maven { url 'https://jitpack.io' }
+    maven { url 'https://repo.spongepowered.org/maven' }
 }
 
 dependencies {
-    implementation(files(starmadeDirectory + "StarMade.jar"))
-    implementation(fileTree(dir: (starmadeDirectory + "lib"), include: "*.jar"))
+    compileOnly(files(starmadeDirectory + "StarMade.jar"))
+    compileOnly(fileTree(dir: (starmadeDirectory + "lib"), include: "*.jar"))
+    implementation(fileTree(dir: 'lib', include: '*.jar'))
+
+    compileOnly 'org.spongepowered:mixin:0.8.7'
+    annotationProcessor 'org.spongepowered:mixin:0.8.7:processor'
 }
 
 compileJava.options.encoding = 'UTF-8'
 
+tasks.register("updateVersion") {
+    doLast {
+        def modJson = file('src/main/resources/mod.json')
+        def modJsonContent = modJson.getText()
+        modJsonContent = modJsonContent.replaceAll(/"version":\s*".*"/, "\"version\": \"" + version + "\"")
+        modJson.write(modJsonContent)
+    }
+}
+
 jar {
+    dependsOn("updateVersion")
     duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
     destinationDirectory.set(file(starmadeDirectory + "mods"))
-    archiveFileName = jarName + 'v' + version + '.jar'
+    archiveFileName = modName + 'v' + getVersion() + '.jar'
     manifest.attributes('Main-Class': mainClassName)
     from {
         configurations.runtimeClasspath.collect {
-            if(!it.getPath().contains("StarMade") && it.getName().endsWith(".jar")) it.isDirectory() ? it : zipTree(it)
-            else return null;
+            if(!it.getPath().contains("StarMade") && it.getName().endsWith(".jar")) {
+                it.isDirectory() ? it : zipTree(it)
+            } else {
+                return null
+            }
         }
     }
 }
