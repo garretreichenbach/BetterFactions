@@ -382,6 +382,45 @@ public class FactionActionsPanel extends GUIAncor {
                 }
             }
 
+            // Demand button: show when not at war and not allied (demands are non-hostile)
+            if(player.hasPermission("diplomacy.demand") && faction.getIdFaction() != player.getFactionId()) {
+                if(!faction.getEnemies().contains(playerFaction) && !faction.getFriends().contains(playerFaction)) {
+                    buttonPane.addRow();
+                    buttonPane.addButton(0, pos, "SEND DEMAND", GUIHorizontalArea.HButtonColor.YELLOW, new GUICallback() {
+                        @Override
+                        public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                            if(mouseEvent.pressedLeftMouse()) {
+                                getState().getController().queueUIAudio("0022_menu_ui - select 2");
+                                DemandDialog dialog = new DemandDialog();
+                                dialog.setFactions(playerFaction, faction);
+                                dialog.activate();
+                            }
+                        }
+
+                        @Override
+                        public boolean isOccluded() {
+                            return !checkActive();
+                        }
+                    }, new GUIActivationHighlightCallback() {
+                        @Override
+                        public boolean isVisible(InputState inputState) {
+                            return true;
+                        }
+
+                        @Override
+                        public boolean isActive(InputState inputState) {
+                            return checkActive();
+                        }
+
+                        @Override
+                        public boolean isHighlighted(InputState inputState) {
+                            return false;
+                        }
+                    });
+                    pos ++;
+                }
+            }
+
             if(player.hasPermission("federation.[ANY]") && faction.getIdFaction() != player.getFactionId() && player.getFactionData().getFederationId() != -1) {
 
             }

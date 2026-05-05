@@ -77,6 +77,14 @@ public class ModifyFactionMessagePacket extends Packet {
                 factionData.removeMessage(message);
                 FactionManager.updateData(factionData);
             }
+            case FactionMessage.COUNTER -> {
+                // Counter-offer: remove original message, the client will open a new dialog
+                // to compose counter-terms and send as COUNTER_OFFER
+                factionData.removeMessage(message);
+                FactionManager.updateData(factionData);
+                // The actual counter-offer message is sent via SendFactionMessagePacket
+                // from the client's counter-offer dialog
+            }
         }
     }
 
@@ -137,6 +145,29 @@ public class ModifyFactionMessagePacket extends Packet {
                     to.getIdFaction(), from.getIdFaction(), FactionDiplomacyAction.DiploActionType.ACCEPT_FEDERATION_OFFER
                 );
             }
+            case DEMAND_CONCESSION -> {
+                FactionDiplomacyManager.forceDiplomacyAction(
+                    to.getIdFaction(), from.getIdFaction(), FactionDiplomacyAction.DiploActionType.ACCEPT_DEMAND
+                );
+                FactionMessage reply = new FactionMessage(to, from,
+                    to.getName() + " accepted your demands", "We comply with your demands.",
+                    FactionMessage.MessageType.REPLY
+                );
+                FactionManager.getFactionData(from).addMessage(reply);
+                BetterFactions.getInstance().logInfo(to.getName() + " accepted demands from " + from.getName());
+                //TODO: Execute actual demand terms (transfer territory, credits, etc.)
+            }
+            case COUNTER_OFFER -> {
+                // Accept counter-offer: execute based on original type
+                // For now, treat as generic acceptance
+                FactionMessage reply = new FactionMessage(to, from,
+                    to.getName() + " accepted your counter-offer", "We accept the revised terms.",
+                    FactionMessage.MessageType.REPLY
+                );
+                FactionManager.getFactionData(from).addMessage(reply);
+                BetterFactions.getInstance().logInfo(to.getName() + " accepted counter-offer from " + from.getName());
+                //TODO: Execute counter-offer terms based on originalType field
+            }
             default -> {}
         }
     }
@@ -187,6 +218,27 @@ public class ModifyFactionMessagePacket extends Packet {
                 FactionDiplomacyManager.forceDiplomacyAction(
                     to.getIdFaction(), from.getIdFaction(), FactionDiplomacyAction.DiploActionType.REJECT_FEDERATION_OFFER
                 );
+            }
+            case DEMAND_CONCESSION -> {
+                // Reject demand: generates a casus belli for the demanding faction (Phase 3)
+                FactionDiplomacyManager.forceDiplomacyAction(
+                    to.getIdFaction(), from.getIdFaction(), FactionDiplomacyAction.DiploActionType.REJECT_DEMAND
+                );
+                FactionMessage reply = new FactionMessage(to, from,
+                    to.getName() + " rejected your demands", "We refuse your demands.",
+                    FactionMessage.MessageType.REPLY
+                );
+                FactionManager.getFactionData(from).addMessage(reply);
+                BetterFactions.getInstance().logInfo(to.getName() + " rejected demands from " + from.getName());
+                //TODO: Generate REJECTED_DEMAND casus belli for the demanding faction (Phase 3.1)
+            }
+            case COUNTER_OFFER -> {
+                // Reject counter-offer
+                FactionMessage reply = new FactionMessage(to, from,
+                    to.getName() + " rejected your counter-offer", "We reject the revised terms.",
+                    FactionMessage.MessageType.REPLY
+                );
+                FactionManager.getFactionData(from).addMessage(reply);
             }
             default -> {}
         }

@@ -156,6 +156,24 @@ public class FactionDiplomacyAction extends DiplomacyAction {
 			public String getName(Enum anEnum) {
 				return Lng.str("They feel threatened by us");
 			}
+		}),
+		SEND_DEMAND(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("Sent a demand to them");
+			}
+		}),
+		ACCEPT_DEMAND(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("Accepted their demand");
+			}
+		}),
+		REJECT_DEMAND(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("Rejected their demand");
+			}
 		});
 		private final Translatable description;
 

@@ -198,6 +198,9 @@ public class FactionDiplomacyManager {
 			case ACCEPT_FEDERATION_OFFER -> ConfigManager.actionFederationOfferAccepted.getValue();
 			case REJECT_FEDERATION_OFFER -> ConfigManager.actionFederationOfferRejected.getValue();
 			case THREATENING -> ConfigManager.actionThreatening.getValue();
+			case SEND_DEMAND -> ConfigManager.actionSendDemand.getValue();
+			case ACCEPT_DEMAND -> ConfigManager.actionAcceptDemand.getValue();
+			case REJECT_DEMAND -> ConfigManager.actionRejectDemand.getValue();
 			default -> 0;
 		};
 	}

@@ -109,6 +109,9 @@ public class ConfigManager {
 	public static SimpleConfigInt actionFederationOfferRejected;
 	public static SimpleConfigInt actionFederationLeave;
 	public static SimpleConfigInt actionThreatening;
+	public static SimpleConfigInt actionSendDemand;
+	public static SimpleConfigInt actionAcceptDemand;
+	public static SimpleConfigInt actionRejectDemand;
 
 	public static void initialize(BetterFactions instance) {
 		initMainConfig(instance);
@@ -216,6 +219,9 @@ public class ConfigManager {
 		actionFederationOfferRejected = new SimpleConfigInt(diplomacyConfig, "action-values-federation-offer-rejected", -40);
 		actionFederationLeave = new SimpleConfigInt(diplomacyConfig, "action-values-federation-leave", -50);
 		actionThreatening = new SimpleConfigInt(diplomacyConfig, "action-values-threatening", -20);
+		actionSendDemand = new SimpleConfigInt(diplomacyConfig, "action-values-send-demand", -15);
+		actionAcceptDemand = new SimpleConfigInt(diplomacyConfig, "action-values-accept-demand", 10);
+		actionRejectDemand = new SimpleConfigInt(diplomacyConfig, "action-values-reject-demand", -25);
 
 		diplomacyConfig.readWriteFields();
 	}

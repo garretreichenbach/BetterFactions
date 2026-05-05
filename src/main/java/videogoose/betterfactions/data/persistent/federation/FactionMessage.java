@@ -17,6 +17,7 @@ public class FactionMessage {
     public static final int DELETE = 2;
     public static final int ACCEPT = 3;
     public static final int DENY = 4;
+    public static final int COUNTER = 5;
 
     public enum MessageCategory {ALL, GENERAL, ALLIANCE, FEDERATION, DIPLOMATIC, WAR, TRADE, READ, UNREAD}
 
@@ -27,7 +28,8 @@ public class FactionMessage {
         NON_AGGRESSION_PACT(MessageCategory.DIPLOMATIC, "NON-AGGRESSION PACT OFFER"), CANCEL_NON_AGGRESSION_PACT(MessageCategory.DIPLOMATIC, "CANCEL NON-AGGRESSION PACT"),
         GUARANTEE_INDEPENDENCE(MessageCategory.DIPLOMATIC, "GUARANTEE INDEPENDENCE"), CANCEL_GUARANTEE(MessageCategory.DIPLOMATIC, "CANCEL GUARANTEE"),
         DEMAND_CONCESSION(MessageCategory.WAR, "DEMAND CONCESSION"), DECLARE_WAR(MessageCategory.WAR, "WAR DECLARATION"), OFFER_PEACE(MessageCategory.WAR, "PEACE OFFER"),
-        OFFER_TRADE(MessageCategory.TRADE, "TRADE OFFER"), CANCEL_TRADE(MessageCategory.TRADE, "TRADE CANCELLATION");
+        OFFER_TRADE(MessageCategory.TRADE, "TRADE OFFER"), CANCEL_TRADE(MessageCategory.TRADE, "TRADE CANCELLATION"),
+        COUNTER_OFFER(MessageCategory.DIPLOMATIC, "COUNTER OFFER");
 
         public MessageCategory category;
         public String display;
@@ -51,6 +53,8 @@ public class FactionMessage {
     public boolean read;
     public String acceptButtonText;
     public String denyButtonText;
+    public String counterButtonText;
+    public MessageType originalType; // For counter-offers: tracks the original proposal type
 
     public FactionMessage(Faction from, Faction to, String title, String message) {
         this(from, to, title, message, MessageType.MESSAGE);
@@ -63,21 +67,25 @@ public class FactionMessage {
         this.message = message;
         this.messageType = messageType;
         this.date = System.currentTimeMillis();
-        switch(messageType) {
-            case OFFER_PEACE:
-            case OFFER_TRADE:
-            case ALLIANCE_OFFER:
-            case DEMAND_CONCESSION:
-            case FEDERATION_INVITE:
-            case FEDERATION_REQUEST:
-            case NON_AGGRESSION_PACT:
+        this.counterButtonText = "";
+        switch (messageType) {
+            case OFFER_PEACE, DEMAND_CONCESSION, COUNTER_OFFER -> {
                 acceptButtonText = "ACCEPT";
                 denyButtonText = "DENY";
-                break;
-            default:
+                counterButtonText = "COUNTER";
+            }
+            case OFFER_TRADE, ALLIANCE_OFFER, NON_AGGRESSION_PACT -> {
+                acceptButtonText = "ACCEPT";
+                denyButtonText = "DENY";
+            }
+            case FEDERATION_INVITE, FEDERATION_REQUEST -> {
+                acceptButtonText = "ACCEPT";
+                denyButtonText = "DENY";
+            }
+            default -> {
                 acceptButtonText = "";
                 denyButtonText = "";
-                break;
+            }
         }
     }
 

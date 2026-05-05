@@ -86,6 +86,9 @@ public class SendFactionMessagePacket extends Packet {
         switch (type) {
             case DECLARE_WAR -> processWarDeclaration(from, to);
             case NON_AGGRESSION_PACT -> processNonAggressionPact(from, to);
+            case OFFER_PEACE -> processPeaceOffer(from, to);
+            case DEMAND_CONCESSION -> processDemand(from, to);
+            case COUNTER_OFFER -> processCounterOffer(from, to);
             default -> processStandardMessage(from, to, type);
         }
     }
@@ -154,6 +157,33 @@ public class SendFactionMessagePacket extends Packet {
         FactionManager.getFactionData(to).addMessage(napMessage);
 
         BetterFactions.getInstance().logInfo(from.getName() + " offered non-aggression pact to " + to.getName());
+    }
+
+    private void processCounterOffer(Faction from, Faction to) {
+        // Counter-offers are delivered as messages with modified terms
+        FactionMessage counterMessage = new FactionMessage(from, to, title, message, FactionMessage.MessageType.COUNTER_OFFER);
+        FactionManager.getFactionData(to).addMessage(counterMessage);
+        BetterFactions.getInstance().logInfo(from.getName() + " sent counter-offer to " + to.getName());
+    }
+
+    private void processDemand(Faction from, Faction to) {
+        // Deliver demand message to target faction
+        FactionMessage demandMessage = new FactionMessage(from, to, title, message, FactionMessage.MessageType.DEMAND_CONCESSION);
+        FactionManager.getFactionData(to).addMessage(demandMessage);
+
+        // Fire diplomacy action — demands cause opinion penalty
+        FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.SEND_DEMAND);
+        BetterFactions.getInstance().logInfo(from.getName() + " sent demand to " + to.getName());
+    }
+
+    private void processPeaceOffer(Faction from, Faction to) {
+        // Peace offers carry their demands in the message — deliver to target faction
+        FactionMessage peaceMessage = new FactionMessage(from, to, title, message, FactionMessage.MessageType.OFFER_PEACE);
+        FactionManager.getFactionData(to).addMessage(peaceMessage);
+
+        // Fire diplomacy action
+        FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.PEACE_OFFER);
+        BetterFactions.getInstance().logInfo(from.getName() + " offered peace to " + to.getName());
     }
 
     private void processStandardMessage(Faction from, Faction to, FactionMessage.MessageType type) {
