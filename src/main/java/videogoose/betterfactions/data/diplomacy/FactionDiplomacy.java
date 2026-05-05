@@ -1,6 +1,5 @@
 package videogoose.betterfactions.data.diplomacy;
 
-import api.mod.config.FileConfiguration;
 import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -56,7 +55,7 @@ public class FactionDiplomacy extends Observable implements LogInterface {
 
 			@Override
 			public long getDelay() {
-				return getConfig().getLong("diplomacy-status-calc-delay");
+				return (long) ConfigManager.diplomacyStatusCalcDelay.getValue();
 			}
 
 			@Override
@@ -75,7 +74,7 @@ public class FactionDiplomacy extends Observable implements LogInterface {
 
 			@Override
 			public long getDelay() {
-				return getConfig().getLong("diplomacy-apply-delay");
+				return (long) ConfigManager.diplomacyApplyDelay.getValue();
 			}
 
 			@Override
@@ -94,7 +93,7 @@ public class FactionDiplomacy extends Observable implements LogInterface {
 
 			@Override
 			public long getDelay() {
-				return getConfig().getLong("diplomacy-change-check-delay");
+				return (long) ConfigManager.diplomacyChangeCheckDelay.getValue();
 			}
 
 			@Override
@@ -131,15 +130,11 @@ public class FactionDiplomacy extends Observable implements LogInterface {
 		});
 	}
 
-	public FileConfiguration getConfig() {
-		return ConfigManager.getDiplomacyConfig();
-	}
-
 	public void diplomacyAction(FactionDiplomacyAction.DiploActionType type, long otherDbId) {
 		FactionDiplomacyEntity e = entities.get(otherDbId);
 		if(e == null) {
 			e = new FactionDiplomacyEntity((FactionState) faction.getState(), faction.getIdFaction(), otherDbId);
-			e.setPoints(getConfig().getInt("diplomacy-start-points"));
+			e.setPoints(ConfigManager.diplomacyStartPoints.getValue());
 			entities.put(otherDbId, e);
 		}
 		e.diplomacyAction(type);
@@ -221,7 +216,7 @@ public class FactionDiplomacy extends Observable implements LogInterface {
 
 	@Override
 	public void log(String string, LogLevel l) {
-		BetterFactions.log.info("[DIPLOMACY]" + string);
+		BetterFactions.getInstance().logInfo("[DIPLOMACY] " + string);
 	}
 
 	public Tag toTag() {
@@ -284,7 +279,7 @@ public class FactionDiplomacy extends Observable implements LogInterface {
 	}
 
 	public String printFor(PlayerState player) {
-		StringBuffer b = new StringBuffer();
+		StringBuilder b = new StringBuilder();
 		FactionDiplomacyEntity FactionDiplomacyEntity = entities.get(player.getDbId());
 		if(FactionDiplomacyEntity != null){
 			b.append("PLAYER DIPLOMACY: \n");
@@ -303,7 +298,7 @@ public class FactionDiplomacy extends Observable implements LogInterface {
 		FactionDiplomacyEntity e = entities.get(f.getIdFaction());
 		if(e == null) {
 			e = new FactionDiplomacyEntity((FactionState) faction.getState(), faction.getIdFaction(), (long)f.getIdFaction());
-			e.setPoints(getConfig().getInt("diplomacy-start-points"));
+			e.setPoints(ConfigManager.diplomacyStartPoints.getValue());
 			entities.put(f.getIdFaction(), e);
 		}
 		ntChanged(f.getIdFaction());
@@ -313,7 +308,7 @@ public class FactionDiplomacy extends Observable implements LogInterface {
 		FactionDiplomacyEntity e = entities.get(p.getDbId());
 		if(e == null) {
 			e = new FactionDiplomacyEntity((FactionState) faction.getState(), faction.getIdFaction(), p.getDbId());
-			e.setPoints(getConfig().getInt("diplomacy-start-points"));
+			e.setPoints(ConfigManager.diplomacyStartPoints.getValue());
 			entities.put(p.getDbId(), e);
 			e.calculateStaticModifiers(0);
 			e.applyDynamicModifiers(0);

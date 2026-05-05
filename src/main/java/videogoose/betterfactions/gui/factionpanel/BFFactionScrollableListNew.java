@@ -16,11 +16,7 @@ import org.schema.schine.input.InputState;
 
 import java.util.*;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public class BFFactionScrollableListNew extends ScrollableTableList<Faction> implements Observer {
 
 	private final GUIElement panel;

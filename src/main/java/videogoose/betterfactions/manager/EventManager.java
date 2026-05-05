@@ -6,32 +6,23 @@ import api.mod.StarLoader;
 import org.schema.game.client.view.gui.PlayerPanel;
 import videogoose.betterfactions.BetterFactions;
 import videogoose.betterfactions.gui.factionpanel.BFFactionPanelNew;
-
-import java.lang.reflect.Field;
+import videogoose.betterfactions.mixin.PlayerPanelAccessor;
 
 /**
- * [Description]
+ * Handles mod event registration.
  *
  * @author TheDerpGamer (MrGoose#0027)
  */
 public class EventManager {
 
 	public static void registerEvents(BetterFactions betterFactions) {
-		StarLoader.registerListener(PlayerGUICreateEvent.class, new Listener<PlayerGUICreateEvent>() {
-			@Override
-			public void onEvent(PlayerGUICreateEvent event) {
-				try {
-					PlayerPanel playerPanel = event.getPlayerPanel();
-					Field factionPanelNewField = playerPanel.getClass().getDeclaredField("factionPanelNew");
-					factionPanelNewField.setAccessible(true);
-					if(!(factionPanelNewField.get(playerPanel) instanceof BFFactionPanelNew)) {
-						BFFactionPanelNew factionPanelNew = new BFFactionPanelNew(playerPanel.getState());
-						factionPanelNew.onInit();
-						factionPanelNewField.set(playerPanel, factionPanelNew);
-					}
-				} catch(NoSuchFieldException | IllegalAccessException e) {
-					e.printStackTrace();
-				}
+		StarLoader.registerListener(PlayerGUICreateEvent.class, (Listener<PlayerGUICreateEvent>) event -> {
+			PlayerPanel playerPanel = event.getPlayerPanel();
+			PlayerPanelAccessor accessor = (PlayerPanelAccessor) playerPanel;
+			if (!(accessor.getFactionPanelNew() instanceof BFFactionPanelNew)) {
+				BFFactionPanelNew factionPanelNew = new BFFactionPanelNew(playerPanel.getState());
+				factionPanelNew.onInit();
+				accessor.setFactionPanelNew(factionPanelNew);
 			}
 		}, betterFactions);
 	}

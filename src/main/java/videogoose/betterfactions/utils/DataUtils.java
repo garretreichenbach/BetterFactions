@@ -4,10 +4,9 @@ import api.common.GameClient;
 import api.common.GameCommon;
 import videogoose.betterfactions.BetterFactions;
 
-import java.util.logging.Level;
 
 /**
- * [Description]
+ * Utility class for data paths and resource locations.
  *
  * @author TheDerpGamer (MrGoose#0027)
  */
@@ -19,12 +18,10 @@ public class DataUtils {
 
 	public static String getWorldDataPath() {
 		String universeName = GameCommon.getUniqueContextId();
-		if(!universeName.contains(":")) return getResourcesPath() + "/data/" + universeName;
-		else {
-			try {
-				BetterFactions.log.log(Level.WARNING,"Client " + GameClient.getClientPlayerState().getName() + " attempted to illegally access server data.");
-			} catch(Exception ignored) { }
-			return null;
-		}
+		if (!universeName.contains(":")) return getResourcesPath() + "/data/" + universeName;
+		try {
+			BetterFactions.getInstance().logWarning("Client " + GameClient.getClientPlayerState().getName() + " attempted to illegally access server data.");
+		} catch (Exception ignored) { }
+		return null;
 	}
 }

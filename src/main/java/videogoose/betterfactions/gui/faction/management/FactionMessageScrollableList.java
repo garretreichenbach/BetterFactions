@@ -14,7 +14,7 @@ import videogoose.betterfactions.data.persistent.faction.FactionMember;
 import videogoose.betterfactions.data.persistent.federation.FactionMessage;
 import videogoose.betterfactions.gui.faction.diplomacy.FactionMessageSendDialog;
 import videogoose.betterfactions.manager.FactionManager;
-import videogoose.betterfactions.manager.LogManager;
+import videogoose.betterfactions.BetterFactions;
 import videogoose.betterfactions.network.client.ModifyFactionMessagePacket;
 import videogoose.betterfactions.utils.DateUtils;
 
@@ -52,7 +52,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
         try {
             messageList.addAll(FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName()).getInbox());
         } catch(Exception exception) {
-            LogManager.logException("Encountered an exception while trying to fetch faction message inbox", exception);
+            BetterFactions.getInstance().logWarning("Failed to fetch faction message inbox: " + exception.getMessage());
         }
         return messageList;
     }
@@ -163,7 +163,7 @@ public class FactionMessageScrollableList extends ScrollableTableList<FactionMes
                     guiElementList.addWithoutUpdate(row);
                 }
             } catch(Exception exception) {
-                exception.printStackTrace();
+                BetterFactions.getInstance().logException("Failed to render faction message list entry", exception);
             }
         }
         guiElementList.updateDim();

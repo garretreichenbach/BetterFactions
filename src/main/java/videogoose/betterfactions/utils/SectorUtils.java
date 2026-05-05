@@ -5,11 +5,7 @@ import org.schema.common.util.linAlg.Vector3i;
 
 import java.io.IOException;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public class SectorUtils {
 
 	public static String getSystemName(Vector3i system) {

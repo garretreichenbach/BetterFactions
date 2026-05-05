@@ -1,7 +1,6 @@
 package videogoose.betterfactions.data.diplomacy;
 
 import api.common.GameCommon;
-import api.mod.config.FileConfiguration;
 import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
 import it.unimi.dsi.fastutil.bytes.Byte2ObjectOpenHashMap;
@@ -13,6 +12,7 @@ import org.schema.common.util.StringTools;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionRelation.RType;
+import videogoose.betterfactions.mixin.CustomRelationType;
 import org.schema.game.common.data.player.faction.FactionRelationOffer;
 import org.schema.game.common.data.player.faction.FactionRelationOfferAcceptOrDecline;
 import org.schema.game.server.data.FactionState;
@@ -25,6 +25,7 @@ import org.schema.schine.network.server.ServerStateInterface;
 import org.schema.schine.resource.tag.FinishTag;
 import org.schema.schine.resource.tag.Tag;
 import org.schema.schine.resource.tag.Tag.Type;
+import videogoose.betterfactions.BetterFactions;
 import videogoose.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
 import videogoose.betterfactions.data.diplomacy.modifier.FactionDiplomacyStaticMod;
 import videogoose.betterfactions.data.diplomacy.modifier.FactionDiplomacyTurnMod;
@@ -49,19 +50,19 @@ public class FactionDiplomacyEntity implements LogInterface {
 
 		@Override
 		public FactionDiplomacyTurnMod remove(Object k) {
-			if(! (k == null || k instanceof FactionDiplomacyAction.DiploActionType)) throw new IllegalArgumentException();
+			if(!(k == null || k instanceof FactionDiplomacyAction.DiploActionType type)) throw new IllegalArgumentException();
 			return super.remove(k);
 		}
 
 		@Override
 		public FactionDiplomacyTurnMod get(Object k) {
-			if(! (k == null || k instanceof FactionDiplomacyAction.DiploActionType)) throw new IllegalArgumentException();
+			if(!(k == null || k instanceof FactionDiplomacyAction.DiploActionType type)) throw new IllegalArgumentException();
 			return super.get(k);
 		}
 
 		@Override
 		public boolean containsKey(Object k) {
-			if(! (k == null || k instanceof FactionDiplomacyAction.DiploActionType)) throw new IllegalArgumentException();
+			if(!(k == null || k instanceof FactionDiplomacyAction.DiploActionType type)) throw new IllegalArgumentException();
 			return super.containsKey(k);
 		}
 
@@ -72,19 +73,19 @@ public class FactionDiplomacyEntity implements LogInterface {
 
 		@Override
 		public FactionDiplomacyStaticMod remove(Object k) {
-			if(! (k == null || k instanceof DiploStatusType)) throw new IllegalArgumentException();
+			if(!(k == null || k instanceof DiploStatusType type)) throw new IllegalArgumentException();
 			return super.remove(k);
 		}
 
 		@Override
 		public FactionDiplomacyStaticMod get(Object k) {
-			if(! (k == null || k instanceof DiploStatusType)) throw new IllegalArgumentException();
+			if(!(k == null || k instanceof DiploStatusType type)) throw new IllegalArgumentException();
 			return super.get(k);
 		}
 
 		@Override
 		public boolean containsKey(Object k) {
-			if(! (k == null || k instanceof DiploStatusType)) throw new IllegalArgumentException();
+			if(!(k == null || k instanceof DiploStatusType type)) throw new IllegalArgumentException();
 			return super.containsKey(k);
 		}
 
@@ -139,7 +140,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 	}
 
 	public void setPoints(int points) {
-		this.points = Math.max(getConfig().getInt("diplomacy-min-points"), Math.min(getConfig().getInt("diplomacy-max-points"), points));
+		this.points = Math.max(ConfigManager.diplomacyMinPoints.getValue(), Math.min(ConfigManager.diplomacyMaxPoints.getValue(), points));
 	}
 
 	public int getRawPoints() {
@@ -153,7 +154,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 	private int recalcPoints() {
 		int p = points;
 		for(FactionDiplomacyStaticMod e : staticMap.values()) p += e.value;
-		return Math.max(getConfig().getInt("diplomacy-min-points"), Math.min(getConfig().getInt("diplomacy-max-points"), p));
+		return Math.max(ConfigManager.diplomacyMinPoints.getValue(), Math.min(ConfigManager.diplomacyMaxPoints.getValue(), p));
 	}
 
 	public void fromNetwork(PacketReadBuffer packetReadBuffer) throws IOException {
@@ -180,62 +181,25 @@ public class FactionDiplomacyEntity implements LogInterface {
 		for(FactionDiplomacyStaticMod m : staticMap.values()) {
 			int elapsed = Math.max(0, m.value - (int) (timeElapsed / 1000 / 60 / 60 / 24));
 			switch(m.type) {
-				case ALLIANCE:
-					m.value = Math.min(getConfig().getInt("diplomacy-alliance-max-points"), Math.max(getConfig().getInt("diplomacy-alliance-min-points"), elapsed));
-					break;
-				case ALLIANCE_WITH_ENEMY:
-					m.value = Math.min(getConfig().getInt("diplomacy-alliance-with-enemy-max-points"), Math.max(getConfig().getInt("diplomacy-alliance-with-enemy-min-points"), elapsed));
-					break;
-				case ALLIANCE_WITH_FRIENDS:
-					m.value = Math.min(getConfig().getInt("diplomacy-alliance-with-friends-max-points"), Math.max(getConfig().getInt("diplomacy-alliance-with-friends-min-points"), elapsed));
-					break;
-				case CLOSE_TERRITORY:
-					m.value = Math.min(getConfig().getInt("diplomacy-close-territory-max-points"), Math.max(getConfig().getInt("diplomacy-close-territory-min-points"), elapsed));
-					break;
-				case IN_WAR:
-					m.value = Math.min(getConfig().getInt("diplomacy-in-war-max-points"), Math.max(getConfig().getInt("diplomacy-in-war-min-points"), elapsed));
-					break;
-				case IN_WAR_WITH_ENEMY:
-					m.value = Math.min(getConfig().getInt("diplomacy-in-war-with-enemy-max-points"), Math.max(getConfig().getInt("diplomacy-in-war-with-enemy-min-points"), elapsed));
-					break;
-				case IN_WAR_WITH_FRIENDS:
-					m.value = Math.min(getConfig().getInt("diplomacy-in-war-with-friends-max-points"), Math.max(getConfig().getInt("diplomacy-in-war-with-friends-min-points"), elapsed));
-					break;
-				case NON_AGGRESSION:
-					m.value = Math.min(getConfig().getInt("diplomacy-non-aggression-max-points"), Math.max(getConfig().getInt("diplomacy-non-aggression-min-points"), elapsed));
-					break;
-				case POWER:
-					m.value = Math.min(getConfig().getInt("diplomacy-power-max-points"), Math.max(getConfig().getInt("diplomacy-power-min-points"), elapsed));
-					break;
-				case PROTECTING:
-					m.value = Math.min(getConfig().getInt("diplomacy-protecting-max-points"), Math.max(getConfig().getInt("diplomacy-protecting-min-points"), elapsed));
-					break;
-				case BEING_PROTECTED:
-					m.value = Math.min(getConfig().getInt("diplomacy-being-protected-max-points"), Math.max(getConfig().getInt("diplomacy-being-protected-min-points"), elapsed));
-					break;
-				case HAS_WAR_GOAL:
-					m.value = Math.min(getConfig().getInt("diplomacy-has-war-goal-max-points"), Math.max(getConfig().getInt("diplomacy-has-war-goal-min-points"), elapsed));
-					break;
-				case TARGET_OF_WAR_GOAL:
-					m.value = Math.min(getConfig().getInt("diplomacy-target-of-war-goal-max-points"), Math.max(getConfig().getInt("diplomacy-target-of-war-goal-min-points"), elapsed));
-					break;
-				case TRUCE:
-					m.value = Math.min(getConfig().getInt("diplomacy-truce-max-points"), Math.max(getConfig().getInt("diplomacy-truce-min-points"), elapsed));
-					break;
-				case NON_AGGRESSION_PACT:
-					m.value = Math.min(getConfig().getInt("diplomacy-non-aggression-pact-max-points"), Math.max(getConfig().getInt("diplomacy-non-aggression-pact-min-points"), elapsed));
-					break;
-				case IN_FEDERATION:
-					m.value = Math.min(getConfig().getInt("diplomacy-in-federation-max-points"), Math.max(getConfig().getInt("diplomacy-in-federation-min-points"), elapsed));
-					break;
-				case FEDERATION_ALLY:
-					m.value = Math.min(getConfig().getInt("diplomacy-federation-ally-max-points"), Math.max(getConfig().getInt("diplomacy-federation-ally-min-points"), elapsed));
-					break;
-				case FEDERATION_ENEMY:
-					m.value = Math.min(getConfig().getInt("diplomacy-federation-enemy-max-points"), Math.max(getConfig().getInt("diplomacy-federation-enemy-min-points"), elapsed));
-					break;
-				default:
-					break;
+				case ALLIANCE -> m.value = Math.min(ConfigManager.allianceMaxPoints.getValue(), Math.max(ConfigManager.allianceMinPoints.getValue(), elapsed));
+				case ALLIANCE_WITH_ENEMY -> m.value = Math.min(ConfigManager.allianceWithEnemyMaxPoints.getValue(), Math.max(ConfigManager.allianceWithEnemyMinPoints.getValue(), elapsed));
+				case ALLIANCE_WITH_FRIENDS -> m.value = Math.min(ConfigManager.allianceWithFriendsMaxPoints.getValue(), Math.max(ConfigManager.allianceWithFriendsMinPoints.getValue(), elapsed));
+				case CLOSE_TERRITORY -> m.value = Math.min(ConfigManager.closeTerritoryMaxPoints.getValue(), Math.max(ConfigManager.closeTerritoryMinPoints.getValue(), elapsed));
+				case IN_WAR -> m.value = Math.min(ConfigManager.inWarMaxPoints.getValue(), Math.max(ConfigManager.inWarMinPoints.getValue(), elapsed));
+				case IN_WAR_WITH_ENEMY -> m.value = Math.min(ConfigManager.inWarWithEnemyMaxPoints.getValue(), Math.max(ConfigManager.inWarWithEnemyMinPoints.getValue(), elapsed));
+				case IN_WAR_WITH_FRIENDS -> m.value = Math.min(ConfigManager.inWarWithFriendsMaxPoints.getValue(), Math.max(ConfigManager.inWarWithFriendsMinPoints.getValue(), elapsed));
+				case NON_AGGRESSION -> m.value = Math.min(ConfigManager.nonAggressionMaxPoints.getValue(), Math.max(ConfigManager.nonAggressionMinPoints.getValue(), elapsed));
+				case POWER -> m.value = Math.min(ConfigManager.powerMaxPoints.getValue(), Math.max(ConfigManager.powerMinPoints.getValue(), elapsed));
+				case PROTECTING -> m.value = Math.min(ConfigManager.protectingMaxPoints.getValue(), Math.max(ConfigManager.protectingMinPoints.getValue(), elapsed));
+				case BEING_PROTECTED -> m.value = Math.min(ConfigManager.beingProtectedMaxPoints.getValue(), Math.max(ConfigManager.beingProtectedMinPoints.getValue(), elapsed));
+				case HAS_WAR_GOAL -> m.value = Math.min(ConfigManager.hasWarGoalMaxPoints.getValue(), Math.max(ConfigManager.hasWarGoalMinPoints.getValue(), elapsed));
+				case TARGET_OF_WAR_GOAL -> m.value = Math.min(ConfigManager.targetOfWarGoalMaxPoints.getValue(), Math.max(ConfigManager.targetOfWarGoalMinPoints.getValue(), elapsed));
+				case TRUCE -> m.value = Math.min(ConfigManager.truceMaxPoints.getValue(), Math.max(ConfigManager.truceMinPoints.getValue(), elapsed));
+				case NON_AGGRESSION_PACT -> m.value = Math.min(ConfigManager.nonAggressionPactMaxPoints.getValue(), Math.max(ConfigManager.nonAggressionPactMinPoints.getValue(), elapsed));
+				case IN_FEDERATION -> m.value = Math.min(ConfigManager.inFederationMaxPoints.getValue(), Math.max(ConfigManager.inFederationMinPoints.getValue(), elapsed));
+				case FEDERATION_ALLY -> m.value = Math.min(ConfigManager.federationAllyMaxPoints.getValue(), Math.max(ConfigManager.federationAllyMinPoints.getValue(), elapsed));
+				case FEDERATION_ENEMY -> m.value = Math.min(ConfigManager.federationEnemyMaxPoints.getValue(), Math.max(ConfigManager.federationEnemyMinPoints.getValue(), elapsed));
+				default -> {}
 			}
 		}
 		checkReactions();
@@ -260,7 +224,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 
 	private boolean executeReaction(FactionDiplomacyReaction r) {
 		switch(r.reaction) {
-			case OFFER_NON_AGGRESSION_PACT:
+			case OFFER_NON_AGGRESSION_PACT -> {
 				if(isFaction()) {
 					if(isNPCFaction()) {
 						FactionRelationOfferAcceptOrDecline offer;
@@ -279,21 +243,25 @@ public class FactionDiplomacyEntity implements LogInterface {
 						FactionRelationOffer offer = new FactionRelationOffer();
 						offer.a = getFaction().getIdFaction();
 						offer.b = (int) dbId;
-						offer.rel = RType.NON_AGGRESSION.code;
+						offer.rel = CustomRelationType.NON_AGGRESSION;
 						state.getFactionManager().getRelationOffersToAdd().add(offer);
 					}
 				}
 				return true;
-			case ACCEPT_NON_AGGRESSION_PACT:
+			}
+			case ACCEPT_NON_AGGRESSION_PACT -> {
 				if(isFaction() && !isNPCFaction()) getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.ACCEPT_NON_AGGRESSION_PACT, (int) dbId);
 				return true;
-			case REJECT_NON_AGGRESSION_PACT:
+			}
+			case REJECT_NON_AGGRESSION_PACT -> {
 				if(isFaction() && !isNPCFaction()) getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.REJECT_NON_AGRESSION_PACT, (int) dbId);
 				return false;
-			case REMOVE_NON_AGGRESSION_PACT:
+			}
+			case REMOVE_NON_AGGRESSION_PACT -> {
 				if(isFaction() && !isNPCFaction()) getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.REMOVE_NON_AGGRESSION_PACT, (int) dbId);
 				return false;
-			case OFFER_ALLIANCE:
+			}
+			case OFFER_ALLIANCE -> {
 				if(isFaction()) {
 					if(isNPCFaction()) {
 						FactionRelationOfferAcceptOrDecline offer;
@@ -317,16 +285,20 @@ public class FactionDiplomacyEntity implements LogInterface {
 					}
 				}
 				return true;
-			case ACCEPT_ALLIANCE_OFFER:
+			}
+			case ACCEPT_ALLIANCE_OFFER -> {
 				if(isFaction() && !isNPCFaction()) getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.ACCEPT_ALLIANCE, (int) dbId);
 				return true;
-			case REJECT_ALLIANCE_OFFER:
+			}
+			case REJECT_ALLIANCE_OFFER -> {
 				if(isFaction() && !isNPCFaction()) getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.REJECT_ALLIANCE, (int) dbId);
 				return false;
-			case REMOVE_ALLIANCE:
+			}
+			case REMOVE_ALLIANCE -> {
 				if(isFaction() && !isNPCFaction()) getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.ALLIANCE_CANCEL, (int) dbId);
 				return false;
-			case OFFER_PEACE_DEAL:
+			}
+			case OFFER_PEACE_DEAL -> {
 				if(isFaction()) {
 					if(isNPCFaction()) {
 						//FactionRelationOfferAcceptOrDecline offer;
@@ -351,18 +323,22 @@ public class FactionDiplomacyEntity implements LogInterface {
 					}
 				}
 				return true;
-			case ACCEPT_PEACE_OFFER:
+			}
+			case ACCEPT_PEACE_OFFER -> {
 				if(isFaction() && !isNPCFaction()) getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.ACCEPT_PEACE_OFFER, (int) dbId);
 				return true;
-			case REJECT_PEACE_OFFER:
+			}
+			case REJECT_PEACE_OFFER -> {
 				if(isFaction() && !isNPCFaction()) getDiplomacy().diplomacyAction(FactionDiplomacyAction.DiploActionType.REJECT_PEACE_OFFER, (int) dbId);
 				return false;
-			case DECLARE_WAR:
+			}
+			case DECLARE_WAR -> {
 				if(getFaction().getRelationshipWithFactionOrPlayer(dbId) != RType.ENEMY) {
 					getFaction().declareWarAgainstEntity(dbId);
 					//Todo: War goal system
 					return true;
 				} else return false;
+			}
 
 			/*
 				case ACCEPT_PEACE_OFFER:
@@ -497,7 +473,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 				return false;
 
 			 */
-			case SEND_POPUP_MESSAGE:
+			case SEND_POPUP_MESSAGE -> {
 				if(! reactionsFired.containsKey(r.index)) {
 					if(isSinglePlayer()) {
 
@@ -516,8 +492,9 @@ public class FactionDiplomacyEntity implements LogInterface {
 					}
 				}
 				return true;
-			default:
-				break;
+			}
+			default -> {
+			}
 		}
 
 
@@ -569,7 +546,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 		} else {
 			if(mod != null) {
 				mod.elapsedTimeInactive += timeElapsed;
-				if(mod.type == DiploStatusType.NON_AGGRESSION || mod.elapsedTimeInactive > getConfig().getLong("diplomacy-static-timeout")) map.remove(status);
+				if(mod.type == DiploStatusType.NON_AGGRESSION || mod.elapsedTimeInactive > (long) ConfigManager.diplomacyStaticTimeout.getValue()) map.remove(status);
 			}
 		}
 		if(mod != null) {
@@ -585,11 +562,9 @@ public class FactionDiplomacyEntity implements LogInterface {
 
 	public float calculateStatus(DiploStatusType status) {
 		RType rel = getDiplomacy().faction.getRelationshipWithFactionOrPlayer(dbId);
-		switch(status) {
-			case ALLIANCE:
-				if(rel == RType.FRIEND) return 1;
-				else return 0;
-			case ALLIANCE_WITH_ENEMY:
+		return switch(status) {
+			case ALLIANCE -> (rel == RType.FRIEND) ? 1 : 0;
+			case ALLIANCE_WITH_ENEMY -> {
 				if(isFaction()) {
 					List<Faction> enemies = getFaction().getEnemies();
 					int alliances = 0;
@@ -601,25 +576,17 @@ public class FactionDiplomacyEntity implements LogInterface {
 							}
 						}
 					}
-
-					return alliances;
-				} else return 0;
-			case CLOSE_TERRITORY:
+					yield alliances;
+				} else yield 0;
+			}
+			case CLOSE_TERRITORY -> {
 				DiplomacyAction dd = actions.get((byte) FactionDiplomacyAction.DiploActionType.TERRITORY.ordinal());
-				if(dd != null && dd.counter > 0) {
-					return 1;
-				} else {
-					return 0;
-				}
-			case IN_WAR:
-				if(rel == RType.ENEMY) {
-//				System.err.println("RETURNING 1::::: "+rel);
-					return 1;
-				} else {
-//				System.err.println("RETURNING 0::::: "+rel);
-					return 0;
-				}
-			case IN_WAR_WITH_ENEMY:
+				yield (dd != null && dd.counter > 0) ? 1 : 0;
+			}
+			case IN_WAR -> {
+				yield (rel == RType.ENEMY) ? 1 : 0;
+			}
+			case IN_WAR_WITH_ENEMY -> {
 				List<Faction> enemies = getFaction().getEnemies();
 				int wars = 0;
 				for(Faction f : enemies) {
@@ -630,8 +597,9 @@ public class FactionDiplomacyEntity implements LogInterface {
 						}
 					}
 				}
-				return wars;
-			case ALLIANCE_WITH_FRIENDS:
+				yield wars;
+			}
+			case ALLIANCE_WITH_FRIENDS -> {
 				if(isFaction()) {
 					List<Faction> friends = getFaction().getFriends();
 					int friendsWFriends = 0;
@@ -643,11 +611,12 @@ public class FactionDiplomacyEntity implements LogInterface {
 							}
 						}
 					}
-					return friendsWFriends;
+					yield friendsWFriends;
 				} else {
-					return 0;
+					yield 0;
 				}
-			case IN_WAR_WITH_FRIENDS:
+			}
+			case IN_WAR_WITH_FRIENDS -> {
 				List<Faction> friends = getFaction().getFriends();
 				int warsWFriends = 0;
 				for(Faction f : friends) {
@@ -658,20 +627,15 @@ public class FactionDiplomacyEntity implements LogInterface {
 						}
 					}
 				}
-				return warsWFriends;
-			case NON_AGGRESSION:
+				yield warsWFriends;
+			}
+			case NON_AGGRESSION -> {
 				DiplomacyAction diplomacyAction = actions.get((byte) FactionDiplomacyAction.DiploActionType.ATTACK.ordinal());
-				if(diplomacyAction == null || diplomacyAction.counter < 1) {
-					return 1;
-				} else {
-					return 0;
-				}
-			case POWER:
-				return 0;
-			default:
-				break;
-		}
-		return 0;
+				yield (diplomacyAction == null || diplomacyAction.counter < 1) ? 1 : 0;
+			}
+			case POWER -> 0;
+			default -> 0;
+		};
 	}
 
 	private Faction getFaction() {
@@ -683,20 +647,20 @@ public class FactionDiplomacyEntity implements LogInterface {
 	}
 
 	private void calculateDynamicModifier(long timeElapsed, Object2ObjectOpenHashMap<FactionDiplomacyAction.DiploActionType, FactionDiplomacyTurnMod> dynamicMap2, FactionDiplomacyAction.DiploActionType action) {
-		int upperOrig = getConfig().getInt("diplomacy-dynamic-upper");
-		int lowerOrig = getConfig().getInt("diplomacy-dynamic-lower");
+		int upperOrig = ConfigManager.diplomacyDynamicUpper.getValue();
+		int lowerOrig = ConfigManager.diplomacyDynamicLower.getValue();
 
 		if((upperOrig == lowerOrig) && lowerOrig == 0) return;
 		int valueMod = upperOrig > lowerOrig ? 1 : - 1;
 		int upper = valueMod > 0 ? upperOrig : lowerOrig;
 		int lower = valueMod > 0 ? lowerOrig : upperOrig;
 
-		long timeOut = getConfig().getLong("diplomacy-turn-timeout");
+		long timeOut = (long) ConfigManager.diplomacyTurnTimeout.getValue();
 		if(Math.abs(upper - lower) > 0) timeOut = 0;
 		int value = FactionDiplomacyManager.getActionValue(action);
 		int ac = getActionCount(action);
 		FactionDiplomacyTurnMod mod = dynamicMap2.get(action);
-		long delay = getConfig().getLong("diplomacy-change-check-delay");
+		long delay = (long) ConfigManager.diplomacyChangeCheckDelay.getValue();
 		if(ac > 0) {
 			if(mod == null) {
 				mod = new FactionDiplomacyTurnMod();
@@ -708,7 +672,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 				mod.totalElapsedTime += timeElapsed;
 				if(mod.elapsedTime > delay) {
 					int b = mod.pointsPerTurn;
-					int md = valueMod * getConfig().getInt("diplomacy-existing-action-modifier");
+					int md = valueMod * ConfigManager.diplomacyExistingActionModifier.getValue();
 					mod.pointsPerTurn = Math.max(lower, Math.min(upper, mod.pointsPerTurn + md));
 					log("PERSISTING ACTION " + b + " -> " + mod.pointsPerTurn + " [" + lower + ", " + upper + "] mod: " + md, LogLevel.DEBUG);
 					mod.elapsedTime -= delay;
@@ -720,7 +684,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 				mod.totalElapsedTime += timeElapsed;
 				if(mod.elapsedTime > delay) {
 					int b = mod.pointsPerTurn;
-					int md = valueMod * getConfig().getInt("diplomacy-non-existing-action-modifier");
+					int md = valueMod * ConfigManager.diplomacyNonExistingActionModifier.getValue();
 					mod.pointsPerTurn = Math.max(lower, Math.min(upper, mod.pointsPerTurn - md));
 					mod.elapsedTime -= delay;
 					log("NON PERSISTING ACTION " + b + " -> " + mod.pointsPerTurn + " [" + lower + ", " + upper + "] mod: " + md + ";", LogLevel.DEBUG);
@@ -733,10 +697,6 @@ public class FactionDiplomacyEntity implements LogInterface {
 			}
 		}
 		checkReactions();
-	}
-
-	public FileConfiguration getConfig() {
-		return ConfigManager.getDiplomacyConfig();
 	}
 
 	void calculateDiplomacyModifiersFromActions(long timeElapsed) {
@@ -785,7 +745,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 			}
 		}
 		//reset action and increase counter
-		action.timeDuration = getConfig().getLong("diplomacy-action-timeout");
+		action.timeDuration = (long) ConfigManager.diplomacyActionTimeout.getValue();
 		action.counter++;
 
 		setChanged();
@@ -793,16 +753,13 @@ public class FactionDiplomacyEntity implements LogInterface {
 
 	public boolean canDoAction(FactionDiplomacyAction.DiploActionType actionType, String reason, Object... args) {
 		try {
-			switch(actionType) {
-				case ATTACK:
-					return FactionUtils.canAttack(getFaction(), getOtherFaction());
-				case PEACE_OFFER:
-					return FactionUtils.canPeace(getFaction(), getOtherFaction(), reason, (WarData) args[0]);
-				default:
-					return false;
-			}
+			return switch(actionType) {
+				case ATTACK -> FactionUtils.canAttack(getFaction(), getOtherFaction());
+				case PEACE_OFFER -> FactionUtils.canPeace(getFaction(), getOtherFaction(), reason, (WarData) args[0]);
+				default -> false;
+			};
 		} catch(Exception exception) {
-			exception.printStackTrace();
+			BetterFactions.getInstance().logException("Failed to check action " + actionType.name(), exception);
 			return false;
 		}
 	}
@@ -853,7 +810,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 	private void fromStaticMapTag(Tag tag) {
 		Tag[] t = tag.getStruct();
 		if((t.length - 1) > 300) {
-			System.err.println("[SERVER][FACTION][NPC][DIPLOMACY] FID: " + fid + "; StaticMap: " + (t.length - 1));
+			BetterFactions.getInstance().logWarning("[SERVER][FACTION][NPC][DIPLOMACY] FID: " + fid + "; StaticMap: " + (t.length - 1));
 		}
 		for(int i = 0; i < t.length - 1; i++) {
 			Tag[] m = t[i].getStruct();
@@ -867,7 +824,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 	private void fromReactionsFiredMap(Tag tag) {
 		Tag[] t = tag.getStruct();
 		if((t.length - 1) > 300) {
-			System.err.println("[SERVER][FACTION][NPC][DIPLOMACY] FID: " + fid + "; ReActions: " + (t.length - 1));
+			BetterFactions.getInstance().logWarning("[SERVER][FACTION][NPC][DIPLOMACY] FID: " + fid + "; ReActions: " + (t.length - 1));
 		}
 		for(int i = 0; i < t.length - 1; i++) {
 			Tag[] m = t[i].getStruct();
@@ -880,7 +837,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 	private void fromDynamicMapTag(Tag tag) {
 		Tag[] t = tag.getStruct();
 		if((t.length - 1) > 300) {
-			System.err.println("[SERVER][FACTION][NPC][DIPLOMACY] FID: " + fid + "; DynMap: " + (t.length - 1));
+			BetterFactions.getInstance().logWarning("[SERVER][FACTION][NPC][DIPLOMACY] FID: " + fid + "; DynMap: " + (t.length - 1));
 		}
 		for(int i = 0; i < t.length - 1; i++) {
 			Tag[] m = t[i].getStruct();
@@ -894,7 +851,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 	private void fromActionsTag(Tag tag) {
 		Tag[] t = tag.getStruct();
 		if((t.length - 1) > 300) {
-			System.err.println("[SERVER][FACTION][NPC][DIPLOMACY] FID: " + fid + "; Actions: " + (t.length - 1));
+			BetterFactions.getInstance().logWarning("[SERVER][FACTION][NPC][DIPLOMACY] FID: " + fid + "; Actions: " + (t.length - 1));
 		}
 		for(int i = 0; i < t.length - 1; i++) {
 			Tag[] m = t[i].getStruct();
@@ -985,7 +942,7 @@ public class FactionDiplomacyEntity implements LogInterface {
 
 	@Override
 	public String toString() {
-		StringBuffer b = new StringBuffer();
+		StringBuilder b = new StringBuilder();
 		b.append("ENTITY: " + dbId + "\n");
 		b.append("Points: " + pointCached + " (Raw: " + points + ")\n");
 		b.append("Actions: \n");

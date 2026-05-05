@@ -3,7 +3,6 @@ package videogoose.betterfactions.utils;
 import api.utils.textures.StarLoaderTexture;
 import org.schema.schine.graphicsengine.forms.Sprite;
 import videogoose.betterfactions.BetterFactions;
-import videogoose.betterfactions.manager.LogManager;
 import videogoose.betterfactions.manager.ResourceManager;
 
 import javax.annotation.Nullable;
@@ -11,27 +10,24 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
+import java.net.URI;
 import java.net.URLConnection;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * ImageUtils.java
- * <Description>
+ * Utility class for loading and managing images.
  *
  * @since 01/30/2021
  * @author TheDerpGamer
  */
 public class ImageUtils {
 
-    private final static ConcurrentLinkedQueue<String> downloadingImages = new ConcurrentLinkedQueue<>();
+    private static final Set<String> downloadingImages = ConcurrentHashMap.newKeySet();
 
     @Nullable
     public static Sprite getImage(String url) {
-        try {
-            fetchImage(url);
-            return scaleSprite(getDefaultLogo(), ResourceManager.SPRITE_WIDTH, ResourceManager.SPRITE_HEIGHT);
-        } catch(Exception ignored) { }
+        fetchImage(url);
         return scaleSprite(getDefaultLogo(), ResourceManager.SPRITE_WIDTH, ResourceManager.SPRITE_HEIGHT);
     }
 
@@ -41,40 +37,40 @@ public class ImageUtils {
         return sprite;
     }
 
-    private static void fetchImage(final String url) {
-        if (!downloadingImages.contains(url)) {
-            new Thread() {
-                @Override
-                public void run() {
-                    downloadingImages.add(url);
-                    final BufferedImage bufferedImage = fromURL(url);
-                    StarLoaderTexture.runOnGraphicsThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Sprite sprite = StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), url);
-                            sprite.setName(url);
-                            sprite.setPositionCenter(false);
-                            ResourceManager.addSprite(sprite);
-                        }
+    private static void fetchImage(String url) {
+        if (!downloadingImages.add(url)) return; // Already downloading
+        Thread thread = new Thread(() -> {
+            try {
+                BufferedImage bufferedImage = fromURL(url);
+                if (bufferedImage != null) {
+                    StarLoaderTexture.runOnGraphicsThread(() -> {
+                        Sprite sprite = StarLoaderTexture.newSprite(bufferedImage, BetterFactions.getInstance(), url);
+                        sprite.setName(url);
+                        sprite.setPositionCenter(false);
+                        ResourceManager.addSprite(sprite);
                     });
-                    downloadingImages.remove(url);
                 }
-            }.start();
-        }
+            } finally {
+                downloadingImages.remove(url);
+            }
+        });
+        thread.setDaemon(true);
+        thread.setName("BetterFactions-ImageFetch");
+        thread.start();
     }
 
+    @Nullable
     private static BufferedImage fromURL(String s) {
-        BufferedImage image = null;
         try {
-            URL url = new URL(s);
-            URLConnection urlConnection = url.openConnection();
-            urlConnection.setRequestProperty("User-Agent", "NING/1.0");
-            InputStream stream = urlConnection.getInputStream();
-            image = ImageIO.read(stream);
-        } catch(IOException exception) {
-            LogManager.logException("Something went wrong while trying to fetch an image from url \"" + s + "\"", exception);
+            URLConnection conn = URI.create(s).toURL().openConnection();
+            conn.setRequestProperty("User-Agent", "NING/1.0");
+            try (InputStream stream = conn.getInputStream()) {
+                return ImageIO.read(stream);
+            }
+        } catch (IOException e) {
+            BetterFactions.getInstance().logWarning("Failed to fetch image from \"" + s + "\": " + e.getMessage());
+            return null;
         }
-        return image;
     }
 
     public static Sprite getDefaultLogo() {

@@ -48,18 +48,8 @@ public class GUIFactionsScrollableList extends ScrollableTableList<Faction> {
 
 	@Override
 	public void initColumns() {
-		addColumn(Lng.str("Name"), 3f, new Comparator<Faction>() {
-			@Override
-			public int compare(Faction o1, Faction o2) {
-				return (o1.getName()).compareTo(o2.getName());
-			}
-		});
-		addFixedWidthColumn(Lng.str("Home"), 140, new Comparator<Faction>() {
-			@Override
-			public int compare(Faction o1, Faction o2) {
-				return o1.getHomeSector().compareTo(o2.getHomeSector());
-			}
-		});
+		addColumn(Lng.str("Name"), 3f, (o1, o2) -> (o1.getName()).compareTo(o2.getName()));
+		addFixedWidthColumn(Lng.str("Home"), 140, (o1, o2) -> o1.getHomeSector().compareTo(o2.getHomeSector()));
 		addTextFilter(new GUIListFilterText<Faction>() {
 			@Override
 			public boolean isOk(String input, Faction listElement) {
@@ -69,17 +59,13 @@ public class GUIFactionsScrollableList extends ScrollableTableList<Faction> {
 		addDropdownFilter(new GUIListFilterDropdown<Faction, Integer>(0, 1, 2, 3) {
 			@Override
 			public boolean isOk(Integer input, Faction f) {
-				switch(input) {
-					case 0:
-						return true;
-					case 1:
-						return getOwnRelationTo(f) == FactionRelation.RType.NEUTRAL;
-					case 2:
-						return getOwnRelationTo(f) == FactionRelation.RType.ENEMY;
-					case 3:
-						return getOwnRelationTo(f) == FactionRelation.RType.FRIEND;
-				}
-				return true;
+				return switch(input) {
+					case 0 -> true;
+					case 1 -> getOwnRelationTo(f) == FactionRelation.RType.NEUTRAL;
+					case 2 -> getOwnRelationTo(f) == FactionRelation.RType.ENEMY;
+					case 3 -> getOwnRelationTo(f) == FactionRelation.RType.FRIEND;
+					default -> true;
+				};
 			}
 		}, new CreateGUIElementInterface<Integer>() {
 			@Override
@@ -87,18 +73,11 @@ public class GUIFactionsScrollableList extends ScrollableTableList<Faction> {
 				GUIAncor c = new GUIAncor(getState(), 10, 24);
 				GUITextOverlayTableDropDown a = new GUITextOverlayTableDropDown(10, 10, getState());
 				switch(o) {
-					case 0:
-						a.setTextSimple(Lng.str("ALL"));
-						break;
-					case 1:
-						a.setTextSimple(Lng.str("NEUTRAL"));
-						break;
-					case 2:
-						a.setTextSimple(Lng.str("WAR"));
-						break;
-					case 3:
-						a.setTextSimple(Lng.str("ALLIES"));
-						break;
+					case 0 -> a.setTextSimple(Lng.str("ALL"));
+					case 1 -> a.setTextSimple(Lng.str("NEUTRAL"));
+					case 2 -> a.setTextSimple(Lng.str("WAR"));
+					case 3 -> a.setTextSimple(Lng.str("ALLIES"));
+					default -> {}
 				}
 				a.setPos(4, 4, 0);
 				c.setUserPointer(o);

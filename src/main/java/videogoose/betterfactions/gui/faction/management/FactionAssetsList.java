@@ -16,7 +16,7 @@ import videogoose.betterfactions.data.serializeable.FactionEntityData;
 import videogoose.betterfactions.data.persistent.faction.FactionMember;
 import videogoose.betterfactions.manager.ClientCacheManager;
 import videogoose.betterfactions.manager.FactionManager;
-import videogoose.betterfactions.manager.LogManager;
+import videogoose.betterfactions.BetterFactions;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -117,7 +117,7 @@ public class FactionAssetsList extends ScrollableTableList<FactionEntityData> {
         try {
             entityDataList.addAll(ClientCacheManager.factionAssets.values());
         } catch(Exception exception) {
-            LogManager.logException("Encountered an exception while trying to fetch faction message inbox", exception);
+            BetterFactions.getInstance().logWarning("Failed to fetch faction assets: " + exception.getMessage());
         }
         return entityDataList;
     }
@@ -161,7 +161,7 @@ public class FactionAssetsList extends ScrollableTableList<FactionEntityData> {
                 row.onInit();
                 guiElementList.addWithoutUpdate(row);
             } catch(Exception exception) {
-                exception.printStackTrace();
+                BetterFactions.getInstance().logException("Failed to render faction asset list entry", exception);
             }
         }
         guiElementList.updateDim();

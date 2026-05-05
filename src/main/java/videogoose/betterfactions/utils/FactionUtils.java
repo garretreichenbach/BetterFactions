@@ -17,11 +17,7 @@ import videogoose.betterfactions.manager.FactionDiplomacyManager;
 import java.util.ArrayList;
 import java.util.Objects;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public class FactionUtils {
 
 	private static ModSkeleton getInstance() {
@@ -91,13 +87,9 @@ public class FactionUtils {
 			if(entity.getDbId() != faction.getIdFaction()) {
 				for(FactionDiplomacyStaticMod mod : entity.getStaticMap().values()) {
 					switch(mod.type) {
-						case PROTECTING:
-						case BEING_PROTECTED:
-						case IN_FEDERATION:
-						case FEDERATION_ALLY:
-						case ALLIANCE:
+						case PROTECTING, BEING_PROTECTED, IN_FEDERATION, FEDERATION_ALLY, ALLIANCE ->
 							allies.add(Objects.requireNonNull(GameCommon.getGameState()).getFactionManager().getFaction((int) entity.getDbId()));
-							break;
+						default -> {}
 					}
 				}
 			}

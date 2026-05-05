@@ -226,18 +226,11 @@ public class BFFactionPanelNew extends FactionPanelNew {
 			@Override
 			public String toString() {
 				FactionRelation.RType ownRelationTo = getOwnRelationTo(f);
-				String rel = "";
-				switch(ownRelationTo) {
-					case ENEMY:
-						rel = Lng.str("They consider you an enemy");
-						break;
-					case FRIEND:
-						rel = Lng.str("They consider you an ally");
-						break;
-					case NEUTRAL:
-						rel = Lng.str("Neutral relation");
-						break;
-				}
+				String rel = switch(ownRelationTo) {
+					case ENEMY -> Lng.str("They consider you an enemy");
+					case FRIEND -> Lng.str("They consider you an ally");
+					case NEUTRAL -> Lng.str("Neutral relation");
+				};
 				FactionDiplomacyEntity ent = FactionDiplomacyManager.getDiplomacy(fid).entities.get(getOwnPlayer().getDbId());
 				int points = 0;
 				int raw = 0;
@@ -257,18 +250,11 @@ public class BFFactionPanelNew extends FactionPanelNew {
 			@Override
 			public String toString() {
 				FactionRelation.RType ownRelationTo = getOwnRelationTo(f);
-				String rel = "";
-				switch(ownRelationTo) {
-					case ENEMY:
-						rel = Lng.str("They consider your faction enemy");
-						break;
-					case FRIEND:
-						rel = Lng.str("They consider your faction an ally");
-						break;
-					case NEUTRAL:
-						rel = Lng.str("Neutral relation to your faction");
-						break;
-				}
+				String rel = switch(ownRelationTo) {
+					case ENEMY -> Lng.str("They consider your faction enemy");
+					case FRIEND -> Lng.str("They consider your faction an ally");
+					case NEUTRAL -> Lng.str("Neutral relation to your faction");
+				};
 				FactionDiplomacyEntity ent = FactionDiplomacyManager.getDiplomacy(fid).entities.get(getState().getPlayer().getFactionId());
 				int points = 0;
 				int raw = 0;

@@ -16,12 +16,7 @@ import org.schema.schine.input.InputState;
 import videogoose.betterfactions.data.persistent.federation.FactionMessage;
 import videogoose.betterfactions.network.client.SendFactionMessagePacket;
 
-/**
- * <Description>
- *
- * @author TheDerpGamer
- * @version 1.0 - [09/16/2021]
- */
+
 public class FactionMessageSendPanel extends GUIInputDialogPanel {
 
     private Faction from;

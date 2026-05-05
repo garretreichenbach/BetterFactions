@@ -2,11 +2,7 @@ package videogoose.betterfactions.data.news;
 
 import org.schema.game.server.data.FactionState;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public class FactionNewsEventTrading extends FactionNewsEventOtherEnt {
 	@Override
 	public FactionNews.FactionNewsEventType getType() {

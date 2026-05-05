@@ -46,7 +46,7 @@ public class FactionNewsUtils {
         for(Object newsObject : PersistentObjectUtil.getObjects(instance, FactionNewsEntry.class)) {
             FactionNewsEntry newsEntry = (FactionNewsEntry) newsObject;
             int daysBetween = GeneralUtils.getDaysBetween(GeneralUtils.getCurrentDate(), new Date(newsEntry.date));
-            if(daysBetween > ConfigManager.getMainConfig().getInt("max-news-backup")) toRemove.add(newsEntry);
+            if(daysBetween > ConfigManager.maxNewsBackup.getValue()) toRemove.add(newsEntry);
         }
         for(FactionNewsEntry newsEntry : toRemove) PersistentObjectUtil.removeObject(instance, newsEntry);
         PersistentObjectUtil.save(instance);

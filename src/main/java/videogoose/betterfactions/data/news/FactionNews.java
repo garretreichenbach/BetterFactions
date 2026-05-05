@@ -12,11 +12,7 @@ import org.schema.schine.resource.tag.Tag;
 
 import java.util.Observable;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public class FactionNews extends Observable {
 
 	public enum FactionNewsEventType {

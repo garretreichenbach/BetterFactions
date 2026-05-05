@@ -7,11 +7,7 @@ import videogoose.betterfactions.manager.WarManager;
 
 import java.util.ArrayList;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public class NPCFactionUtils {
 
 	public static boolean isWillingToAcceptPeaceOffer(Faction from, Faction to, WarData warData, StringBuilder reason) {

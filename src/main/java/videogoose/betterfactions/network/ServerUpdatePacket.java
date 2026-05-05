@@ -8,11 +8,7 @@ import videogoose.betterfactions.manager.UpdateManager;
 
 import java.io.IOException;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public class ServerUpdatePacket extends Packet {
 
 	private UpdateManager.UpdateType updateType;
@@ -58,7 +54,7 @@ public class ServerUpdatePacket extends Packet {
 	@Override
 	public void processPacketOnServer(PlayerState playerState) {
 		switch(updateType) {
-
+			// No update types handled yet
 		}
 	}
 }

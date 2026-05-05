@@ -11,6 +11,8 @@ import org.schema.game.server.data.blueprintnw.BlueprintClassification;
 import org.schema.game.server.data.blueprintnw.BlueprintEntry;
 import org.schema.schine.network.objects.Sendable;
 
+import videogoose.betterfactions.BetterFactions;
+
 import java.util.ArrayList;
 
 /**
@@ -28,7 +30,7 @@ public class EntityUtils {
                 BlueprintEntry entry = BluePrintController.active.getBlueprint(entity.blueprintIdentifier);
                 if(entry.getClassification() != null) return entry.getClassification();
             } catch (EntityNotFountException e) {
-                e.printStackTrace();
+                BetterFactions.getInstance().logException("Blueprint not found for entity: " + entity.blueprintIdentifier, e);
             }
         }
         return BlueprintClassification.NONE;

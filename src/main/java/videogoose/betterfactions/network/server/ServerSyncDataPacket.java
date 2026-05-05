@@ -8,7 +8,7 @@ import videogoose.betterfactions.data.persistent.PersistentData;
 import videogoose.betterfactions.data.persistent.diplomacy.DiplomaticDataOld;
 import videogoose.betterfactions.data.persistent.faction.FactionData;
 import videogoose.betterfactions.data.persistent.federation.FederationData;
-import videogoose.betterfactions.manager.LogManager;
+import videogoose.betterfactions.BetterFactions;
 import videogoose.betterfactions.manager.NetworkSyncManager;
 
 import java.io.IOException;
@@ -40,21 +40,16 @@ public class ServerSyncDataPacket extends Packet {
         data = new PersistentData[packetReadBuffer.readInt()];
         for(int i = 0; i < data.length; i ++) {
             int dataType = packetReadBuffer.readInt();
-            switch(dataType) {
-                case NetworkSyncManager.FACTION_DATA:
-                    data[i] = packetReadBuffer.readObject(FactionData.class);
-                    break;
-                case NetworkSyncManager.FEDERATION_DATA:
-                    data[i] = packetReadBuffer.readObject(FederationData.class);
-                    break;
-                case NetworkSyncManager.DIPLOMATIC_DATA:
-                    data[i] = packetReadBuffer.readObject(DiplomaticDataOld.class);
-                    break;
-                default:
-                    data[i] = packetReadBuffer.readObject(PersistentData.class);
-                    LogManager.logWarning("Incoming persistent data doesn't have a specific type: " + data[i].toString(), null);
-                    break;
-            }
+            data[i] = switch(dataType) {
+                case NetworkSyncManager.FACTION_DATA -> packetReadBuffer.readObject(FactionData.class);
+                case NetworkSyncManager.FEDERATION_DATA -> packetReadBuffer.readObject(FederationData.class);
+                case NetworkSyncManager.DIPLOMATIC_DATA -> packetReadBuffer.readObject(DiplomaticDataOld.class);
+                default -> {
+                    PersistentData fallback = packetReadBuffer.readObject(PersistentData.class);
+                    BetterFactions.getInstance().logWarning("Incoming persistent data doesn't have a specific type: " + fallback);
+                    yield fallback;
+                }
+            };
         }
     }
 

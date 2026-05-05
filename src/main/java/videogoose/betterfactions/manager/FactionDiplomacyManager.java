@@ -12,172 +12,153 @@ import videogoose.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
 import videogoose.betterfactions.data.diplomacy.modifier.FactionDiplomacyTurnMod;
 import videogoose.betterfactions.utils.DataUtils;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.logging.Level;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (MrGoose#0027)
- */
 public class FactionDiplomacyManager {
 
-	public static final Queue<FactionDiplomacy> diplomacyChanged = new ConcurrentLinkedQueue<>();
-	private static boolean initialized;
+	public static final ConcurrentLinkedQueue<FactionDiplomacy> diplomacyChanged = new ConcurrentLinkedQueue<>();
+	private static final ConcurrentHashMap<Integer, FactionDiplomacy> diplomacyCache = new ConcurrentHashMap<>();
+	private static volatile boolean initialized;
 
 	public static void initialize() {
-		final File file = new File(DataUtils.getWorldDataPath() + "/diplomacy");
-		if(!file.exists()) file.mkdirs();
+		if (initialized) return;
+		File dir = new File(DataUtils.getWorldDataPath() + "/diplomacy");
+		if (!dir.exists()) dir.mkdirs();
+
 		new StarRunnable() {
 			@Override
 			public void run() {
 				try {
-					for(File f : Objects.requireNonNull(file.listFiles())) {
-						if(f.getName().endsWith(".smdat")) {
-							FactionDiplomacy diplomacy = new FactionDiplomacy(GameCommon.getGameState().getFactionManager().getFaction(Integer.parseInt(f.getName().split("\\.")[0])));
-							diplomacy.fromTag(Tag.readFrom(Files.newInputStream(f.toPath()), true, false));
-							diplomacy.update(GameServer.getServerState().getController().getTimer().currentTime);
+					File[] files = dir.listFiles();
+					if (files == null) return;
+					for (File f : files) {
+						if (!f.getName().endsWith(".smdat")) continue;
+						int factionId = Integer.parseInt(f.getName().split("\\.")[0]);
+						FactionDiplomacy diplomacy = new FactionDiplomacy(
+							GameCommon.getGameState().getFactionManager().getFaction(factionId)
+						);
+						try (InputStream in = Files.newInputStream(f.toPath())) {
+							diplomacy.fromTag(Tag.readFrom(in, true, false));
 						}
+						diplomacyCache.put(factionId, diplomacy);
+						diplomacy.update(GameServer.getServerState().getController().getTimer().currentTime);
 					}
-				} catch(IOException exception) {
-					BetterFactions.log.log(Level.WARNING, "Failed to load diplomacy files!");
+				} catch (IOException e) {
+					BetterFactions.getInstance().logException("Failed to load diplomacy files!", e);
 				}
 			}
 		}.runTimer(BetterFactions.getInstance(), 300);
+
 		new StarRunnable() {
 			@Override
 			public void run() {
-				FactionDiplomacy diplomacy = diplomacyChanged.poll();
-				while(diplomacy != null) {
+				FactionDiplomacy diplomacy;
+				while ((diplomacy = diplomacyChanged.poll()) != null) {
 					File output = new File(DataUtils.getWorldDataPath() + "/diplomacy/" + diplomacy.faction.getIdFaction() + ".smdat");
-					if(output.exists()) output.delete();
 					try {
+						if (output.exists()) output.delete();
 						output.createNewFile();
-						diplomacy.toTag().writeTo(Files.newOutputStream(output.toPath()), true);
-						diplomacy = diplomacyChanged.poll();
-					} catch(IOException e) {
-						throw new RuntimeException(e);
+						try (OutputStream out = Files.newOutputStream(output.toPath())) {
+							diplomacy.toTag().writeTo(out, true);
+						}
+					} catch (IOException e) {
+						BetterFactions.getInstance().logException("Failed to save diplomacy data for faction " + diplomacy.faction.getIdFaction(), e);
 					}
 				}
 			}
 		}.runTimer(BetterFactions.getInstance(), 300);
+
 		initialized = true;
 	}
 
-	private static void initDiplomacyData(int factionId, File file) {
-		FactionDiplomacy diplomacy = new FactionDiplomacy(Objects.requireNonNull(GameCommon.getGameState()).getFactionManager().getFaction(factionId));
-		try {
-			diplomacy.toTag().writeTo(Files.newOutputStream(file.toPath()), true);
-		} catch(IOException exception) {
-			BetterFactions.log.log(Level.WARNING, "Failed to initialize diplomacy data for faction " + factionId + "!", exception);
-		}
-	}
-
-	public static FactionDiplomacy getDiplomacy(int factionId) {
-		if(!initialized) initialize();
-		File file = new File(DataUtils.getWorldDataPath() + "/diplomacy/" + factionId + ".smdat");
-		if(!file.exists()) initDiplomacyData(factionId, file);
-		FactionDiplomacy diplomacy = new FactionDiplomacy(Objects.requireNonNull(GameCommon.getGameState()).getFactionManager().getFaction(factionId));
-		try {
-			diplomacy.fromTag(Tag.readFrom(Files.newInputStream(file.toPath()), true, false));
-		} catch(IOException exception) {
-			BetterFactions.log.log(Level.WARNING, "Failed to load diplomacy data for faction " + factionId + "!", exception);
+	private static FactionDiplomacy loadFromDisk(int factionId, File file) {
+		FactionDiplomacy diplomacy = new FactionDiplomacy(
+			Objects.requireNonNull(GameCommon.getGameState()).getFactionManager().getFaction(factionId)
+		);
+		if (!file.exists()) {
+			// Initialize new diplomacy data
+			try (OutputStream out = Files.newOutputStream(file.toPath())) {
+				diplomacy.toTag().writeTo(out, true);
+			} catch (IOException e) {
+				BetterFactions.getInstance().logException("Failed to initialize diplomacy data for faction " + factionId, e);
+			}
+		} else {
+			try (InputStream in = Files.newInputStream(file.toPath())) {
+				diplomacy.fromTag(Tag.readFrom(in, true, false));
+			} catch (IOException e) {
+				BetterFactions.getInstance().logException("Failed to load diplomacy data for faction " + factionId, e);
+			}
 		}
 		return diplomacy;
 	}
 
+	public static FactionDiplomacy getDiplomacy(int factionId) {
+		if (!initialized) initialize();
+		return diplomacyCache.computeIfAbsent(factionId, id -> {
+			File file = new File(DataUtils.getWorldDataPath() + "/diplomacy/" + id + ".smdat");
+			return loadFromDisk(id, file);
+		});
+	}
+
+	public static void invalidateCache(int factionId) {
+		diplomacyCache.remove(factionId);
+	}
+
 	public static List<FactionDiplomacyReaction> getReactions(int factionId) {
-		if(!initialized) initialize();
-		return new ArrayList<>(); //Todo: Implement
+		if (!initialized) initialize();
+		return new ArrayList<>(); //TODO: Implement
 	}
 
 	public static int getDiplomacyValue(FactionDiplomacyEntity.DiploStatusType status) {
-		switch(status) {
-			case IN_WAR:
-				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-war");
-			case IN_WAR_WITH_ENEMY:
-				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-war-with-enemy");
-			case CLOSE_TERRITORY:
-				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-close-territory");
-			case POWER:
-				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-power");
-			case ALLIANCE:
-				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-alliance");
-			case ALLIANCE_WITH_ENEMY:
-				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-alliance-with-enemy");
-			case ALLIANCE_WITH_FRIENDS:
-				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-alliance-with-friends");
-			case NON_AGGRESSION:
-				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-non-aggression");
-			case FACTION_MEMBER_AT_WAR_WITH_US:
-				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-faction-member-at-war-with-us");
-			case FACTION_MEMBER_WE_DONT_LIKE:
-				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-faction-member-we-dont-like");
-			case IN_FEDERATION:
-				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-in-federation");
-			case FEDERATION_ALLY:
-				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-federation-ally");
-			case FEDERATION_ENEMY:
-				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-federation-enemy");
-			case HAS_WAR_GOAL:
-				return ConfigManager.getDiplomacyConfig().getInt("diplomacy-values-has-war-goal");
-			default:
-				return 0;
-		}
+		return switch (status) {
+			case IN_WAR -> ConfigManager.valuesWar.getValue();
+			case IN_WAR_WITH_ENEMY -> ConfigManager.valuesWarWithEnemy.getValue();
+			case CLOSE_TERRITORY -> ConfigManager.valuesCloseTerritory.getValue();
+			case POWER -> ConfigManager.valuesPower.getValue();
+			case ALLIANCE -> ConfigManager.valuesAlliance.getValue();
+			case ALLIANCE_WITH_ENEMY -> ConfigManager.valuesAllianceWithEnemy.getValue();
+			case ALLIANCE_WITH_FRIENDS -> ConfigManager.valuesAllianceWithFriends.getValue();
+			case NON_AGGRESSION -> ConfigManager.valuesNonAggression.getValue();
+			case FACTION_MEMBER_AT_WAR_WITH_US -> ConfigManager.valuesFactionMemberAtWarWithUs.getValue();
+			case FACTION_MEMBER_WE_DONT_LIKE -> ConfigManager.valuesFactionMemberWeDontLike.getValue();
+			case IN_FEDERATION -> ConfigManager.valuesInFederation.getValue();
+			case FEDERATION_ALLY -> ConfigManager.valuesFederationAlly.getValue();
+			case FEDERATION_ENEMY -> ConfigManager.valuesFederationEnemy.getValue();
+			case HAS_WAR_GOAL -> ConfigManager.valuesHasWarGoal.getValue();
+			default -> 0;
+		};
 	}
 
 	public static int getActionValue(FactionDiplomacyAction.DiploActionType action) {
-		switch(action) {
-			case ATTACK:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-attack");
-			case ATTACK_ENEMY:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-attack-enemy");
-			case ATTACK_ALLY:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-attack-friend");
-			case MINING:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-mining");
-			case TERRITORY:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-territory");
-			case PEACE_OFFER:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-peace-offer");
-			case ACCEPT_PEACE_OFFER:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-peace-offer-accepted");
-			case REJECT_PEACE_OFFER:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-peace-offer-rejected");
-			case DECLARATION_OF_WAR:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-declaration-of-war");
-			case ALLIANCE_REQUEST:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-alliance-request");
-			case ACCEPT_ALLIANCE:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-alliance-request-accepted");
-			case REJECT_ALLIANCE:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-alliance-request-rejected");
-			case ALLIANCE_CANCEL:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-alliance-cancel");
-			case ALLIANCE_WITH_ENEMY:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-alliance-with-enemy");
-			case ALLIANCE_WITH_FRIEND:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-alliance-with-friend");
-			case TRADING_WITH_US:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-trading-with-us");
-			case TRADING_WITH_ENEMY:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-trading-with-enemy");
-			case ACCEPT_FEDERATION_OFFER:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-federation-offer-accepted");
-			case REJECT_FEDERATION_OFFER:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-federation-offer-rejected");
-			case THREATENING:
-				return ConfigManager.getDiplomacyConfig().getInt("action-values-threatening");
-			default:
-				return 0;
-		}
+		return switch (action) {
+			case ATTACK -> ConfigManager.actionAttack.getValue();
+			case ATTACK_ENEMY -> ConfigManager.actionAttackEnemy.getValue();
+			case ATTACK_ALLY -> ConfigManager.actionAttackFriend.getValue();
+			case MINING -> ConfigManager.actionMining.getValue();
+			case TERRITORY -> ConfigManager.actionTerritory.getValue();
+			case PEACE_OFFER -> ConfigManager.actionPeaceOffer.getValue();
+			case ACCEPT_PEACE_OFFER -> ConfigManager.actionPeaceOfferAccepted.getValue();
+			case REJECT_PEACE_OFFER -> ConfigManager.actionPeaceOfferRejected.getValue();
+			case DECLARATION_OF_WAR -> ConfigManager.actionDeclarationOfWar.getValue();
+			case ALLIANCE_REQUEST -> ConfigManager.actionAllianceRequest.getValue();
+			case ACCEPT_ALLIANCE -> ConfigManager.actionAllianceRequestAccepted.getValue();
+			case REJECT_ALLIANCE -> ConfigManager.actionAllianceRequestRejected.getValue();
+			case ALLIANCE_CANCEL -> ConfigManager.actionAllianceCancel.getValue();
+			case ALLIANCE_WITH_ENEMY -> ConfigManager.actionAllianceWithEnemy.getValue();
+			case ALLIANCE_WITH_FRIEND -> ConfigManager.actionAllianceWithFriend.getValue();
+			case TRADING_WITH_US -> ConfigManager.actionTradingWithUs.getValue();
+			case TRADING_WITH_ENEMY -> ConfigManager.actionTradingWithEnemy.getValue();
+			case ACCEPT_FEDERATION_OFFER -> ConfigManager.actionFederationOfferAccepted.getValue();
+			case REJECT_FEDERATION_OFFER -> ConfigManager.actionFederationOfferRejected.getValue();
+			case THREATENING -> ConfigManager.actionThreatening.getValue();
+			default -> 0;
+		};
 	}
 
 	public static FactionDiplomacyReaction getReaction(FactionDiplomacyAction action) {

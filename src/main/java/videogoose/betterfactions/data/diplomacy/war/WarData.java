@@ -7,11 +7,7 @@ import videogoose.betterfactions.manager.UpdateManager;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public class WarData {
 
 	private final long id;

@@ -41,29 +41,26 @@ public class ResourceManager {
 
     public static void loadResources(final ResourceLoader loader) {
 
-        StarLoaderTexture.runOnGraphicsThread(new Runnable() {
-            @Override
-            public void run() {
+        StarLoaderTexture.runOnGraphicsThread(() -> {
 
-                //Load Sprites
-                for(String spriteName : spriteNames) {
-                    try {
-                        Sprite sprite = StarLoaderTexture.newSprite(instance.getJarBufferedImage("videogoose/betterfactions/resources/sprites/" + spriteName + ".png"), instance, spriteName);
-                        sprite.setPositionCenter(false);
-                        sprite.setName(spriteName);
-                        spriteMap.put(spriteName, sprite);
-                    } catch(Exception exception) {
-                        LogManager.logException("Failed to load sprite \"" + spriteName + "\"", exception);
-                    }
+            //Load Sprites
+            for(String spriteName : spriteNames) {
+                try {
+                    Sprite sprite = StarLoaderTexture.newSprite(instance.getJarBufferedImage("videogoose/betterfactions/resources/sprites/" + spriteName + ".png"), instance, spriteName);
+                    sprite.setPositionCenter(false);
+                    sprite.setName(spriteName);
+                    spriteMap.put(spriteName, sprite);
+                } catch(Exception exception) {
+                    BetterFactions.getInstance().logWarning("Failed to load sprite \"" + spriteName + "\": " + exception.getMessage());
                 }
+            }
 
-                //Load fonts
-                for(String fontName : fontNames) {
-                    try {
-                        fontMap.put(fontName, Font.createFont(Font.TRUETYPE_FONT, instance.getJarResource("videogoose/betterfactions/resources/fonts/" + fontName + ".ttf")));
-                    } catch(Exception exception) {
-                        LogManager.logException("Failed to load font \"" + fontName + "\"", exception);
-                    }
+            //Load fonts
+            for(String fontName : fontNames) {
+                try {
+                    fontMap.put(fontName, Font.createFont(Font.TRUETYPE_FONT, instance.getJarResource("videogoose/betterfactions/resources/fonts/" + fontName + ".ttf")));
+                } catch(Exception exception) {
+                    BetterFactions.getInstance().logWarning("Failed to load font \"" + fontName + "\": " + exception.getMessage());
                 }
             }
         });
@@ -96,6 +93,7 @@ public class ResourceManager {
         spriteMap.put(name, sprite);
     }
 
+    @SuppressWarnings("unchecked")
     public static UnicodeFont getFont(String fontName, int size, Color color, Color outlineColor, int outlineSize) {
         try {
             Font font = fontMap.get(fontName).deriveFont((float) size);
@@ -106,10 +104,13 @@ public class ResourceManager {
             unicodeFont.addAsciiGlyphs();
             unicodeFont.loadGlyphs();
             return unicodeFont;
-        } catch(Exception ignored) { }
+        } catch(Exception exception) {
+            BetterFactions.getInstance().logWarning("Failed to load font \"" + fontName + "\": " + exception.getMessage());
+        }
         return null;
     }
 
+    @SuppressWarnings("unchecked")
     public static UnicodeFont getFont(String fontName, int size, Color color) {
         try {
             Font font = fontMap.get(fontName).deriveFont((float) size);
@@ -120,7 +121,7 @@ public class ResourceManager {
             unicodeFont.loadGlyphs();
             return unicodeFont;
         } catch(Exception exception) {
-            exception.printStackTrace();
+            BetterFactions.getInstance().logWarning("Failed to load font \"" + fontName + "\": " + exception.getMessage());
         }
         return null;
     }

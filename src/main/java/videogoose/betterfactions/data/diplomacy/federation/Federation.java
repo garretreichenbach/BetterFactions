@@ -1,10 +1,6 @@
 package videogoose.betterfactions.data.diplomacy.federation;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public class Federation {
 
 	private final long id;

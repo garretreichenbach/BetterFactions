@@ -14,6 +14,7 @@ import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalButtonTablePane;
 import org.schema.schine.input.InputState;
+import videogoose.betterfactions.BetterFactions;
 import videogoose.betterfactions.data.persistent.faction.FactionData;
 import videogoose.betterfactions.data.persistent.faction.FactionMember;
 import videogoose.betterfactions.data.persistent.faction.FactionRank;
@@ -133,7 +134,7 @@ public class FactionActionsPanel extends GUIAncor {
 
                             public void pressedOK() {
                                 getState().getController().queueUIAudio("0022_menu_ui - cancel");
-                                System.err.println("[CLIENT][FactionControlManager] leaving Faction");
+                                BetterFactions.getInstance().logInfo("[CLIENT][FactionControlManager] leaving Faction");
                                 getState().getPlayer().getFactionController().leaveFaction();
                                 deactivate();
                                 onInit();
@@ -746,7 +747,7 @@ public class FactionActionsPanel extends GUIAncor {
                             }
 
                             public void pressedOK() {
-                                System.err.println("[CLIENT][FactionControlManager] leaving Faction");
+                                BetterFactions.getInstance().logInfo("[CLIENT][FactionControlManager] leaving Faction");
                                 this.getState().getPlayer().getFactionController().leaveFaction();
                                 this.deactivate();
                             }

@@ -6,11 +6,7 @@ import videogoose.betterfactions.manager.UpdateManager;
 
 import java.util.ArrayList;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public class ClientCache implements CacheInterface {
 
 	private final HashList<Class<?>, Object> cache = new HashList<>();
@@ -19,7 +15,7 @@ public class ClientCache implements CacheInterface {
 	public void updateCache(UpdateManager.UpdateType updateType, Object... args) {
 		ArrayList<Object> objects;
 		switch(updateType) {
-			case UPDATE_WAR_DATA:
+			case UPDATE_WAR_DATA -> {
 				objects = cache.get(WarData.class);
 				WarData warData = (WarData) args[0];
 				for(Object obj : objects) {
@@ -30,6 +26,7 @@ public class ClientCache implements CacheInterface {
 						break;
 					}
 				}
+			}
 		}
 	}
 

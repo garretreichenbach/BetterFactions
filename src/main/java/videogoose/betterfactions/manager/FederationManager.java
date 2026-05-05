@@ -9,6 +9,7 @@ import videogoose.betterfactions.data.persistent.federation.FederationData;
 import videogoose.betterfactions.utils.FactionNewsUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Objects;
 
@@ -68,9 +69,8 @@ public class FederationManager {
 
     public static int getNewId() {
         HashMap<Integer, FederationData> federationMap = getFederationDataMap();
-        for(int i = 0; i < federationMap.keySet().size(); i ++) {
-            if(!federationMap.containsKey(i)) return i + 100000;
-        }
-        return -1;
+        if(federationMap.isEmpty()) return 100000;
+        int maxId = Collections.max(federationMap.keySet());
+        return maxId + 1;
     }
 }

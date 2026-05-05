@@ -6,11 +6,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public abstract class FactionNewsEventOtherEnt extends FactionNewsEvent {
 
 	public String otherEnt;

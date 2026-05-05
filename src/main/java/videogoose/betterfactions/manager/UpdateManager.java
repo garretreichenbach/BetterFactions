@@ -7,11 +7,6 @@ import org.schema.game.common.data.player.PlayerState;
 import videogoose.betterfactions.network.ClientUpdatePacket;
 import videogoose.betterfactions.network.ServerUpdatePacket;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
 public class UpdateManager {
 
 	public enum UpdateType {

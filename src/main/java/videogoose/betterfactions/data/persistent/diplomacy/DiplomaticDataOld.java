@@ -3,12 +3,7 @@ package videogoose.betterfactions.data.persistent.diplomacy;
 import videogoose.betterfactions.data.persistent.PersistentData;
 import videogoose.betterfactions.manager.NetworkSyncManager;
 
-/**
- * <Description>
- *
- * @author TheDerpGamer
- * @version 1.0 - [09/16/2021]
- */
+
 public class DiplomaticDataOld implements PersistentData {
 
     private transient boolean needsUpdate = true;

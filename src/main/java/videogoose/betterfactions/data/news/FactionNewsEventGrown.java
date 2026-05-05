@@ -4,11 +4,7 @@ import org.schema.game.server.data.FactionState;
 import org.schema.schine.common.language.Lng;
 import videogoose.betterfactions.utils.SectorUtils;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public class FactionNewsEventGrown extends FactionNewsEventSystem {
 
 	@Override

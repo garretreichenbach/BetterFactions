@@ -3,11 +3,7 @@ package videogoose.betterfactions.data.news;
 import org.schema.game.server.data.FactionState;
 import org.schema.schine.common.language.Lng;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public class FactionNewsEventFederationCreated extends FactionNewsEventOtherEnt {
 
 	@Override

@@ -4,12 +4,7 @@ import api.utils.gui.GUIInputDialog;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 
-/**
- * <Description>
- *
- * @author TheDerpGamer
- * @version 1.0 - [09/16/2021]
- */
+
 public class FactionMessageSendDialog extends GUIInputDialog {
 
     @Override

@@ -3,6 +3,11 @@ plugins {
     id 'application'
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
 def starmadeDirectory = project.property("starmade_root")
 def modName = project.property("mod_name")
 group = project.property('mod_org_id')
@@ -24,7 +29,13 @@ dependencies {
     annotationProcessor 'org.spongepowered:mixin:0.8.7:processor'
 }
 
-compileJava.options.encoding = 'UTF-8'
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += [
+        '-AmixinTargetObfuscation=notch',
+        '-AmixinDefaultObfuscation=notch'
+    ]
+}
 
 tasks.register("updateVersion") {
     doLast {
@@ -40,7 +51,12 @@ jar {
     duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
     destinationDirectory.set(file(starmadeDirectory + "mods"))
     archiveFileName = modName + 'v' + getVersion() + '.jar'
-    manifest.attributes('Main-Class': mainClassName)
+    manifest {
+        attributes(
+            'Main-Class': mainClassName,
+            'MixinConfigs': 'betterfactions.mixins.json'
+        )
+    }
     from {
         configurations.runtimeClasspath.collect {
             if(!it.getPath().contains("StarMade") && it.getName().endsWith(".jar")) {

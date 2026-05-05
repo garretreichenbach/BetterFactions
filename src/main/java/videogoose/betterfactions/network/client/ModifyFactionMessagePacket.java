@@ -51,18 +51,19 @@ public class ModifyFactionMessagePacket extends Packet {
     public void processPacketOnServer(PlayerState playerState) {
         FactionData factionData = FactionManager.getFactionData(message.toId);
         switch(mode) {
-            case FactionMessage.MARK_READ:
+            case FactionMessage.MARK_READ -> {
                 message.read = true;
                 FactionManager.updateData(message);
-                break;
-            case FactionMessage.MARK_UNREAD:
+            }
+            case FactionMessage.MARK_UNREAD -> {
                 message.read = false;
                 FactionManager.updateData(message);
-                break;
-            case FactionMessage.DELETE:
+            }
+            case FactionMessage.DELETE -> {
                 factionData.removeMessage(message);
                 FactionManager.updateData(factionData);
-                break;
+            }
+            default -> {}
         }
     }
 }

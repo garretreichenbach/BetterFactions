@@ -28,6 +28,7 @@ import org.schema.game.client.view.gui.weapon.WeaponPanelNew;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActiveInterface;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIMainWindow;
+import videogoose.betterfactions.BetterFactions;
 import javax.vecmath.Vector2f;
 import java.awt.*;
 import java.lang.reflect.Field;
@@ -111,32 +112,32 @@ public class GUIUtils {
                 }
             }
         } catch (IllegalAccessException | NullPointerException | NoSuchFieldException e) {
-            e.printStackTrace();
+            BetterFactions.getInstance().logWarning("Failed to get current active window: " + e.getMessage());
         }
         return null;
     }
 
     public static GUIActiveInterface getControlManagerInterface(AbstractControlManager controlManager) throws NoSuchFieldException, IllegalAccessException {
         Field menuField = null;
-        if (controlManager instanceof CatalogControlManager) {
+        if (controlManager instanceof CatalogControlManager catalogManager) {
             menuField = getPlayerPanel().getClass().getDeclaredField("catalogPanelNew");
-        } else if (controlManager instanceof InventoryControllerManager) {
+        } else if (controlManager instanceof InventoryControllerManager inventoryManager) {
             menuField = getPlayerPanel().getClass().getDeclaredField("inventoryPanelNew");
-        } else if (controlManager instanceof FleetControlManager) {
+        } else if (controlManager instanceof FleetControlManager fleetManager) {
             menuField = getPlayerPanel().getClass().getDeclaredField("fleetPanel");
-        } else if (controlManager instanceof FactionControlManager) {
+        } else if (controlManager instanceof FactionControlManager factionManager) {
             menuField = getPlayerPanel().getClass().getDeclaredField("factionPanelNew");
-        } else if (controlManager instanceof ShopControllerManager) {
+        } else if (controlManager instanceof ShopControllerManager shopManager) {
             menuField = getPlayerPanel().getClass().getDeclaredField("shopPanelNew");
-        } else if (controlManager instanceof WeaponAssignControllerManager) {
+        } else if (controlManager instanceof WeaponAssignControllerManager weaponManager) {
             menuField = getPlayerPanel().getClass().getDeclaredField("weaponManagerPanelNew");
-        } else if (controlManager instanceof NavigationControllerManager) {
+        } else if (controlManager instanceof NavigationControllerManager navigationManager) {
             menuField = getPlayerPanel().getClass().getDeclaredField("navigationPanelNew");
-        } else if (controlManager instanceof AiConfigurationManager) {
+        } else if (controlManager instanceof AiConfigurationManager aiManager) {
             menuField = getPlayerPanel().getClass().getDeclaredField("aiPanelNew");
-        } else if (controlManager instanceof StructureControllerManager) {
+        } else if (controlManager instanceof StructureControllerManager structureManager) {
             menuField = getPlayerPanel().getClass().getDeclaredField("structurePanelNew");
-        } else if (controlManager instanceof ThrustManager) {
+        } else if (controlManager instanceof ThrustManager thrustManager) {
             menuField = getPlayerGameControlManager().getThrustManager().getClass().getDeclaredField("gameMenu");
         }
 

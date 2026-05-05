@@ -9,11 +9,7 @@ import videogoose.betterfactions.data.diplomacy.war.wargoal.WarGoalData;
 
 import java.util.ArrayList;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public class WarManager {
 
 	public static HashList<WarData, WarGoalData> getWarsInvolvedIn(Faction faction) {

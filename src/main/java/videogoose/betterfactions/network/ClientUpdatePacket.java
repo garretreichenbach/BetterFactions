@@ -9,11 +9,7 @@ import videogoose.betterfactions.manager.cache.CacheManager;
 
 import java.io.IOException;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public class ClientUpdatePacket extends Packet {
 
 	private UpdateManager.UpdateType updateType;

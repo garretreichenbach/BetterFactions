@@ -1,7 +1,6 @@
 package videogoose.betterfactions.gui.factionpanel;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import org.hsqldb.lib.StringComparator;
 import org.schema.game.client.data.GameClientState;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
@@ -50,20 +49,8 @@ public class GUIFactionDiploScrollableList extends ScrollableTableList<FactionDi
 	@Override
 	public void initColumns() {
 
-		final StringComparator c = new StringComparator();
-
-		addColumn(Lng.str("Modifier"), 3f, new Comparator<FactionDiplomacyMod>() {
-			@Override
-			public int compare(FactionDiplomacyMod o1, FactionDiplomacyMod o2) {
-				return (o1.getName()).compareTo(o2.getName());
-			}
-		});
-		addFixedWidthColumn(Lng.str("Value"), 140, new Comparator<FactionDiplomacyMod>() {
-			@Override
-			public int compare(FactionDiplomacyMod o1, FactionDiplomacyMod o2) {
-				return o1.getValue() - o2.getValue();
-			}
-		});
+		addColumn(Lng.str("Modifier"), 3f, (o1, o2) -> (o1.getName()).compareTo(o2.getName()));
+		addFixedWidthColumn(Lng.str("Value"), 140, (o1, o2) -> o1.getValue() - o2.getValue());
 
 		addTextFilter(new GUIListFilterText<FactionDiplomacyMod>() {
 
@@ -77,15 +64,12 @@ public class GUIFactionDiploScrollableList extends ScrollableTableList<FactionDi
 
 			@Override
 			public boolean isOk(Integer input, FactionDiplomacyMod f) {
-				switch(input) {
-					case 0:
-						return true;
-					case 1:
-						return ! f.isStatic();
-					case 2:
-						return f.isStatic();
-				}
-				return true;
+				return switch(input) {
+					case 0 -> true;
+					case 1 -> !f.isStatic();
+					case 2 -> f.isStatic();
+					default -> true;
+				};
 			}
 		}, new CreateGUIElementInterface<Integer>() {
 			@Override
@@ -93,15 +77,10 @@ public class GUIFactionDiploScrollableList extends ScrollableTableList<FactionDi
 				GUIAncor c = new GUIAncor(getState(), 10, 24);
 				GUITextOverlayTableDropDown a = new GUITextOverlayTableDropDown(10, 10, getState());
 				switch(o) {
-					case 0:
-						a.setTextSimple(Lng.str("ALL"));
-						break;
-					case 1:
-						a.setTextSimple(Lng.str("TURN MODIFIERS"));
-						break;
-					case 2:
-						a.setTextSimple(Lng.str("STATIC MODIFIERS"));
-						break;
+					case 0 -> a.setTextSimple(Lng.str("ALL"));
+					case 1 -> a.setTextSimple(Lng.str("TURN MODIFIERS"));
+					case 2 -> a.setTextSimple(Lng.str("STATIC MODIFIERS"));
+					default -> {}
 				}
 
 				a.setPos(4, 4, 0);

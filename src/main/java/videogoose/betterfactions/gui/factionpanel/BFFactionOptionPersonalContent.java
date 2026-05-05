@@ -15,6 +15,7 @@ import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea.HButtonType;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalButtonTablePane;
 import org.schema.schine.input.InputState;
+import videogoose.betterfactions.BetterFactions;
 
 public class BFFactionOptionPersonalContent extends GUIAncor {
 
@@ -84,7 +85,7 @@ public class BFFactionOptionPersonalContent extends GUIAncor {
 
 							@Override
 							public void pressedOK() {
-								System.err.println("[CLIENT][FactionControlManager] leaving Faction");
+								BetterFactions.getInstance().logInfo("[CLIENT][FactionControlManager] leaving Faction");
 								getState().getPlayer().getFactionController().leaveFaction();
 								deactivate();
 							}

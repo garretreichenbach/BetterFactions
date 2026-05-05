@@ -84,8 +84,8 @@ public class NetworkSyncManager {
         assert onClient() : "Server cannot be here.";
         HashMap<Integer, FactionData> dataCache = new HashMap<>();
         for(Map.Entry<Integer, PersistentData> entry : clientDataCache.entrySet()) {
-            if(entry.getValue().getDataType() == FACTION_DATA && entry.getValue() instanceof FactionData) {
-                dataCache.put(entry.getKey(), (FactionData) entry.getValue());
+            if(entry.getValue().getDataType() == FACTION_DATA && entry.getValue() instanceof FactionData factionData) {
+                dataCache.put(entry.getKey(), factionData);
             }
         }
         return dataCache;
@@ -99,8 +99,8 @@ public class NetworkSyncManager {
         assert onClient() : "Server cannot be here.";
         HashMap<Integer, FederationData> dataCache = new HashMap<>();
         for(Map.Entry<Integer, PersistentData> entry : clientDataCache.entrySet()) {
-            if(entry.getValue().getDataType() == FEDERATION_DATA && entry.getValue() instanceof FederationData) {
-                dataCache.put(entry.getKey(), (FederationData) entry.getValue());
+            if(entry.getValue().getDataType() == FEDERATION_DATA && entry.getValue() instanceof FederationData federationData) {
+                dataCache.put(entry.getKey(), federationData);
             }
         }
         return dataCache;
@@ -114,8 +114,8 @@ public class NetworkSyncManager {
         assert onClient() : "Server cannot be here.";
         HashMap<Integer, DiplomaticDataOld> dataCache = new HashMap<>();
         for(Map.Entry<Integer, PersistentData> entry : clientDataCache.entrySet()) {
-            if(entry.getValue().getDataType() == DIPLOMATIC_DATA && entry.getValue() instanceof DiplomaticDataOld) {
-                dataCache.put(entry.getKey(), (DiplomaticDataOld) entry.getValue());
+            if(entry.getValue().getDataType() == DIPLOMATIC_DATA && entry.getValue() instanceof DiplomaticDataOld diplomaticData) {
+                dataCache.put(entry.getKey(), diplomaticData);
             }
         }
         return dataCache;
@@ -131,16 +131,12 @@ public class NetworkSyncManager {
         for(PersistentData persistentData : data) {
             int dataId = persistentData.getDataId();
             switch(modType) {
-                case UPDATE:
+                case UPDATE -> {
                     if(!clientDataCache.containsKey(dataId)) addSyncData(persistentData);
                     else updateSyncData(persistentData);
-                    break;
-                case ADD:
-                    addSyncData(persistentData);
-                    break;
-                case REMOVE:
-                    removeSyncData(persistentData);
-                    break;
+                }
+                case ADD -> addSyncData(persistentData);
+                case REMOVE -> removeSyncData(persistentData);
             }
         }
     }

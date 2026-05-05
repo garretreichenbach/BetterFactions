@@ -71,7 +71,7 @@ public class FactionInfoPanel extends GUIAncor {
     public void draw() {
         super.draw();
         factionLogoButton.setPos(20.0f, 20.0f, 0.0f);
-        if(ConfigManager.getMainConfig().getBoolean("debug-mode")) handleDebug();
+        if(ConfigManager.debugMode.getValue()) handleDebug();
     }
 
     private void handleDebug() {

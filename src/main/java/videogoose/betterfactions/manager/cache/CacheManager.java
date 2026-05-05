@@ -2,11 +2,7 @@ package videogoose.betterfactions.manager.cache;
 
 import api.common.GameCommon;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public class CacheManager {
 
 	private static CacheInterface cache;

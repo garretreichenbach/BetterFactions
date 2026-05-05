@@ -6,11 +6,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-/**
- * [Description]
- *
- * @author TheDerpGamer (TheDerpGamer#0027)
- */
+
 public abstract class FactionNewsEventSystem extends FactionNewsEvent {
 
 	public Vector3i system = new Vector3i();
