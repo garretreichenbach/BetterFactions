@@ -6,7 +6,6 @@ import org.schema.common.util.linAlg.Vector3i;
 import videogoose.betterfactions.BetterFactions;
 import videogoose.betterfactions.data.diplomacy.claims.ClaimData;
 import videogoose.betterfactions.data.diplomacy.claims.ClaimData.ClaimOrigin;
-import videogoose.betterfactions.data.diplomacy.war.CasusBelli;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -64,12 +63,12 @@ public class ClaimsManager {
      */
     public static void removeClaim(int factionId, Vector3i systemCoords) {
         String key = coordsKey(systemCoords);
-        var systemClaims = claimsBySystem.get(key);
+	    List<ClaimData> systemClaims = claimsBySystem.get(key);
         if (systemClaims != null) {
             systemClaims.removeIf(c -> c.factionId == factionId);
             if (systemClaims.isEmpty()) claimsBySystem.remove(key);
         }
-        var factionClaims = claimsByFaction.get(factionId);
+	    List<ClaimData> factionClaims = claimsByFaction.get(factionId);
         if (factionClaims != null) {
             factionClaims.removeIf(c -> c.systemCoords.equals(systemCoords));
         }
@@ -87,7 +86,7 @@ public class ClaimsManager {
      * Check if a faction has a claim on a specific system.
      */
     public static boolean hasClaim(int factionId, Vector3i systemCoords) {
-        var claims = claimsByFaction.get(factionId);
+	    List<ClaimData> claims = claimsByFaction.get(factionId);
         if (claims == null) return false;
         return claims.stream().anyMatch(c -> c.systemCoords.equals(systemCoords));
     }
@@ -110,7 +109,7 @@ public class ClaimsManager {
      * Check if a system is contested (claimed by multiple factions).
      */
     public static boolean isContested(Vector3i systemCoords) {
-        var claims = claimsBySystem.get(coordsKey(systemCoords));
+	    List<ClaimData> claims = claimsBySystem.get(coordsKey(systemCoords));
         return claims != null && claims.size() > 1;
     }
 
@@ -119,11 +118,11 @@ public class ClaimsManager {
      */
     public static List<Integer> getContestingFactions(int factionId) {
         List<Integer> contesting = new ArrayList<>();
-        var claims = claimsByFaction.get(factionId);
+	    List<ClaimData> claims = claimsByFaction.get(factionId);
         if (claims == null) return contesting;
 
         for (ClaimData claim : claims) {
-            var systemClaims = claimsBySystem.get(coordsKey(claim.systemCoords));
+	        List<ClaimData> systemClaims = claimsBySystem.get(coordsKey(claim.systemCoords));
             if (systemClaims == null) continue;
             for (ClaimData other : systemClaims) {
                 if (other.factionId != factionId && !contesting.contains(other.factionId)) {

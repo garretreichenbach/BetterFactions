@@ -5,12 +5,16 @@ import api.mod.config.PersistentObjectUtil;
 import api.network.Packet;
 import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
+import org.schema.game.common.controller.ShopInterface;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
 import videogoose.betterfactions.BetterFactions;
 import org.schema.game.common.data.player.faction.FactionRelationOffer;
+import videogoose.betterfactions.data.diplomacy.FactionDiplomacy;
+import videogoose.betterfactions.data.diplomacy.FactionDiplomacyEntity;
 import videogoose.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
 import videogoose.betterfactions.data.diplomacy.war.CasusBelli;
+import videogoose.betterfactions.data.persistent.faction.FactionMember;
 import videogoose.betterfactions.data.persistent.federation.FactionMessage;
 import videogoose.betterfactions.manager.CasusBelliManager;
 import videogoose.betterfactions.mixin.CustomRelationType;
@@ -78,7 +82,7 @@ public class SendFactionMessagePacket extends Packet {
         }
 
         // Check faction permissions
-        var member = FactionManager.getPlayerFactionMember(playerState.getName());
+	    FactionMember member = FactionManager.getPlayerFactionMember(playerState.getName());
         FactionMessage.MessageType type = FactionMessage.MessageType.valueOf(messageType);
         if (member != null && !hasPermissionForType(member, type)) {
             BetterFactions.getInstance().logWarning("Player " + playerState.getName() + " lacks permission for " + type.name());
@@ -105,17 +109,15 @@ public class SendFactionMessagePacket extends Packet {
 
     private boolean hasPermissionForType(videogoose.betterfactions.data.persistent.faction.FactionMember member, FactionMessage.MessageType type) {
         return switch (type) {
-            case DECLARE_WAR -> member.hasPermission("diplomacy.war");
+            case DECLARE_WAR, OFFER_PEACE -> member.hasPermission("diplomacy.war");
             case ALLIANCE_OFFER, ALLIANCE_BREAK -> member.hasPermission("diplomacy.alliance");
             case NON_AGGRESSION_PACT, CANCEL_NON_AGGRESSION_PACT -> member.hasPermission("diplomacy.nap");
-            case OFFER_PEACE -> member.hasPermission("diplomacy.war");
-            case DEMAND_CONCESSION -> member.hasPermission("diplomacy.demand");
+	        case DEMAND_CONCESSION -> member.hasPermission("diplomacy.demand");
             case OFFER_TRADE, CANCEL_TRADE -> member.hasPermission("trade.offer");
             case FEDERATION_INVITE, FEDERATION_REQUEST -> member.hasPermission("federation.invite");
-            case IMPROVE_RELATIONS, DECREASE_RELATIONS, INSULT, EMBARGO, CANCEL_EMBARGO, BAN_DIPLOMATS -> member.hasPermission("diplomacy.[ANY]");
-            case GUARANTEE_INDEPENDENCE, CANCEL_GUARANTEE -> member.hasPermission("diplomacy.[ANY]");
-            case SEND_GIFT -> member.hasPermission("diplomacy.[ANY]");
-            default -> true; // General messages don't need special permissions
+            case IMPROVE_RELATIONS, DECREASE_RELATIONS, INSULT, EMBARGO, CANCEL_EMBARGO, BAN_DIPLOMATS, SEND_GIFT,
+                 GUARANTEE_INDEPENDENCE, CANCEL_GUARANTEE -> member.hasPermission("diplomacy.[ANY]");
+	        default -> true; // General messages don't need special permissions
         };
     }
 
@@ -153,7 +155,7 @@ public class SendFactionMessagePacket extends Packet {
         boolean hasCB = CasusBelliManager.hasCB(from.getIdFaction(), to.getIdFaction());
         if (!hasCB) {
             // Unjustified war: opinion penalty with ALL factions
-            var factionManager = GameCommon.getGameState().getFactionManager();
+	        org.schema.game.common.data.player.faction.FactionManager factionManager = GameCommon.getGameState().getFactionManager();
             for (Faction faction : factionManager.getFactionCollection()) {
                 if (faction.getIdFaction() != from.getIdFaction() && faction.getIdFaction() != to.getIdFaction()) {
                     if (faction.isPlayerFaction() || faction.isNPC()) {
@@ -250,8 +252,8 @@ public class SendFactionMessagePacket extends Packet {
 
     private void processImproveRelations(Faction from, Faction to) {
         // Check if the target faction has banned our diplomats
-        var diplomacy = FactionDiplomacyManager.getDiplomacy(to.getIdFaction());
-        var entity = diplomacy.entities.get((long) from.getIdFaction());
+	    FactionDiplomacy diplomacy = FactionDiplomacyManager.getDiplomacy(to.getIdFaction());
+	    FactionDiplomacyEntity entity = diplomacy.entities.get(from.getIdFaction());
         if (entity != null && entity.hasActiveAction(FactionDiplomacyAction.DiploActionType.BAN_DIPLOMATS)) {
             BetterFactions.getInstance().logInfo(from.getName() + " tried to improve relations with " + to.getName() + " but diplomats are banned");
             return;
@@ -298,10 +300,10 @@ public class SendFactionMessagePacket extends Packet {
         }
         if (amount > 0) {
             // Transfer credits from sender's faction shop to receiver's
-            var fromShop = from.getShop();
+	        ShopInterface fromShop = from.getShop();
             if (fromShop != null && fromShop.getCredits() >= amount) {
                 fromShop.modCredits(-amount);
-                var toShop = to.getShop();
+	            ShopInterface toShop = to.getShop();
                 if (toShop != null) toShop.modCredits(amount);
                 FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.SEND_GIFT);
                 String cleanMsg = message.contains("]") ? message.substring(message.indexOf(']') + 1) : "";

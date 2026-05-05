@@ -3,16 +3,18 @@ package videogoose.betterfactions.gui.faction.diplomacy.war;
 import api.common.GameClient;
 import api.network.packets.PacketUtil;
 import api.utils.gui.GUIInputDialogPanel;
+import org.schema.game.common.data.player.faction.Faction;
 import org.schema.schine.common.OnInputChangedCallback;
 import org.schema.schine.common.TextCallback;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.core.settings.PrefixNotFoundException;
 import org.schema.schine.graphicsengine.forms.font.FontLibrary;
 import org.schema.schine.graphicsengine.forms.gui.*;
-import org.schema.schine.graphicsengine.forms.gui.newgui.*;
+import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActivatableTextBar;
+import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
+import org.schema.schine.graphicsengine.forms.gui.newgui.GUIDialogWindow;
 import org.schema.schine.input.InputState;
 import videogoose.betterfactions.data.persistent.faction.FactionData;
-import videogoose.betterfactions.data.persistent.federation.FactionMessage;
 import videogoose.betterfactions.data.persistent.federation.PeaceOfferMessage;
 import videogoose.betterfactions.data.serializeable.DiplomaticData;
 import videogoose.betterfactions.data.serializeable.DiplomaticData.DiplomaticDataType;
@@ -56,10 +58,10 @@ public class PeaceDealPanel extends GUIInputDialogPanel {
 
         // Find opponent leader
         if (isAttacker) {
-            var leaderFaction = warData.getDefenderLeaderFaction();
+            Faction leaderFaction = warData.getDefenderLeaderFaction();
             this.to = leaderFaction != null ? FactionManager.getFactionData(leaderFaction) : null;
         } else {
-            var leaderFaction = warData.getAttackerLeaderFaction();
+            Faction leaderFaction = warData.getAttackerLeaderFaction();
             this.to = leaderFaction != null ? FactionManager.getFactionData(leaderFaction) : null;
         }
         if (to == null) return;

@@ -3,13 +3,14 @@ package videogoose.betterfactions.manager;
 import api.common.GameCommon;
 import api.utils.StarRunnable;
 import org.schema.game.common.data.player.faction.Faction;
+import org.schema.game.common.data.player.faction.FactionManager;
 import videogoose.betterfactions.BetterFactions;
 import videogoose.betterfactions.data.diplomacy.FactionDiplomacy;
 import videogoose.betterfactions.data.diplomacy.FactionDiplomacyEntity;
 import videogoose.betterfactions.data.diplomacy.war.CasusBelli;
-import videogoose.betterfactions.data.diplomacy.war.CasusBelli.CBType;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -43,9 +44,9 @@ public class CasusBelliManager {
      */
     public static List<CasusBelli> getAvailableCBs(int fromFactionId, int toFactionId) {
         List<CasusBelli> result = new ArrayList<>();
-        var targetMap = cbMap.get(fromFactionId);
+	    ConcurrentHashMap<Integer, List<CasusBelli>> targetMap = cbMap.get(fromFactionId);
         if (targetMap == null) return result;
-        var cbs = targetMap.get(toFactionId);
+	    List<CasusBelli> cbs = targetMap.get(toFactionId);
         if (cbs == null) return result;
         for (CasusBelli cb : cbs) {
             if (cb.ready) result.add(cb);
@@ -63,7 +64,7 @@ public class CasusBelliManager {
     /**
      * Check if faction has a specific CB type against target.
      */
-    public static boolean hasCB(int fromFactionId, int toFactionId, CBType type) {
+    public static boolean hasCB(int fromFactionId, int toFactionId, CasusBelli.CBType type) {
         for (CasusBelli cb : getAvailableCBs(fromFactionId, toFactionId)) {
             if (cb.type == type) return true;
         }
@@ -87,10 +88,10 @@ public class CasusBelliManager {
     /**
      * Remove a specific CB (e.g., after war is declared using it).
      */
-    public static void removeCB(int fromFactionId, int toFactionId, CBType type) {
-        var targetMap = cbMap.get(fromFactionId);
+    public static void removeCB(int fromFactionId, int toFactionId, CasusBelli.CBType type) {
+	    ConcurrentHashMap<Integer, List<CasusBelli>> targetMap = cbMap.get(fromFactionId);
         if (targetMap == null) return;
-        var cbs = targetMap.get(toFactionId);
+	    List<CasusBelli> cbs = targetMap.get(toFactionId);
         if (cbs == null) return;
         cbs.removeIf(cb -> cb.type == type);
     }
@@ -99,7 +100,7 @@ public class CasusBelliManager {
      * Remove all CBs between two factions (e.g., after peace).
      */
     public static void clearCBs(int fromFactionId, int toFactionId) {
-        var targetMap = cbMap.get(fromFactionId);
+	    ConcurrentHashMap<Integer, List<CasusBelli>> targetMap = cbMap.get(fromFactionId);
         if (targetMap != null) targetMap.remove(toFactionId);
     }
 
@@ -109,7 +110,7 @@ public class CasusBelliManager {
      */
     public static void onUnjustifiedWar(int aggressorFactionId, int victimFactionId) {
         int opinionThreshold = ConfigManager.containmentOpinionThreshold.getValue();
-        var factionManager = GameCommon.getGameState().getFactionManager();
+	    FactionManager factionManager = GameCommon.getGameState().getFactionManager();
 
         for (Faction faction : factionManager.getFactionCollection()) {
             if (faction.getIdFaction() == aggressorFactionId || faction.getIdFaction() == victimFactionId) continue;
@@ -118,7 +119,7 @@ public class CasusBelliManager {
             FactionDiplomacy diplomacy = FactionDiplomacyManager.getDiplomacy(faction.getIdFaction());
             FactionDiplomacyEntity entity = diplomacy.entities.get((long) aggressorFactionId);
             if (entity != null && entity.getPoints() < opinionThreshold) {
-                addCB(new CasusBelli(CBType.CONTAINMENT, faction.getIdFaction(), aggressorFactionId));
+                addCB(new CasusBelli(CasusBelli.CBType.CONTAINMENT, faction.getIdFaction(), aggressorFactionId));
             }
         }
     }
@@ -127,29 +128,21 @@ public class CasusBelliManager {
      * Called when a demand is rejected. Grants REJECTED_DEMAND CB to the demanding faction.
      */
     public static void onDemandRejected(int demandingFactionId, int rejectingFactionId) {
-        addCB(new CasusBelli(CBType.REJECTED_DEMAND, demandingFactionId, rejectingFactionId));
+        addCB(new CasusBelli(CasusBelli.CBType.REJECTED_DEMAND, demandingFactionId, rejectingFactionId));
     }
 
     /**
      * Start fabricating a CB of the given type.
      */
-    public static void startFabrication(int fromFactionId, int toFactionId, CBType type) {
+    public static void startFabrication(int fromFactionId, int toFactionId, CasusBelli.CBType type) {
         CasusBelli cb = new CasusBelli(type, fromFactionId, toFactionId);
         addCB(cb);
         cb.startFabrication();
     }
 
     private static void updateFabrications() {
-        for (var targetMap : cbMap.values()) {
-            for (var cbs : targetMap.values()) {
-                for (CasusBelli cb : cbs) {
-                    if (cb.updateFabrication()) {
-                        BetterFactions.getInstance().logInfo("CB fabrication complete: " + cb.type.displayName
-                            + " for faction " + cb.fromFactionId + " against " + cb.toFactionId);
-                    }
-                }
-            }
-        }
+	    cbMap.values().stream().flatMap(targetMap -> targetMap.values().stream()).flatMap(Collection::stream).filter(CasusBelli::updateFabrication).forEach(cb -> BetterFactions.getInstance().logInfo("CB fabrication complete: " + cb.type.displayName
+			    + " for faction " + cb.fromFactionId + " against " + cb.toFactionId));
     }
 
     /**
@@ -157,7 +150,7 @@ public class CasusBelliManager {
      * Called periodically by the timer.
      */
     private static void generateAutomaticCBs() {
-        var factionManager = GameCommon.getGameState().getFactionManager();
+	    FactionManager factionManager = GameCommon.getGameState().getFactionManager();
         if (factionManager == null) return;
 
         for (Faction faction : factionManager.getFactionCollection()) {
@@ -165,39 +158,35 @@ public class CasusBelliManager {
             int fid = faction.getIdFaction();
             FactionDiplomacy diplomacy = FactionDiplomacyManager.getDiplomacy(fid);
 
-            for (var entry : diplomacy.entities.entrySet()) {
-                long targetId = entry.getKey();
-                if (targetId <= 0 || targetId >= Integer.MAX_VALUE) continue; // Skip players
-                int tid = (int) targetId;
-                FactionDiplomacyEntity entity = entry.getValue();
-
-                // RIVALRY CB: if rival status exists
-                if (entity.existsStatusModifier(FactionDiplomacyEntity.DiploStatusType.RIVAL)) {
-                    if (!hasCB(fid, tid, CBType.RIVALRY)) {
-                        addCB(new CasusBelli(CBType.RIVALRY, fid, tid));
-                    }
-                } else {
-                    removeCB(fid, tid, CBType.RIVALRY);
-                }
-
-                // BORDER_FRICTION CB: if contested claims exist
-                if (entity.existsStatusModifier(FactionDiplomacyEntity.DiploStatusType.CONTESTED_CLAIMS)) {
-                    if (!hasCB(fid, tid, CBType.BORDER_FRICTION)) {
-                        addCB(new CasusBelli(CBType.BORDER_FRICTION, fid, tid));
-                    }
-                } else {
-                    removeCB(fid, tid, CBType.BORDER_FRICTION);
-                }
-
-                // ALLIANCE_THREAT CB: if target is at war with one of our allies
-                if (entity.existsStatusModifier(FactionDiplomacyEntity.DiploStatusType.IN_WAR_WITH_FRIENDS)) {
-                    if (!hasCB(fid, tid, CBType.ALLIANCE_THREAT)) {
-                        addCB(new CasusBelli(CBType.ALLIANCE_THREAT, fid, tid));
-                    }
-                } else {
-                    removeCB(fid, tid, CBType.ALLIANCE_THREAT);
-                }
-            }
+	        // RIVALRY CB: if rival status exists
+	        // BORDER_FRICTION CB: if contested claims exist
+	        // ALLIANCE_THREAT CB: if target is at war with one of our allies
+	        diplomacy.entities.forEach((key, entity) -> {
+		        long targetId = key;
+		        if(targetId <= 0 || targetId >= Integer.MAX_VALUE) return; // Skip players
+		        int tid = (int) targetId;
+		        if(entity.existsStatusModifier(FactionDiplomacyEntity.DiploStatusType.RIVAL)) {
+			        if(!hasCB(fid, tid, CasusBelli.CBType.RIVALRY)) {
+				        addCB(new CasusBelli(CasusBelli.CBType.RIVALRY, fid, tid));
+			        }
+		        } else {
+			        removeCB(fid, tid, CasusBelli.CBType.RIVALRY);
+		        }
+		        if(entity.existsStatusModifier(FactionDiplomacyEntity.DiploStatusType.CONTESTED_CLAIMS)) {
+			        if(!hasCB(fid, tid, CasusBelli.CBType.BORDER_FRICTION)) {
+				        addCB(new CasusBelli(CasusBelli.CBType.BORDER_FRICTION, fid, tid));
+			        }
+		        } else {
+			        removeCB(fid, tid, CasusBelli.CBType.BORDER_FRICTION);
+		        }
+		        if(entity.existsStatusModifier(FactionDiplomacyEntity.DiploStatusType.IN_WAR_WITH_FRIENDS)) {
+			        if(!hasCB(fid, tid, CasusBelli.CBType.ALLIANCE_THREAT)) {
+				        addCB(new CasusBelli(CasusBelli.CBType.ALLIANCE_THREAT, fid, tid));
+			        }
+		        } else {
+			        removeCB(fid, tid, CasusBelli.CBType.ALLIANCE_THREAT);
+		        }
+	        });
         }
     }
 }

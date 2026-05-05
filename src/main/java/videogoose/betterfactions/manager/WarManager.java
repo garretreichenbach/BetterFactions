@@ -4,6 +4,7 @@ import api.common.GameCommon;
 import api.mod.config.PersistentObjectUtil;
 import api.utils.StarRunnable;
 import org.schema.game.common.data.player.faction.Faction;
+import org.schema.game.common.data.player.faction.FactionManager;
 import org.schema.game.common.data.player.faction.FactionRelation;
 import videogoose.betterfactions.BetterFactions;
 import videogoose.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
@@ -90,7 +91,7 @@ public class WarManager {
      * Sets all participants to NEUTRAL and fires peace acceptance actions.
      */
     private static void forceStatusQuoPeace(WarData war) {
-        var factionManager = GameCommon.getGameState().getFactionManager();
+	    FactionManager factionManager = GameCommon.getGameState().getFactionManager();
         BetterFactions.getInstance().logInfo("War exhaustion forced status-quo peace for: " + war.getName());
 
         // Set all opposing pairs to neutral
