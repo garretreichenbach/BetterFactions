@@ -3,18 +3,24 @@ package videogoose.betterfactions.gui.faction.diplomacy.war;
 import api.utils.gui.GUIInputDialog;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
+import videogoose.betterfactions.data.serializeable.war.WarData;
 
 /**
- * <Description>
- *
- * @author TheDerpGamer
- * @version 1.0 - [12/15/2021]
+ * Dialog for peace deal negotiations
  */
 public class PeaceDealDialog extends GUIInputDialog {
 
+    private WarData warData;
+
+    public void setWarData(WarData warData) {
+        this.warData = warData;
+    }
+
     @Override
     public PeaceDealPanel createPanel() {
-        return new PeaceDealPanel(getState(), this);
+        PeaceDealPanel panel = new PeaceDealPanel(getState(), this);
+        if (warData != null) panel.createPanel(warData);
+        return panel;
     }
 
     @Override
@@ -24,17 +30,13 @@ public class PeaceDealDialog extends GUIInputDialog {
 
     @Override
     public void callback(GUIElement element, MouseEvent mouseEvent) {
-        if(mouseEvent.pressedLeftMouse()) {
-            switch(((String) element.getUserPointer()).toUpperCase()) {
-                case "X":
-                case "CANCEL":
-                    deactivate();
-                    break;
-                case "OK":
-                case "SEND":
+        if (mouseEvent.pressedLeftMouse()) {
+            switch (((String) element.getUserPointer()).toUpperCase()) {
+                case "X", "CANCEL" -> deactivate();
+                case "OK", "SEND" -> {
                     getInputPanel().sendMessage();
                     deactivate();
-                    break;
+                }
             }
         }
     }

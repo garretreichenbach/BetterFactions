@@ -6,28 +6,38 @@ import api.utils.StarRunnable;
 import org.schema.schine.resource.tag.Tag;
 import videogoose.betterfactions.BetterFactions;
 import videogoose.betterfactions.data.diplomacy.FactionDiplomacy;
+import videogoose.betterfactions.data.diplomacy.FactionDiplomacyConfig;
 import videogoose.betterfactions.data.diplomacy.FactionDiplomacyEntity;
 import videogoose.betterfactions.data.diplomacy.FactionDiplomacyReaction;
 import videogoose.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
-import videogoose.betterfactions.data.diplomacy.modifier.FactionDiplomacyTurnMod;
 import videogoose.betterfactions.utils.DataUtils;
 
 import java.io.*;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+/**
+ * Manages faction diplomacy data, persistence, configuration, and reactions.
+ */
 public class FactionDiplomacyManager {
 
 	public static final ConcurrentLinkedQueue<FactionDiplomacy> diplomacyChanged = new ConcurrentLinkedQueue<>();
 	private static final ConcurrentHashMap<Integer, FactionDiplomacy> diplomacyCache = new ConcurrentHashMap<>();
 	private static volatile boolean initialized;
+	private static FactionDiplomacyConfig diplomacyConfig;
 
 	public static void initialize() {
 		if (initialized) return;
+
+		// Initialize the diplomacy config with default reactions
+		diplomacyConfig = new FactionDiplomacyConfig();
+		if (diplomacyConfig.reactions.isEmpty()) {
+			diplomacyConfig.addDefaultActions();
+		}
+
 		File dir = new File(DataUtils.getWorldDataPath() + "/diplomacy");
 		if (!dir.exists()) dir.mkdirs();
 
@@ -82,7 +92,6 @@ public class FactionDiplomacyManager {
 			Objects.requireNonNull(GameCommon.getGameState()).getFactionManager().getFaction(factionId)
 		);
 		if (!file.exists()) {
-			// Initialize new diplomacy data
 			try (OutputStream out = Files.newOutputStream(file.toPath())) {
 				diplomacy.toTag().writeTo(out, true);
 			} catch (IOException e) {
@@ -110,9 +119,41 @@ public class FactionDiplomacyManager {
 		diplomacyCache.remove(factionId);
 	}
 
+	public static FactionDiplomacyConfig getConfig() {
+		if (diplomacyConfig == null) {
+			diplomacyConfig = new FactionDiplomacyConfig();
+			if (diplomacyConfig.reactions.isEmpty()) {
+				diplomacyConfig.addDefaultActions();
+			}
+		}
+		return diplomacyConfig;
+	}
+
+	/**
+	 * Returns all diplomacy reactions (global, not per-faction).
+	 * These are checked periodically by each FactionDiplomacyEntity.
+	 */
 	public static List<FactionDiplomacyReaction> getReactions(int factionId) {
 		if (!initialized) initialize();
-		return new ArrayList<>(); //TODO: Implement
+		return getConfig().reactions;
+	}
+
+	/**
+	 * Returns the per-action reaction from the diplomacy config, if one exists.
+	 * Per-action reactions are defined in the XML config on individual DiplomacyConfigElements.
+	 */
+	public static FactionDiplomacyReaction getReaction(FactionDiplomacyAction action) {
+		FactionDiplomacyConfig.DiplomacyConfigElement element = getConfig().get(action.type);
+		if (element != null && element.reaction != null) {
+			// Config element has a game-level DiplomacyReaction, but we need FactionDiplomacyReaction.
+			// The default config doesn't define per-action reactions, so this path is for custom XML configs.
+			// For now, search the global reactions list for one matching this action type.
+			for (FactionDiplomacyReaction r : getConfig().reactions) {
+				if (r.isSatisfied(null)) continue; // Skip reactions with no entity context
+				return r; // Return first applicable reaction
+			}
+		}
+		return null;
 	}
 
 	public static int getDiplomacyValue(FactionDiplomacyEntity.DiploStatusType status) {
@@ -159,14 +200,6 @@ public class FactionDiplomacyManager {
 			case THREATENING -> ConfigManager.actionThreatening.getValue();
 			default -> 0;
 		};
-	}
-
-	public static FactionDiplomacyReaction getReaction(FactionDiplomacyAction action) {
-		return null; //TODO: Implement
-	}
-
-	public static boolean existsAction(FactionDiplomacyTurnMod d) {
-		return false; //TODO: Implement
 	}
 
 	public static void forceDiplomacyAction(int faction1, int faction2, FactionDiplomacyAction.DiploActionType diplomacyAction) {

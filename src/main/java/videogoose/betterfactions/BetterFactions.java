@@ -11,6 +11,7 @@ import videogoose.betterfactions.manager.ConfigManager;
 import videogoose.betterfactions.manager.EventManager;
 import videogoose.betterfactions.manager.FactionDiplomacyManager;
 import videogoose.betterfactions.network.ClientUpdatePacket;
+import videogoose.betterfactions.network.FactionDiplomacyPacket;
 import videogoose.betterfactions.utils.ReflectionUtils;
 
 import javax.vecmath.Vector3f;
@@ -74,5 +75,6 @@ public class BetterFactions extends StarMod {
 
 	private void registerPackets() {
 		PacketUtil.registerPacket(ClientUpdatePacket.class);
+		PacketUtil.registerPacket(FactionDiplomacyPacket.class);
 	}
 }

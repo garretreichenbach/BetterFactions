@@ -18,7 +18,6 @@ import videogoose.betterfactions.data.persistent.federation.PeaceOfferMessage;
 import videogoose.betterfactions.data.serializeable.DiplomaticData;
 import videogoose.betterfactions.data.serializeable.PeaceOfferData;
 import videogoose.betterfactions.data.serializeable.war.WarData;
-import videogoose.betterfactions.data.serializeable.war.WarParticipantData;
 import videogoose.betterfactions.manager.FactionManager;
 import videogoose.betterfactions.network.client.SendFactionMessagePacket;
 import videogoose.betterfactions.utils.FactionDiplomacyUtils;
@@ -26,20 +25,18 @@ import videogoose.betterfactions.utils.FactionDiplomacyUtils;
 import java.util.ArrayList;
 
 /**
- * <Description>
- *
- * @author TheDerpGamer
- * @version 1.0 - [12/15/2021]
+ * Panel for composing peace deal offers during a war.
  */
 public class PeaceDealPanel extends GUIInputDialogPanel {
 
     private WarData warData;
+    private FactionData from;
+    private FactionData to;
     private final ArrayList<DiplomaticData> dataList = new ArrayList<>();
 
     private GUIActivatableTextBar messageBar;
     private GUIElementList leftSide;
     private GUIElementList rightSide;
-
 
     public PeaceDealPanel(InputState inputState, GUICallback guiCallback) {
         super(inputState, "PeaceDealPanel", "OFFER PEACE", "", 500, 300, guiCallback);
@@ -49,91 +46,36 @@ public class PeaceDealPanel extends GUIInputDialogPanel {
     public void createPanel(WarData warData) {
         this.warData = warData;
         FactionData playerFactionData = FactionManager.getPlayerFactionData(GameClient.getClientPlayerState().getName());
-        if(playerFactionData != null && warData.isInvolved(playerFactionData)) {
-            GUIContentPane contentPane = ((GUIDialogWindow) background).getMainContentPane();
+        if (playerFactionData == null || !warData.isInvolved(playerFactionData)) return;
 
-            { //Message Input
-                contentPane.addNewTextBox(0, 30);
-                (messageBar = new GUIActivatableTextBar(getState(), FontLibrary.FontSize.SMALL, 420, 8, "", contentPane.getContent(0), new MessageTextCallback(), new MessageTextChangedCallback())).onInit();
-                contentPane.getContent(0).attach(messageBar);
-            }
-
-            { //Current Demands / Offers
-                contentPane.addNewTextBox(1, (int) ((contentPane.getHeight() - 28) / 3));
-            }
-
-            { //Participants
-                contentPane.addDivider((int) ((contentPane.getWidth() - 28) / 2));
-
-                (leftSide = new GUIElementList(getState())).onInit();
-                (rightSide = new GUIElementList(getState())).onInit();
-
-                if(warData.defenders.containsKey(playerFactionData.getFactionId())) { //Defender
-                    FactionData warLeader = FactionDiplomacyUtils.getDefenderLeader(warData);
-                    for(WarParticipantData participantData : warData.defenders.values()) {
-                        switch(participantData.warGoal.warGoalType) {
-
-                        }
-                    }
-                } else if(warData.attackers.containsKey(playerFactionData.getFactionId())) { //Attacker
-                    FactionData warLeader = FactionDiplomacyUtils.getAttackerLeader(warData);
-                    WarParticipantData participantData = warData.attackers.get(playerFactionData.getFactionId());
-                    if(warLeader.equals(playerFactionData)) {
-
-                    } else {
-
-                    }
-                }
-            }
+        // Determine from/to based on which side the player is on
+        if (warData.defenders.containsKey(playerFactionData.getFactionId())) {
+            this.from = playerFactionData;
+            this.to = FactionDiplomacyUtils.getAttackerLeader(warData);
+        } else if (warData.attackers.containsKey(playerFactionData.getFactionId())) {
+            this.from = playerFactionData;
+            this.to = FactionDiplomacyUtils.getDefenderLeader(warData);
+        } else {
+            return;
         }
 
-        /*
-        (warList = new GUIElementList(getState())).onInit();
-        for(Map.Entry<String, WarData> entry : ClientCacheManager.factionWars.entrySet()) {
-            if(entry.getValue().isInvolved(playerFaction)) {
-                GUITextOverlay textOverlay = new GUITextOverlay(50, 12, getState());
-                textOverlay.onInit();
-                textOverlay.setFont(FontLibrary.FontSize.MEDIUM.getFont());
-                textOverlay.setTextSimple(entry.getKey());
-                textOverlay.setUserPointer(entry.getValue());
-                textOverlay.setMouseUpdateEnabled(true);
-                GUIListElement element = new GUIListElement(textOverlay, getState());
-                element.onInit();
-                element.setUserPointer(entry.getValue());
-                element.setMouseUpdateEnabled(true);
-                element.setCallback(new GUICallback() {
-                    @Override
-                    public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+        GUIContentPane contentPane = ((GUIDialogWindow) background).getMainContentPane();
 
-                    }
+        // Message input
+        contentPane.addNewTextBox(0, 30);
+        messageBar = new GUIActivatableTextBar(getState(), FontLibrary.FontSize.SMALL, 420, 8, "Peace terms...", contentPane.getContent(0), new MessageTextChangedCallback(), new MessageTextCallback());
+        messageBar.onInit();
+        contentPane.getContent(0).attach(messageBar);
 
-                    @Override
-                    public boolean isOccluded() {
-                        return false;
-                    }
-                });
-                warList.add(element);
-            }
-        }
-        contentPane.getContent(0).attach(warList);
+        // Current demands/offers
+        contentPane.addNewTextBox(1, (int) ((contentPane.getHeight() - 28) / 3));
 
+        // Participants
+        contentPane.addDivider((int) ((contentPane.getWidth() - 28) / 2));
+        (leftSide = new GUIElementList(getState())).onInit();
+        (rightSide = new GUIElementList(getState())).onInit();
 
-
-         */
-        /*
-        (messageOverlay = new GUITextOverlay(30, 30, getState())).onInit();
-        messageOverlay.setFont(FontLibrary.FontSize.MEDIUM.getFont());
-        String name = to.getName();
-        if(to.getIdFaction() == FactionManager.TRAIDING_GUILD_ID) name = "Trading Guild";
-        messageOverlay.setTextSimple("Peace offer to " + name);
-        ((GUIDialogWindow) background).getMainContentPane().getContent(0).attach(messageOverlay);
-        ((GUIDialogWindow) background).getMainContentPane().setTextBoxHeightLast(30);
-
-        ((GUIDialogWindow) background).getMainContentPane().addNewTextBox(26);
-        (titleTextBar = new GUIActivatableTextBar(getState(), FontLibrary.FontSize.MEDIUM, 80, 1, "Title", ((GUIDialogWindow) background).getMainContentPane().getContent(1), new FactionMessageTextCallback(), new FactionMessageTextChangedCallback())).onInit();
-        ((GUIDialogWindow) background).getMainContentPane().getContent(0, 1).attach(titleTextBar);
-        ((GUIDialogWindow) background).getMainContentPane().setTextBoxHeightLast(28);
-         */
+        //TODO: Populate left/right sides with participant war goals and demands (Phase 2.3)
     }
 
     private GUIListElement createOverlay(DiplomaticData diplomaticData, GUICallback callback) {
@@ -152,16 +94,16 @@ public class PeaceDealPanel extends GUIInputDialogPanel {
     }
 
     public void sendMessage() {
-        FactionMessage message = new PeaceOfferMessage(from.getFaction(), to.getFaction(), getTitleText(), new PeaceOfferData(from, to, dataList));
+        if (from == null || to == null) return;
+        String title = messageBar != null ? messageBar.getText() : "Peace Offer";
+        FactionMessage message = new PeaceOfferMessage(
+            from.getFaction(), to.getFaction(), title,
+            new PeaceOfferData(from, to, dataList)
+        );
         PacketUtil.sendPacketToServer(new SendFactionMessagePacket(message));
     }
 
-    public String getTitleText() {
-        return titleTextBar.getText();
-    }
-
     private class MessageTextChangedCallback implements OnInputChangedCallback {
-
         @Override
         public String onInputChanged(String s) {
             return s;
@@ -170,9 +112,7 @@ public class PeaceDealPanel extends GUIInputDialogPanel {
 
     private class MessageTextCallback implements TextCallback {
         @Override
-        public String[] getCommandPrefixes() {
-            return null;
-        }
+        public String[] getCommandPrefixes() { return null; }
 
         @Override
         public String handleAutoComplete(String s, TextCallback callback, String prefix) throws PrefixNotFoundException {
@@ -180,15 +120,12 @@ public class PeaceDealPanel extends GUIInputDialogPanel {
         }
 
         @Override
-        public void onFailedTextCheck(String msg) {
-        }
+        public void onFailedTextCheck(String msg) {}
 
         @Override
-        public void onTextEnter(String entry, boolean send, boolean onAutoComplete) {
-        }
+        public void onTextEnter(String entry, boolean send, boolean onAutoComplete) {}
 
         @Override
-        public void newLine() {
-        }
+        public void newLine() {}
     }
 }

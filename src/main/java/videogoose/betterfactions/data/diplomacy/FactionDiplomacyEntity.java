@@ -703,20 +703,34 @@ public class FactionDiplomacyEntity implements LogInterface {
 		ObjectIterator<FactionDiplomacyAction> iterator = actions.values().iterator();
 		while(iterator.hasNext()) {
 			FactionDiplomacyAction a = iterator.next();
+
+			// Check for a per-action reaction
 			FactionDiplomacyReaction react = FactionDiplomacyManager.getReaction(a);
-			if(react != null) {
-				if(react.isSatisfied(this)) executeReaction(react);
-				else calculateDynamicModifier(0, dynamicMap, a.type);
-				log("ACTION TIMEOUT: " + a.type.name() + " " + a.timeDuration + " - " + timeElapsed + " = " + (a.timeDuration - timeElapsed), LogLevel.DEBUG);
-				a.timeDuration -= timeElapsed;
-				if(a.timeDuration <= 0) iterator.remove();
+			if(react != null && react.isSatisfied(this)) {
+				executeReaction(react);
+			} else {
+				calculateDynamicModifier(0, dynamicMap, a.type);
 			}
 
-			for(FactionDiplomacyTurnMod d : dynamicMap.values()) {
-				if(FactionDiplomacyManager.existsAction(d)) calculateDynamicModifier(timeElapsed, dynamicMap, d.type);
-			}
-			setNTChanged();
+			// Expire actions after their timeout regardless of reaction
+			log("ACTION TIMEOUT: " + a.type.name() + " " + a.timeDuration + " - " + timeElapsed + " = " + (a.timeDuration - timeElapsed), LogLevel.DEBUG);
+			a.timeDuration -= timeElapsed;
+			if(a.timeDuration <= 0) iterator.remove();
 		}
+
+		// Process dynamic modifiers for actions that still exist
+		for(FactionDiplomacyTurnMod d : dynamicMap.values()) {
+			if(hasActiveAction(d.type)) calculateDynamicModifier(timeElapsed, dynamicMap, d.type);
+		}
+		setNTChanged();
+	}
+
+	/**
+	 * Checks if this entity has an active action of the given type.
+	 */
+	public boolean hasActiveAction(FactionDiplomacyAction.DiploActionType type) {
+		FactionDiplomacyAction action = actions.get((byte) type.ordinal());
+		return action != null && action.timeDuration > 0;
 	}
 
 	public int getActionCount(FactionDiplomacyAction.DiploActionType type) {
