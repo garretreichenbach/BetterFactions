@@ -14,12 +14,6 @@ import videogoose.betterfactions.data.persistent.federation.FactionMessage;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-/**
- * <Description>
- *
- * @version 1.0 - [01/30/2021]
- * @author TheDerpGamer
- */
 public class FactionManager {
 
     private static final ModSkeleton instance = BetterFactions.getInstance().getSkeleton();

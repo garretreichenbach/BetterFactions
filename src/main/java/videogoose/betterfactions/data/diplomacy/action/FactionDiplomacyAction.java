@@ -192,6 +192,48 @@ public class FactionDiplomacyAction extends DiplomacyAction {
 			public String getName(Enum anEnum) {
 				return Lng.str("Guaranteed our independence");
 			}
+		}),
+		IMPROVE_RELATIONS(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("Improving relations with us");
+			}
+		}),
+		DECREASE_RELATIONS(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("Actively worsening relations with us");
+			}
+		}),
+		INSULT(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("Insulted us");
+			}
+		}),
+		SEND_GIFT(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("Sent us a gift");
+			}
+		}),
+		EMBARGO(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("Placed an embargo on us");
+			}
+		}),
+		BREAK_GUARANTEE(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("Broke their guarantee of our independence");
+			}
+		}),
+		BAN_DIPLOMATS(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("Banned our diplomats");
+			}
 		});
 		private final Translatable description;
 

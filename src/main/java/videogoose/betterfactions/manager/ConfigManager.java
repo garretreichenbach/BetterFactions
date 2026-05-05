@@ -115,6 +115,14 @@ public class ConfigManager {
 	public static SimpleConfigInt actionUnjustifiedWar;
 	public static SimpleConfigInt actionDeclareRivalry;
 	public static SimpleConfigInt actionGuaranteeIndependence;
+	public static SimpleConfigInt actionImproveRelations;
+	public static SimpleConfigInt actionDecreaseRelations;
+	public static SimpleConfigInt actionInsult;
+	public static SimpleConfigInt actionSendGift;
+	public static SimpleConfigInt actionEmbargo;
+	public static SimpleConfigInt actionBreakGuarantee;
+	public static SimpleConfigInt actionBanDiplomats;
+	public static SimpleConfigInt banDiplomatsDurationMs;
 
 	// Casus belli settings
 	public static SimpleConfigInt containmentOpinionThreshold;
@@ -241,6 +249,14 @@ public class ConfigManager {
 		actionUnjustifiedWar = new SimpleConfigInt(diplomacyConfig, "action-values-unjustified-war", -100);
 		actionDeclareRivalry = new SimpleConfigInt(diplomacyConfig, "action-values-declare-rivalry", -30);
 		actionGuaranteeIndependence = new SimpleConfigInt(diplomacyConfig, "action-values-guarantee-independence", 40);
+		actionImproveRelations = new SimpleConfigInt(diplomacyConfig, "action-values-improve-relations", 2);
+		actionDecreaseRelations = new SimpleConfigInt(diplomacyConfig, "action-values-decrease-relations", -2);
+		actionInsult = new SimpleConfigInt(diplomacyConfig, "action-values-insult", -40);
+		actionSendGift = new SimpleConfigInt(diplomacyConfig, "action-values-send-gift", 20);
+		actionEmbargo = new SimpleConfigInt(diplomacyConfig, "action-values-embargo", -30);
+		actionBreakGuarantee = new SimpleConfigInt(diplomacyConfig, "action-values-break-guarantee", -50);
+		actionBanDiplomats = new SimpleConfigInt(diplomacyConfig, "action-values-ban-diplomats", -20);
+		banDiplomatsDurationMs = new SimpleConfigInt(diplomacyConfig, "ban-diplomats-duration-ms", 600000);
 
 		// Casus belli
 		containmentOpinionThreshold = new SimpleConfigInt(diplomacyConfig, "containment-opinion-threshold", -50);

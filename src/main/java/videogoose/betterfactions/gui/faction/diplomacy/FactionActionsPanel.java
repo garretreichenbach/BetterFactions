@@ -305,6 +305,145 @@ public class FactionActionsPanel extends GUIAncor {
                         }
                     }
 
+                    // Improve/Decrease Relations + Insult + Gift + Embargo
+                    if(player.hasPermission("diplomacy.[ANY]") && faction.getIdFaction() != player.getFactionId()) {
+                        // Improve Relations
+                        buttonPane.addRow();
+                        buttonPane.addButton(0, pos, "IMPROVE RELATIONS", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
+                            @Override
+                            public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                                if(mouseEvent.pressedLeftMouse()) {
+                                    getState().getController().queueUIAudio("0022_menu_ui - select 2");
+                                    FactionMessage msg = new FactionMessage(playerFaction, faction,
+                                        playerFaction.getName() + " is improving relations", "", FactionMessage.MessageType.IMPROVE_RELATIONS);
+                                    api.network.packets.PacketUtil.sendPacketToServer(
+                                        new videogoose.betterfactions.network.client.SendFactionMessagePacket(msg));
+                                }
+                            }
+                            @Override
+                            public boolean isOccluded() { return !checkActive(); }
+                        }, new GUIActivationHighlightCallback() {
+                            @Override public boolean isVisible(InputState inputState) { return true; }
+                            @Override public boolean isActive(InputState inputState) { return checkActive(); }
+                            @Override public boolean isHighlighted(InputState inputState) { return false; }
+                        });
+                        pos++;
+
+                        // Decrease Relations
+                        buttonPane.addRow();
+                        buttonPane.addButton(0, pos, "DECREASE RELATIONS", GUIHorizontalArea.HButtonColor.RED, new GUICallback() {
+                            @Override
+                            public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                                if(mouseEvent.pressedLeftMouse()) {
+                                    getState().getController().queueUIAudio("0022_menu_ui - select 2");
+                                    FactionMessage msg = new FactionMessage(playerFaction, faction,
+                                        playerFaction.getName() + " is worsening relations", "", FactionMessage.MessageType.DECREASE_RELATIONS);
+                                    api.network.packets.PacketUtil.sendPacketToServer(
+                                        new videogoose.betterfactions.network.client.SendFactionMessagePacket(msg));
+                                }
+                            }
+                            @Override
+                            public boolean isOccluded() { return !checkActive(); }
+                        }, new GUIActivationHighlightCallback() {
+                            @Override public boolean isVisible(InputState inputState) { return true; }
+                            @Override public boolean isActive(InputState inputState) { return checkActive(); }
+                            @Override public boolean isHighlighted(InputState inputState) { return false; }
+                        });
+                        pos++;
+
+                        // Insult (with custom message)
+                        buttonPane.addRow();
+                        buttonPane.addButton(0, pos, "INSULT", GUIHorizontalArea.HButtonColor.PINK, new GUICallback() {
+                            @Override
+                            public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                                if(mouseEvent.pressedLeftMouse()) {
+                                    getState().getController().queueUIAudio("0022_menu_ui - select 2");
+                                    FactionMessageSendDialog dialog = new FactionMessageSendDialog();
+                                    dialog.getInputPanel().createPanel(playerFaction, faction, FactionMessage.MessageType.INSULT);
+                                    dialog.activate();
+                                }
+                            }
+                            @Override
+                            public boolean isOccluded() { return !checkActive(); }
+                        }, new GUIActivationHighlightCallback() {
+                            @Override public boolean isVisible(InputState inputState) { return true; }
+                            @Override public boolean isActive(InputState inputState) { return checkActive(); }
+                            @Override public boolean isHighlighted(InputState inputState) { return false; }
+                        });
+                        pos++;
+
+                        // Send Gift
+                        buttonPane.addRow();
+                        buttonPane.addButton(0, pos, "SEND GIFT", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
+                            @Override
+                            public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                                if(mouseEvent.pressedLeftMouse()) {
+                                    getState().getController().queueUIAudio("0022_menu_ui - select 2");
+                                    //TODO: Open a dialog to specify credit amount
+                                    FactionMessage msg = new FactionMessage(playerFaction, faction,
+                                        "Gift from " + playerFaction.getName(), "[GIFT:1000]", FactionMessage.MessageType.SEND_GIFT);
+                                    api.network.packets.PacketUtil.sendPacketToServer(
+                                        new videogoose.betterfactions.network.client.SendFactionMessagePacket(msg));
+                                }
+                            }
+                            @Override
+                            public boolean isOccluded() { return !checkActive(); }
+                        }, new GUIActivationHighlightCallback() {
+                            @Override public boolean isVisible(InputState inputState) { return true; }
+                            @Override public boolean isActive(InputState inputState) { return checkActive(); }
+                            @Override public boolean isHighlighted(InputState inputState) { return false; }
+                        });
+                        pos++;
+
+                        // Embargo
+                        if(!faction.getEnemies().contains(playerFaction)) {
+                            buttonPane.addRow();
+                            buttonPane.addButton(0, pos, "EMBARGO", GUIHorizontalArea.HButtonColor.YELLOW, new GUICallback() {
+                                @Override
+                                public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                                    if(mouseEvent.pressedLeftMouse()) {
+                                        getState().getController().queueUIAudio("0022_menu_ui - select 2");
+                                        FactionMessage msg = new FactionMessage(playerFaction, faction,
+                                            playerFaction.getName() + " has embargoed " + faction.getName(),
+                                            "", FactionMessage.MessageType.EMBARGO);
+                                        api.network.packets.PacketUtil.sendPacketToServer(
+                                            new videogoose.betterfactions.network.client.SendFactionMessagePacket(msg));
+                                    }
+                                }
+                                @Override
+                                public boolean isOccluded() { return !checkActive(); }
+                            }, new GUIActivationHighlightCallback() {
+                                @Override public boolean isVisible(InputState inputState) { return true; }
+                                @Override public boolean isActive(InputState inputState) { return checkActive(); }
+                                @Override public boolean isHighlighted(InputState inputState) { return false; }
+                            });
+                            pos++;
+                        }
+
+                        // Ban Diplomats
+                        buttonPane.addRow();
+                        buttonPane.addButton(0, pos, "BAN DIPLOMATS", GUIHorizontalArea.HButtonColor.RED, new GUICallback() {
+                            @Override
+                            public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                                if(mouseEvent.pressedLeftMouse()) {
+                                    getState().getController().queueUIAudio("0022_menu_ui - select 2");
+                                    FactionMessage msg = new FactionMessage(playerFaction, faction,
+                                        playerFaction.getName() + " banned diplomats from " + faction.getName(),
+                                        "", FactionMessage.MessageType.BAN_DIPLOMATS);
+                                    api.network.packets.PacketUtil.sendPacketToServer(
+                                        new videogoose.betterfactions.network.client.SendFactionMessagePacket(msg));
+                                }
+                            }
+                            @Override
+                            public boolean isOccluded() { return !checkActive(); }
+                        }, new GUIActivationHighlightCallback() {
+                            @Override public boolean isVisible(InputState inputState) { return true; }
+                            @Override public boolean isActive(InputState inputState) { return checkActive(); }
+                            @Override public boolean isHighlighted(InputState inputState) { return false; }
+                        });
+                        pos++;
+                    }
+
                     if(player.hasPermission("diplomacy.war")) {
                         if(!faction.getFriends().contains(player.getFactionData().getFaction())) {
                             if(faction.getEnemies().contains(player.getFactionData().getFaction())) {

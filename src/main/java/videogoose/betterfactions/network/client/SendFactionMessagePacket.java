@@ -92,6 +92,13 @@ public class SendFactionMessagePacket extends Packet {
             case DEMAND_CONCESSION -> processDemand(from, to);
             case COUNTER_OFFER -> processCounterOffer(from, to);
             case GUARANTEE_INDEPENDENCE -> processGuarantee(from, to);
+            case CANCEL_GUARANTEE -> processBreakGuarantee(from, to);
+            case IMPROVE_RELATIONS -> processImproveRelations(from, to);
+            case DECREASE_RELATIONS -> processDecreaseRelations(from, to);
+            case INSULT -> processInsult(from, to);
+            case SEND_GIFT -> processGift(from, to);
+            case EMBARGO -> processEmbargo(from, to);
+            case BAN_DIPLOMATS -> processBanDiplomats(from, to);
             default -> processStandardMessage(from, to, type);
         }
     }
@@ -105,6 +112,9 @@ public class SendFactionMessagePacket extends Packet {
             case DEMAND_CONCESSION -> member.hasPermission("diplomacy.demand");
             case OFFER_TRADE, CANCEL_TRADE -> member.hasPermission("trade.offer");
             case FEDERATION_INVITE, FEDERATION_REQUEST -> member.hasPermission("federation.invite");
+            case IMPROVE_RELATIONS, DECREASE_RELATIONS, INSULT, EMBARGO, CANCEL_EMBARGO, BAN_DIPLOMATS -> member.hasPermission("diplomacy.[ANY]");
+            case GUARANTEE_INDEPENDENCE, CANCEL_GUARANTEE -> member.hasPermission("diplomacy.[ANY]");
+            case SEND_GIFT -> member.hasPermission("diplomacy.[ANY]");
             default -> true; // General messages don't need special permissions
         };
     }
@@ -227,6 +237,105 @@ public class SendFactionMessagePacket extends Packet {
         // Fire diplomacy action
         FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.PEACE_OFFER);
         BetterFactions.getInstance().logInfo(from.getName() + " offered peace to " + to.getName());
+    }
+
+    private void processBreakGuarantee(Faction from, Faction to) {
+        FactionMessage msg = new FactionMessage(from, to,
+            from.getName() + " revoked their guarantee of your independence",
+            message, FactionMessage.MessageType.CANCEL_GUARANTEE);
+        FactionManager.getFactionData(to).addMessage(msg);
+        FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.BREAK_GUARANTEE);
+        BetterFactions.getInstance().logInfo(from.getName() + " broke guarantee of " + to.getName());
+    }
+
+    private void processImproveRelations(Faction from, Faction to) {
+        // Check if the target faction has banned our diplomats
+        var diplomacy = FactionDiplomacyManager.getDiplomacy(to.getIdFaction());
+        var entity = diplomacy.entities.get((long) from.getIdFaction());
+        if (entity != null && entity.hasActiveAction(FactionDiplomacyAction.DiploActionType.BAN_DIPLOMATS)) {
+            BetterFactions.getInstance().logInfo(from.getName() + " tried to improve relations with " + to.getName() + " but diplomats are banned");
+            return;
+        }
+        // Timed modifier: apply IMPROVE_RELATIONS action which adds points per tick
+        FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.IMPROVE_RELATIONS);
+        FactionMessage msg = new FactionMessage(from, to,
+            from.getName() + " is improving relations with you",
+            message, FactionMessage.MessageType.IMPROVE_RELATIONS);
+        FactionManager.getFactionData(to).addMessage(msg);
+        BetterFactions.getInstance().logInfo(from.getName() + " improving relations with " + to.getName());
+    }
+
+    private void processDecreaseRelations(Faction from, Faction to) {
+        FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.DECREASE_RELATIONS);
+        FactionMessage msg = new FactionMessage(from, to,
+            from.getName() + " is actively worsening relations with you",
+            message, FactionMessage.MessageType.DECREASE_RELATIONS);
+        FactionManager.getFactionData(to).addMessage(msg);
+        BetterFactions.getInstance().logInfo(from.getName() + " decreasing relations with " + to.getName());
+    }
+
+    private void processInsult(Faction from, Faction to) {
+        // Insults use the player's custom message text
+        FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.INSULT);
+        String insultTitle = from.getName() + " has insulted " + to.getName();
+        FactionMessage msg = new FactionMessage(from, to, insultTitle, message, FactionMessage.MessageType.INSULT);
+        FactionManager.getFactionData(to).addMessage(msg);
+        // Insults grant the insulted faction a rivalry CB
+        CasusBelliManager.addCB(new CasusBelli(CasusBelli.CBType.RIVALRY, to.getIdFaction(), from.getIdFaction()));
+        BetterFactions.getInstance().logInfo(from.getName() + " insulted " + to.getName());
+    }
+
+    private void processGift(Faction from, Faction to) {
+        // Parse credit amount from message metadata
+        int amount = 0;
+        if (message != null && message.startsWith("[GIFT:")) {
+            int end = message.indexOf(']');
+            if (end > 0) {
+                try {
+                    amount = Integer.parseInt(message.substring("[GIFT:".length(), end));
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        if (amount > 0) {
+            // Transfer credits from sender's faction shop to receiver's
+            var fromShop = from.getShop();
+            if (fromShop != null && fromShop.getCredits() >= amount) {
+                fromShop.modCredits(-amount);
+                var toShop = to.getShop();
+                if (toShop != null) toShop.modCredits(amount);
+                FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.SEND_GIFT);
+                String cleanMsg = message.contains("]") ? message.substring(message.indexOf(']') + 1) : "";
+                FactionMessage msg = new FactionMessage(from, to,
+                    from.getName() + " sent you a gift of " + amount + " credits",
+                    cleanMsg, FactionMessage.MessageType.SEND_GIFT);
+                FactionManager.getFactionData(to).addMessage(msg);
+                BetterFactions.getInstance().logInfo(from.getName() + " sent " + amount + " credits to " + to.getName());
+            } else {
+                BetterFactions.getInstance().logWarning(from.getName() + " tried to send gift but insufficient credits");
+            }
+        }
+    }
+
+    private void processBanDiplomats(Faction from, Faction to) {
+        // Ban diplomats: prevents the target from using IMPROVE_RELATIONS on us for a duration
+        // We fire the action on OUR side (from's diplomacy toward to), so when 'to' tries to
+        // improve relations with us, the check finds the active BAN_DIPLOMATS action
+        FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.BAN_DIPLOMATS);
+        FactionMessage msg = new FactionMessage(from, to,
+            from.getName() + " has banned your diplomats",
+            "Your faction's diplomats have been expelled. Improving relations is blocked for a period of time.",
+            FactionMessage.MessageType.BAN_DIPLOMATS);
+        FactionManager.getFactionData(to).addMessage(msg);
+        BetterFactions.getInstance().logInfo(from.getName() + " banned diplomats from " + to.getName());
+    }
+
+    private void processEmbargo(Faction from, Faction to) {
+        FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.EMBARGO);
+        FactionMessage msg = new FactionMessage(from, to,
+            from.getName() + " has placed an embargo on " + to.getName(),
+            message, FactionMessage.MessageType.EMBARGO);
+        FactionManager.getFactionData(to).addMessage(msg);
+        BetterFactions.getInstance().logInfo(from.getName() + " embargoed " + to.getName());
     }
 
     private void processStandardMessage(Faction from, Faction to, FactionMessage.MessageType type) {

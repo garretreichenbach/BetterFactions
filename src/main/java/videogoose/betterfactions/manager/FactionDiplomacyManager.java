@@ -207,6 +207,13 @@ public class FactionDiplomacyManager {
 			case UNJUSTIFIED_WAR -> ConfigManager.actionUnjustifiedWar.getValue();
 			case DECLARE_RIVALRY -> ConfigManager.actionDeclareRivalry.getValue();
 			case GUARANTEE_INDEPENDENCE -> ConfigManager.actionGuaranteeIndependence.getValue();
+			case IMPROVE_RELATIONS -> ConfigManager.actionImproveRelations.getValue();
+			case DECREASE_RELATIONS -> ConfigManager.actionDecreaseRelations.getValue();
+			case INSULT -> ConfigManager.actionInsult.getValue();
+			case SEND_GIFT -> ConfigManager.actionSendGift.getValue();
+			case EMBARGO -> ConfigManager.actionEmbargo.getValue();
+			case BREAK_GUARANTEE -> ConfigManager.actionBreakGuarantee.getValue();
+			case BAN_DIPLOMATS -> ConfigManager.actionBanDiplomats.getValue();
 			default -> 0;
 		};
 	}

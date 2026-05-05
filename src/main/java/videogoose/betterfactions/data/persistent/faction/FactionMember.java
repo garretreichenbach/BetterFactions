@@ -7,13 +7,6 @@ import videogoose.betterfactions.manager.FactionManager;
 
 import java.io.Serializable;
 
-/**
- * FactionMember
- * <Description>
- *
- * @author TheDerpGamer
- * @since 04/15/2021
- */
 public class FactionMember implements Serializable {
 
     public String name;
