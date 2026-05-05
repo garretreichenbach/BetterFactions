@@ -13,6 +13,7 @@ import videogoose.betterfactions.BetterFactions;
 import videogoose.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
 import videogoose.betterfactions.data.persistent.faction.FactionData;
 import videogoose.betterfactions.data.persistent.federation.FactionMessage;
+import videogoose.betterfactions.manager.CasusBelliManager;
 import videogoose.betterfactions.manager.FactionDiplomacyManager;
 import videogoose.betterfactions.manager.FactionManager;
 import videogoose.betterfactions.mixin.CustomRelationType;
@@ -230,7 +231,8 @@ public class ModifyFactionMessagePacket extends Packet {
                 );
                 FactionManager.getFactionData(from).addMessage(reply);
                 BetterFactions.getInstance().logInfo(to.getName() + " rejected demands from " + from.getName());
-                //TODO: Generate REJECTED_DEMAND casus belli for the demanding faction (Phase 3.1)
+                // Grant REJECTED_DEMAND CB to the demanding faction
+                CasusBelliManager.onDemandRejected(from.getIdFaction(), to.getIdFaction());
             }
             case COUNTER_OFFER -> {
                 // Reject counter-offer

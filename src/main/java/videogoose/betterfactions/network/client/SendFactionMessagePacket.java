@@ -10,7 +10,9 @@ import org.schema.game.common.data.player.faction.Faction;
 import videogoose.betterfactions.BetterFactions;
 import org.schema.game.common.data.player.faction.FactionRelationOffer;
 import videogoose.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
+import videogoose.betterfactions.data.diplomacy.war.CasusBelli;
 import videogoose.betterfactions.data.persistent.federation.FactionMessage;
+import videogoose.betterfactions.manager.CasusBelliManager;
 import videogoose.betterfactions.mixin.CustomRelationType;
 import videogoose.betterfactions.data.serializeable.war.WarData;
 import videogoose.betterfactions.data.serializeable.war.WarGoalData;
@@ -89,6 +91,7 @@ public class SendFactionMessagePacket extends Packet {
             case OFFER_PEACE -> processPeaceOffer(from, to);
             case DEMAND_CONCESSION -> processDemand(from, to);
             case COUNTER_OFFER -> processCounterOffer(from, to);
+            case GUARANTEE_INDEPENDENCE -> processGuarantee(from, to);
             default -> processStandardMessage(from, to, type);
         }
     }
@@ -136,12 +139,42 @@ public class SendFactionMessagePacket extends Packet {
         // Fire diplomacy action
         FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.DECLARATION_OF_WAR);
 
+        // Check for casus belli — unjustified wars have consequences
+        boolean hasCB = CasusBelliManager.hasCB(from.getIdFaction(), to.getIdFaction());
+        if (!hasCB) {
+            // Unjustified war: opinion penalty with ALL factions
+            var factionManager = GameCommon.getGameState().getFactionManager();
+            for (Faction faction : factionManager.getFactionCollection()) {
+                if (faction.getIdFaction() != from.getIdFaction() && faction.getIdFaction() != to.getIdFaction()) {
+                    if (faction.isPlayerFaction() || faction.isNPC()) {
+                        FactionDiplomacyManager.forceDiplomacyAction(
+                            from.getIdFaction(), faction.getIdFaction(),
+                            FactionDiplomacyAction.DiploActionType.UNJUSTIFIED_WAR
+                        );
+                    }
+                }
+            }
+            // Grant containment CB to factions with low opinion of the aggressor
+            CasusBelliManager.onUnjustifiedWar(from.getIdFaction(), to.getIdFaction());
+            BetterFactions.getInstance().logInfo(from.getName() + " declared UNJUSTIFIED war on " + to.getName());
+        } else {
+            // Consume the CB
+            for (CasusBelli cb : CasusBelliManager.getAvailableCBs(from.getIdFaction(), to.getIdFaction())) {
+                if (cb.type.unlockedWarGoal == warGoalType) {
+                    CasusBelliManager.removeCB(from.getIdFaction(), to.getIdFaction(), cb.type);
+                    break;
+                }
+            }
+        }
+
         // Send war declaration message to target faction
         String cleanMessage = message != null && message.contains("]") ? message.substring(message.indexOf(']') + 1) : "";
-        FactionMessage warMessage = new FactionMessage(from, to, title, cleanMessage, FactionMessage.MessageType.DECLARE_WAR);
+        String justification = hasCB ? " (Justified)" : " (Unjustified)";
+        FactionMessage warMessage = new FactionMessage(from, to, title + justification, cleanMessage, FactionMessage.MessageType.DECLARE_WAR);
         FactionManager.getFactionData(to).addMessage(warMessage);
 
-        BetterFactions.getInstance().logInfo(from.getName() + " declared war on " + to.getName() + " with goal: " + warGoalType.displayName);
+        BetterFactions.getInstance().logInfo(from.getName() + " declared war on " + to.getName()
+            + " with goal: " + warGoalType.displayName + (hasCB ? " (justified)" : " (UNJUSTIFIED)"));
     }
 
     private void processNonAggressionPact(Faction from, Faction to) {
@@ -157,6 +190,16 @@ public class SendFactionMessagePacket extends Packet {
         FactionManager.getFactionData(to).addMessage(napMessage);
 
         BetterFactions.getInstance().logInfo(from.getName() + " offered non-aggression pact to " + to.getName());
+    }
+
+    private void processGuarantee(Faction from, Faction to) {
+        // Guarantee independence: notify the guaranteed faction
+        FactionMessage guaranteeMsg = new FactionMessage(from, to, title, message, FactionMessage.MessageType.GUARANTEE_INDEPENDENCE);
+        FactionManager.getFactionData(to).addMessage(guaranteeMsg);
+
+        // Fire diplomacy action — positive opinion modifier
+        FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.GUARANTEE_INDEPENDENCE);
+        BetterFactions.getInstance().logInfo(from.getName() + " guaranteed independence of " + to.getName());
     }
 
     private void processCounterOffer(Faction from, Faction to) {

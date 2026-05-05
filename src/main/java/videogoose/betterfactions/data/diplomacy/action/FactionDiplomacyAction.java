@@ -174,6 +174,24 @@ public class FactionDiplomacyAction extends DiplomacyAction {
 			public String getName(Enum anEnum) {
 				return Lng.str("Rejected their demand");
 			}
+		}),
+		UNJUSTIFIED_WAR(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("Declared an unjustified war");
+			}
+		}),
+		DECLARE_RIVALRY(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("Declared us as a rival");
+			}
+		}),
+		GUARANTEE_INDEPENDENCE(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("Guaranteed our independence");
+			}
 		});
 		private final Translatable description;
 

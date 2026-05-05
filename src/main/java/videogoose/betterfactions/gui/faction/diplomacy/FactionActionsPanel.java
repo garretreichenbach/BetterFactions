@@ -421,6 +421,71 @@ public class FactionActionsPanel extends GUIAncor {
                 }
             }
 
+            // Rivalry: show when not allied, not at war, and not already a rival (max 3 rivals)
+            if(player.hasPermission("diplomacy.[ANY]") && faction.getIdFaction() != player.getFactionId()) {
+                if(!faction.getFriends().contains(playerFaction) && !faction.getEnemies().contains(playerFaction)) {
+                    buttonPane.addRow();
+                    buttonPane.addButton(0, pos, "DECLARE RIVAL", GUIHorizontalArea.HButtonColor.PINK, new GUICallback() {
+                        @Override
+                        public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                            if(mouseEvent.pressedLeftMouse()) {
+                                getState().getController().queueUIAudio("0022_menu_ui - select 2");
+                                FactionMessageSendDialog dialog = new FactionMessageSendDialog();
+                                dialog.getInputPanel().createPanel(playerFaction, faction, FactionMessage.MessageType.DECLARE_WAR);
+                                // Repurpose: we'll use a dedicated message type below
+                                FactionMessage rivalMsg = new FactionMessage(playerFaction, faction,
+                                    playerFaction.getName() + " declares " + faction.getName() + " as a rival",
+                                    "[RIVALRY]", FactionMessage.MessageType.MESSAGE);
+                                api.network.packets.PacketUtil.sendPacketToServer(
+                                    new videogoose.betterfactions.network.client.SendFactionMessagePacket(rivalMsg));
+                            }
+                        }
+
+                        @Override
+                        public boolean isOccluded() {
+                            return !checkActive();
+                        }
+                    }, new GUIActivationHighlightCallback() {
+                        @Override
+                        public boolean isVisible(InputState inputState) { return true; }
+                        @Override
+                        public boolean isActive(InputState inputState) { return checkActive(); }
+                        @Override
+                        public boolean isHighlighted(InputState inputState) { return false; }
+                    });
+                    pos ++;
+                }
+
+                // Guarantee Independence: show for weaker factions, not already guaranteed
+                if(!faction.getEnemies().contains(playerFaction)) {
+                    buttonPane.addRow();
+                    buttonPane.addButton(0, pos, "GUARANTEE INDEPENDENCE", GUIHorizontalArea.HButtonColor.GREEN, new GUICallback() {
+                        @Override
+                        public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                            if(mouseEvent.pressedLeftMouse()) {
+                                getState().getController().queueUIAudio("0022_menu_ui - select 2");
+                                FactionMessageSendDialog dialog = new FactionMessageSendDialog();
+                                dialog.getInputPanel().createPanel(playerFaction, faction, FactionMessage.MessageType.GUARANTEE_INDEPENDENCE);
+                                dialog.activate();
+                            }
+                        }
+
+                        @Override
+                        public boolean isOccluded() {
+                            return !checkActive();
+                        }
+                    }, new GUIActivationHighlightCallback() {
+                        @Override
+                        public boolean isVisible(InputState inputState) { return true; }
+                        @Override
+                        public boolean isActive(InputState inputState) { return checkActive(); }
+                        @Override
+                        public boolean isHighlighted(InputState inputState) { return false; }
+                    });
+                    pos ++;
+                }
+            }
+
             if(player.hasPermission("federation.[ANY]") && faction.getIdFaction() != player.getFactionId() && player.getFactionData().getFederationId() != -1) {
 
             }

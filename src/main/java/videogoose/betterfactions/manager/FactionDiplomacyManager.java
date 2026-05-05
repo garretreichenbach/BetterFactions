@@ -172,6 +172,9 @@ public class FactionDiplomacyManager {
 			case FEDERATION_ALLY -> ConfigManager.valuesFederationAlly.getValue();
 			case FEDERATION_ENEMY -> ConfigManager.valuesFederationEnemy.getValue();
 			case HAS_WAR_GOAL -> ConfigManager.valuesHasWarGoal.getValue();
+			case RIVAL -> ConfigManager.valuesRival.getValue();
+			case GUARANTEED_BY -> ConfigManager.valuesGuaranteedBy.getValue();
+			case CONTESTED_CLAIMS -> ConfigManager.valuesContestedClaims.getValue();
 			default -> 0;
 		};
 	}
@@ -201,6 +204,9 @@ public class FactionDiplomacyManager {
 			case SEND_DEMAND -> ConfigManager.actionSendDemand.getValue();
 			case ACCEPT_DEMAND -> ConfigManager.actionAcceptDemand.getValue();
 			case REJECT_DEMAND -> ConfigManager.actionRejectDemand.getValue();
+			case UNJUSTIFIED_WAR -> ConfigManager.actionUnjustifiedWar.getValue();
+			case DECLARE_RIVALRY -> ConfigManager.actionDeclareRivalry.getValue();
+			case GUARANTEE_INDEPENDENCE -> ConfigManager.actionGuaranteeIndependence.getValue();
 			default -> 0;
 		};
 	}

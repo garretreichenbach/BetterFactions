@@ -112,6 +112,22 @@ public class ConfigManager {
 	public static SimpleConfigInt actionSendDemand;
 	public static SimpleConfigInt actionAcceptDemand;
 	public static SimpleConfigInt actionRejectDemand;
+	public static SimpleConfigInt actionUnjustifiedWar;
+	public static SimpleConfigInt actionDeclareRivalry;
+	public static SimpleConfigInt actionGuaranteeIndependence;
+
+	// Casus belli settings
+	public static SimpleConfigInt containmentOpinionThreshold;
+
+	// War exhaustion
+	public static SimpleConfigBool warExhaustionEnabled;
+	public static SimpleConfigInt warExhaustionPerDay;
+	public static SimpleConfigInt warExhaustionMaxForStatusQuo;
+
+	// Status values for new types
+	public static SimpleConfigInt valuesRival;
+	public static SimpleConfigInt valuesGuaranteedBy;
+	public static SimpleConfigInt valuesContestedClaims;
 
 	public static void initialize(BetterFactions instance) {
 		initMainConfig(instance);
@@ -222,6 +238,22 @@ public class ConfigManager {
 		actionSendDemand = new SimpleConfigInt(diplomacyConfig, "action-values-send-demand", -15);
 		actionAcceptDemand = new SimpleConfigInt(diplomacyConfig, "action-values-accept-demand", 10);
 		actionRejectDemand = new SimpleConfigInt(diplomacyConfig, "action-values-reject-demand", -25);
+		actionUnjustifiedWar = new SimpleConfigInt(diplomacyConfig, "action-values-unjustified-war", -100);
+		actionDeclareRivalry = new SimpleConfigInt(diplomacyConfig, "action-values-declare-rivalry", -30);
+		actionGuaranteeIndependence = new SimpleConfigInt(diplomacyConfig, "action-values-guarantee-independence", 40);
+
+		// Casus belli
+		containmentOpinionThreshold = new SimpleConfigInt(diplomacyConfig, "containment-opinion-threshold", -50);
+
+		// War exhaustion
+		warExhaustionEnabled = new SimpleConfigBool(diplomacyConfig, "war-exhaustion-enabled", false);
+		warExhaustionPerDay = new SimpleConfigInt(diplomacyConfig, "war-exhaustion-per-day", 2);
+		warExhaustionMaxForStatusQuo = new SimpleConfigInt(diplomacyConfig, "war-exhaustion-forced-peace", 100);
+
+		// New status values
+		valuesRival = new SimpleConfigInt(diplomacyConfig, "diplomacy-values-rival", -50);
+		valuesGuaranteedBy = new SimpleConfigInt(diplomacyConfig, "diplomacy-values-guaranteed-by", 30);
+		valuesContestedClaims = new SimpleConfigInt(diplomacyConfig, "diplomacy-values-contested-claims", -25);
 
 		diplomacyConfig.readWriteFields();
 	}

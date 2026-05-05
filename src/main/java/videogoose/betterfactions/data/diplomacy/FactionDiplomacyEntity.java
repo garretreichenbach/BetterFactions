@@ -634,6 +634,17 @@ public class FactionDiplomacyEntity implements LogInterface {
 				yield (diplomacyAction == null || diplomacyAction.counter < 1) ? 1 : 0;
 			}
 			case POWER -> 0;
+			case RIVAL -> {
+				// Rival status is set manually, not calculated — return 1 if exists, 0 if not
+				yield existsStatusModifier(DiploStatusType.RIVAL) ? 1 : 0;
+			}
+			case GUARANTEED_BY -> {
+				yield existsStatusModifier(DiploStatusType.GUARANTEED_BY) ? 1 : 0;
+			}
+			case CONTESTED_CLAIMS -> {
+				List<Integer> contesting = videogoose.betterfactions.manager.ClaimsManager.getContestingFactions(getFaction().getIdFaction());
+				yield contesting.contains((int) dbId) ? 1 : 0;
+			}
 			default -> 0;
 		};
 	}
@@ -1114,6 +1125,24 @@ public class FactionDiplomacyEntity implements LogInterface {
 			@Override
 			public String getName(Enum anEnum) {
 				return Lng.str("We have a truce with them");
+			}
+		}),
+		RIVAL(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("They are our rival");
+			}
+		}),
+		GUARANTEED_BY(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("We guarantee their independence");
+			}
+		}),
+		CONTESTED_CLAIMS(new Translatable() {
+			@Override
+			public String getName(Enum anEnum) {
+				return Lng.str("We have contested territorial claims");
 			}
 		});
 
