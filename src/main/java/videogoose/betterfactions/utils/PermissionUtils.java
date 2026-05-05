@@ -16,7 +16,10 @@ public class PermissionUtils {
             "entity.ship.[ENTITY_TAG].activate.[ELEMENT_TAG]", "entity.station.[ENTITY_TAG].activate.[ELEMENT_TAG]",
             "entity.ship.[ENTITY_TAG].edit", "entity.station.[ENTITY_TAG].edit",
             "entity.ship.[ENTITY_TAG].dock", "entity.ship.[ENTITY_TAG].undock", "entity.ship.[ENTITY_TAG].pilot",
-            "manage.members.ranks", "manage.members.kick", "manage.members.invite", "manage.fp", "manage.info"
+            "manage.members.ranks", "manage.members.kick", "manage.members.invite", "manage.fp", "manage.info",
+            "diplomacy.ally", "diplomacy.alliance", "diplomacy.war", "diplomacy.nap", "diplomacy.demand", "diplomacy.claims",
+            "federation.create", "federation.invite", "federation.manage",
+            "trade.offer", "trade.cancel"
     };
 
     public static ArrayList<String> getSubPermissions(String permission) {

@@ -1,12 +1,20 @@
 package videogoose.betterfactions.network.client;
 
 import api.common.GameCommon;
+import api.mod.config.PersistentObjectUtil;
 import api.network.Packet;
 import api.network.PacketReadBuffer;
 import api.network.PacketWriteBuffer;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
+import videogoose.betterfactions.BetterFactions;
+import org.schema.game.common.data.player.faction.FactionRelationOffer;
+import videogoose.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
 import videogoose.betterfactions.data.persistent.federation.FactionMessage;
+import videogoose.betterfactions.mixin.CustomRelationType;
+import videogoose.betterfactions.data.serializeable.war.WarData;
+import videogoose.betterfactions.data.serializeable.war.WarGoalData;
+import videogoose.betterfactions.manager.FactionDiplomacyManager;
 import videogoose.betterfactions.manager.FactionManager;
 import videogoose.betterfactions.utils.FactionMessageUtils;
 
@@ -14,10 +22,7 @@ import java.io.IOException;
 
 /**
  * Sends a Faction Message to server.
- * <p>[CLIENT] -> [SERVER]<p/>
- *
- * @author TheDerpGamer
- * @version 1.0 - [09/21/2021]
+ * <p>[CLIENT] -> [SERVER]</p>
  */
 public class SendFactionMessagePacket extends Packet {
 
@@ -27,9 +32,7 @@ public class SendFactionMessagePacket extends Packet {
     private String message;
     private String messageType;
 
-    public SendFactionMessagePacket() {
-
-    }
+    public SendFactionMessagePacket() {}
 
     public SendFactionMessagePacket(FactionMessage factionMessage) {
         fromId = factionMessage.fromId;
@@ -58,20 +61,108 @@ public class SendFactionMessagePacket extends Packet {
     }
 
     @Override
-    public void processPacketOnClient() {
-
-    }
+    public void processPacketOnClient() {}
 
     @Override
     public void processPacketOnServer(PlayerState playerState) {
         Faction from = GameCommon.getGameState().getFactionManager().getFaction(fromId);
         Faction to = GameCommon.getGameState().getFactionManager().getFaction(toId);
-        if(org.schema.game.common.data.player.faction.FactionManager.isNPCFactionOrPirateOrTrader(toId)) {
-            String response = FactionMessageUtils.getResponseMessage(FactionMessage.MessageType.valueOf(messageType), to, from);
+        if (from == null || to == null) return;
+
+        // Validate sender belongs to the from faction
+        if (playerState.getFactionId() != fromId) {
+            BetterFactions.getInstance().logWarning("Player " + playerState.getName() + " tried to send diplomatic message for faction " + fromId + " but belongs to " + playerState.getFactionId());
+            return;
+        }
+
+        // Check faction permissions
+        var member = FactionManager.getPlayerFactionMember(playerState.getName());
+        FactionMessage.MessageType type = FactionMessage.MessageType.valueOf(messageType);
+        if (member != null && !hasPermissionForType(member, type)) {
+            BetterFactions.getInstance().logWarning("Player " + playerState.getName() + " lacks permission for " + type.name());
+            return;
+        }
+
+        switch (type) {
+            case DECLARE_WAR -> processWarDeclaration(from, to);
+            case NON_AGGRESSION_PACT -> processNonAggressionPact(from, to);
+            default -> processStandardMessage(from, to, type);
+        }
+    }
+
+    private boolean hasPermissionForType(videogoose.betterfactions.data.persistent.faction.FactionMember member, FactionMessage.MessageType type) {
+        return switch (type) {
+            case DECLARE_WAR -> member.hasPermission("diplomacy.war");
+            case ALLIANCE_OFFER, ALLIANCE_BREAK -> member.hasPermission("diplomacy.alliance");
+            case NON_AGGRESSION_PACT, CANCEL_NON_AGGRESSION_PACT -> member.hasPermission("diplomacy.nap");
+            case OFFER_PEACE -> member.hasPermission("diplomacy.war");
+            case DEMAND_CONCESSION -> member.hasPermission("diplomacy.demand");
+            case OFFER_TRADE, CANCEL_TRADE -> member.hasPermission("trade.offer");
+            case FEDERATION_INVITE, FEDERATION_REQUEST -> member.hasPermission("federation.invite");
+            default -> true; // General messages don't need special permissions
+        };
+    }
+
+    private void processWarDeclaration(Faction from, Faction to) {
+        // Parse war goal from message metadata
+        WarGoalData.WarGoalType warGoalType = WarGoalData.WarGoalType.SHOW_SUPERIORITY;
+        if (message != null && message.startsWith("[WAR_GOAL:")) {
+            int end = message.indexOf(']');
+            if (end > 0) {
+                String goalName = message.substring("[WAR_GOAL:".length(), end);
+                try {
+                    warGoalType = WarGoalData.WarGoalType.valueOf(goalName);
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+
+        // Declare war via game's faction system
+        from.declareWarAgainstEntity(to.getIdFaction());
+
+        // Create war data
+        WarData warData = new WarData(from.getName() + " vs " + to.getName());
+        WarGoalData attackerGoal = new WarGoalData(warGoalType, from.getIdFaction(), to.getIdFaction());
+        WarGoalData defenderGoal = new WarGoalData(WarGoalData.WarGoalType.DEFEND_SELF, to.getIdFaction(), from.getIdFaction());
+        warData.addAttacker(from.getIdFaction(), attackerGoal);
+        warData.addDefender(to.getIdFaction(), defenderGoal);
+
+        // Persist war data
+        PersistentObjectUtil.addObject(BetterFactions.getInstance().getSkeleton(), warData);
+        PersistentObjectUtil.save(BetterFactions.getInstance().getSkeleton());
+
+        // Fire diplomacy action
+        FactionDiplomacyManager.forceDiplomacyAction(from.getIdFaction(), to.getIdFaction(), FactionDiplomacyAction.DiploActionType.DECLARATION_OF_WAR);
+
+        // Send war declaration message to target faction
+        String cleanMessage = message != null && message.contains("]") ? message.substring(message.indexOf(']') + 1) : "";
+        FactionMessage warMessage = new FactionMessage(from, to, title, cleanMessage, FactionMessage.MessageType.DECLARE_WAR);
+        FactionManager.getFactionData(to).addMessage(warMessage);
+
+        BetterFactions.getInstance().logInfo(from.getName() + " declared war on " + to.getName() + " with goal: " + warGoalType.displayName);
+    }
+
+    private void processNonAggressionPact(Faction from, Faction to) {
+        // Create a faction relation offer for NAP
+        FactionRelationOffer offer = new FactionRelationOffer();
+        offer.a = from.getIdFaction();
+        offer.b = to.getIdFaction();
+        offer.rel = CustomRelationType.NON_AGGRESSION;
+        GameCommon.getGameState().getFactionManager().getRelationOffersToAdd().add(offer);
+
+        // Send message to target faction
+        FactionMessage napMessage = new FactionMessage(from, to, title, message, FactionMessage.MessageType.NON_AGGRESSION_PACT);
+        FactionManager.getFactionData(to).addMessage(napMessage);
+
+        BetterFactions.getInstance().logInfo(from.getName() + " offered non-aggression pact to " + to.getName());
+    }
+
+    private void processStandardMessage(Faction from, Faction to, FactionMessage.MessageType type) {
+        if (org.schema.game.common.data.player.faction.FactionManager.isNPCFactionOrPirateOrTrader(toId)) {
+            String response = FactionMessageUtils.getResponseMessage(type, to, from);
             FactionMessage factionMessage = new FactionMessage(to, from, "Reply from " + to.getName(), response, FactionMessage.MessageType.REPLY);
             FactionManager.getFactionData(from).addMessage(factionMessage);
         } else {
-            FactionMessage factionMessage = new FactionMessage(from, to, title, message, FactionMessage.MessageType.valueOf(messageType));
+            FactionMessage factionMessage = new FactionMessage(from, to, title, message, type);
             FactionManager.getFactionData(to).addMessage(factionMessage);
         }
     }

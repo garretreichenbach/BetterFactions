@@ -3,11 +3,10 @@ package videogoose.betterfactions.manager.cache;
 import api.mod.config.PersistentObjectUtil;
 import api.utils.other.HashList;
 import videogoose.betterfactions.BetterFactions;
-import videogoose.betterfactions.data.diplomacy.war.WarData;
+import videogoose.betterfactions.data.serializeable.war.WarData;
 import videogoose.betterfactions.manager.UpdateManager;
 
 import java.util.ArrayList;
-
 
 public class ServerCache implements CacheInterface {
 

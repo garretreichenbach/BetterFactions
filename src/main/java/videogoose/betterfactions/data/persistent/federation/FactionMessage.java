@@ -15,6 +15,8 @@ public class FactionMessage {
     public static final int MARK_READ = 0;
     public static final int MARK_UNREAD = 1;
     public static final int DELETE = 2;
+    public static final int ACCEPT = 3;
+    public static final int DENY = 4;
 
     public enum MessageCategory {ALL, GENERAL, ALLIANCE, FEDERATION, DIPLOMATIC, WAR, TRADE, READ, UNREAD}
 

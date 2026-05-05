@@ -1,11 +1,11 @@
 package videogoose.betterfactions.utils;
 
 import org.schema.game.common.data.player.faction.Faction;
-import videogoose.betterfactions.data.diplomacy.war.WarData;
-import videogoose.betterfactions.data.diplomacy.war.wargoal.WarGoalData;
+import videogoose.betterfactions.data.serializeable.war.WarData;
+import videogoose.betterfactions.data.serializeable.war.WarGoalData;
 import videogoose.betterfactions.manager.WarManager;
 
-import java.util.ArrayList;
+import java.util.List;
 
 
 public class NPCFactionUtils {
@@ -39,12 +39,12 @@ public class NPCFactionUtils {
 			} else {
 				//Otherwise, check the current peace offer demands and how many of them meet the demands put forth by the NPC faction.
 				//Each demand is worth a certain amount of point, and if the total amount of points in the peace offer is at least half of the points in the NPC faction's demands, the NPC faction will accept the peace offer.
-				ArrayList<WarGoalData> npcGoals = warData.getGoals(to);
+				List<WarGoalData> npcGoals = warData.getGoals(to);
 				float npcPoints = 0.0f;
-				for(WarGoalData npcGoal : npcGoals) npcPoints += npcGoal.getScore();
-				ArrayList<WarGoalData> demanded = warData.getGoals(from);
+				for(WarGoalData npcGoal : npcGoals) npcPoints += npcGoal.score;
+				List<WarGoalData> demanded = warData.getGoals(from);
 				float demandedPoints = 0.0f;
-				for(WarGoalData demand : demanded) demandedPoints += demand.getScore();
+				for(WarGoalData demand : demanded) demandedPoints += demand.score;
 				float acceptance = demandedPoints / npcPoints;
 				boolean willing = acceptance >= 0.5f;
 				if(willing) reason.append("Will Accept:\n + Most of ").append(to.getName()).append("'s demands are met.\n");

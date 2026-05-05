@@ -10,8 +10,8 @@ import videogoose.betterfactions.BetterFactions;
 import videogoose.betterfactions.data.diplomacy.FactionDiplomacy;
 import videogoose.betterfactions.data.diplomacy.FactionDiplomacyEntity;
 import videogoose.betterfactions.data.diplomacy.modifier.FactionDiplomacyStaticMod;
-import videogoose.betterfactions.data.diplomacy.war.WarData;
-import videogoose.betterfactions.data.diplomacy.war.wargoal.WarGoalData;
+import videogoose.betterfactions.data.serializeable.war.WarData;
+import videogoose.betterfactions.data.serializeable.war.WarGoalData;
 import videogoose.betterfactions.manager.FactionDiplomacyManager;
 
 import java.util.ArrayList;
@@ -36,7 +36,7 @@ public class FactionUtils {
 		ArrayList<WarGoalData> warGoals = new ArrayList<>();
 		for(Object obj : PersistentObjectUtil.getObjects(getInstance(), WarGoalData.class)) {
 			WarGoalData warGoal = (WarGoalData) obj;
-			if(warGoal.getFrom().getIdFaction() == from.getIdFaction() && warGoal.getTo().getIdFaction() == to.getIdFaction()) warGoals.add(warGoal);
+			if(warGoal.fromFactionId == from.getIdFaction() && warGoal.toFactionId == to.getIdFaction()) warGoals.add(warGoal);
 		}
 		return warGoals;
 	}
@@ -45,7 +45,10 @@ public class FactionUtils {
 		HashList<Faction, WarGoalData> warGoals = new HashList<>();
 		for(Object obj : PersistentObjectUtil.getObjects(getInstance(), WarGoalData.class)) {
 			WarGoalData warGoal = (WarGoalData) obj;
-			if(warGoal.getFrom().getIdFaction() == from.getIdFaction()) warGoals.add(warGoal.getTo(), warGoal);
+			if(warGoal.fromFactionId == from.getIdFaction()) {
+				Faction toFaction = GameCommon.getGameState().getFactionManager().getFaction(warGoal.toFactionId);
+				if(toFaction != null) warGoals.add(toFaction, warGoal);
+			}
 		}
 		return warGoals;
 	}

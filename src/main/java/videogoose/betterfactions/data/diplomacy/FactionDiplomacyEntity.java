@@ -29,7 +29,7 @@ import videogoose.betterfactions.BetterFactions;
 import videogoose.betterfactions.data.diplomacy.action.FactionDiplomacyAction;
 import videogoose.betterfactions.data.diplomacy.modifier.FactionDiplomacyStaticMod;
 import videogoose.betterfactions.data.diplomacy.modifier.FactionDiplomacyTurnMod;
-import videogoose.betterfactions.data.diplomacy.war.WarData;
+import videogoose.betterfactions.data.serializeable.war.WarData;
 import videogoose.betterfactions.manager.ConfigManager;
 import videogoose.betterfactions.manager.FactionDiplomacyManager;
 import videogoose.betterfactions.utils.FactionUtils;

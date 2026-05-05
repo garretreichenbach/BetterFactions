@@ -20,6 +20,7 @@ import videogoose.betterfactions.data.persistent.faction.FactionMember;
 import videogoose.betterfactions.data.persistent.faction.FactionRank;
 import videogoose.betterfactions.data.persistent.federation.FactionMessage;
 import videogoose.betterfactions.gui.faction.diplomacy.war.PeaceDealDialog;
+import videogoose.betterfactions.gui.faction.diplomacy.war.WarDeclarationDialog;
 import videogoose.betterfactions.manager.FactionManager;
 
 import javax.annotation.Nullable;
@@ -264,6 +265,46 @@ public class FactionActionsPanel extends GUIAncor {
                         }
                     }
 
+                    // Non-Aggression Pact: show when neutral (not allied, not at war)
+                    if(player.hasPermission("diplomacy.nap")) {
+                        if(!faction.getFriends().contains(playerFaction)
+                            && !faction.getEnemies().contains(playerFaction)) {
+                            buttonPane.addRow();
+                            buttonPane.addButton(0, pos, "OFFER NON-AGGRESSION PACT", GUIHorizontalArea.HButtonColor.BLUE, new GUICallback() {
+                                @Override
+                                public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
+                                    if(mouseEvent.pressedLeftMouse()) {
+                                        getState().getController().queueUIAudio("0022_menu_ui - select 2");
+                                        FactionMessageSendDialog dialog = new FactionMessageSendDialog();
+                                        dialog.getInputPanel().createPanel(playerFaction, faction, FactionMessage.MessageType.NON_AGGRESSION_PACT);
+                                        dialog.activate();
+                                    }
+                                }
+
+                                @Override
+                                public boolean isOccluded() {
+                                    return !checkActive();
+                                }
+                            }, new GUIActivationHighlightCallback() {
+                                @Override
+                                public boolean isVisible(InputState inputState) {
+                                    return true;
+                                }
+
+                                @Override
+                                public boolean isActive(InputState inputState) {
+                                    return checkActive();
+                                }
+
+                                @Override
+                                public boolean isHighlighted(InputState inputState) {
+                                    return false;
+                                }
+                            });
+                            pos ++;
+                        }
+                    }
+
                     if(player.hasPermission("diplomacy.war")) {
                         if(!faction.getFriends().contains(player.getFactionData().getFaction())) {
                             if(faction.getEnemies().contains(player.getFactionData().getFaction())) {
@@ -308,7 +349,9 @@ public class FactionActionsPanel extends GUIAncor {
                                     public void callback(GUIElement guiElement, MouseEvent mouseEvent) {
                                         if(mouseEvent.pressedLeftMouse()) {
                                             getState().getController().queueUIAudio("0022_menu_ui - select 2");
-                                            //Todo: War goal panel
+                                            WarDeclarationDialog dialog = new WarDeclarationDialog();
+                                            dialog.setFactions(player.getFaction(), faction);
+                                            dialog.activate();
                                         }
                                     }
 
