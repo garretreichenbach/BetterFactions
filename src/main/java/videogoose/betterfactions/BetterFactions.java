@@ -6,13 +6,9 @@ import api.network.packets.PacketUtil;
 import org.schema.game.common.data.player.faction.FactionRelation;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.common.language.Translatable;
+import org.schema.schine.resource.ResourceLoader;
 import videogoose.betterfactions.data.commands.ForceDiploCommand;
-import videogoose.betterfactions.manager.ConfigManager;
-import videogoose.betterfactions.manager.EventManager;
-import videogoose.betterfactions.manager.CasusBelliManager;
-import videogoose.betterfactions.manager.ClaimsManager;
-import videogoose.betterfactions.manager.FactionDiplomacyManager;
-import videogoose.betterfactions.manager.WarManager;
+import videogoose.betterfactions.manager.*;
 import videogoose.betterfactions.network.ClientUpdatePacket;
 import videogoose.betterfactions.network.FactionDiplomacyPacket;
 import videogoose.betterfactions.utils.ReflectionUtils;
@@ -43,6 +39,17 @@ public class BetterFactions extends StarMod {
 		WarManager.initialize();
 		registerCommands();
 		registerPackets();
+	}
+
+	@Override
+	public void onResourceLoad(ResourceLoader loader) {
+		ResourceManager.loadResources(loader);
+	}
+
+	public void logDebug(String message) {
+		if(ConfigManager.debugMode.getValue()) {
+			logMessage("[DEBUG]:" + message);
+		}
 	}
 
 	/**
