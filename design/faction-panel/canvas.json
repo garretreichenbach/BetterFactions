@@ -1,0 +1,177 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Proposal"
+    },
+    {
+      "id": "page-2",
+      "name": "Other directions"
+    },
+    {
+      "id": "page-3",
+      "name": "Second pass"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "title": "Today — OPTIONS",
+      "page": "page-1",
+      "x": 0,
+      "y": 0,
+      "w": 960,
+      "h": 620
+    },
+    {
+      "file": "Main.dc.html",
+      "title": "Proposed — OVERVIEW",
+      "page": "page-1",
+      "x": 1060,
+      "y": 0,
+      "w": 960,
+      "h": 620
+    },
+    {
+      "file": "Members.dc.html",
+      "title": "Proposed — MEMBERS",
+      "page": "page-1",
+      "x": 0,
+      "y": 800,
+      "w": 960,
+      "h": 620
+    },
+    {
+      "file": "Settings.dc.html",
+      "title": "Proposed — SETTINGS",
+      "page": "page-1",
+      "x": 1060,
+      "y": 800,
+      "w": 960,
+      "h": 620
+    },
+    {
+      "file": "DirectionB.dc.html",
+      "title": "Direction B — two tabs",
+      "page": "page-2",
+      "x": 0,
+      "y": 0,
+      "w": 960,
+      "h": 620
+    },
+    {
+      "file": "DirectionC.dc.html",
+      "title": "Direction C — minimal",
+      "page": "page-2",
+      "x": 1060,
+      "y": 0,
+      "w": 960,
+      "h": 620
+    },
+    {
+      "file": "Assets.dc.html",
+      "title": "Assets — routing",
+      "page": "page-3",
+      "x": 0,
+      "y": 0,
+      "w": 960,
+      "h": 620
+    },
+    {
+      "file": "Federation.dc.html",
+      "title": "Federation — bloc",
+      "page": "page-3",
+      "x": 1060,
+      "y": 0,
+      "w": 960,
+      "h": 620
+    },
+    {
+      "file": "Ranks.dc.html",
+      "title": "RANKS — built",
+      "page": "page-1",
+      "x": 0,
+      "y": 1700,
+      "w": 800,
+      "h": 620
+    }
+  ],
+  "annotations": [
+    {
+      "id": "note-audit",
+      "page": "page-1",
+      "x": 0,
+      "y": -230,
+      "w": 960,
+      "text": "TODAY — five tabs, and OPTIONS is the junk drawer.\n\nThirteen identical blue rectangles hold membership actions, three inbox queues with their counts baked into the button labels, identity editing, governance, policy toggles and one destructive reset. Nothing about a row tells you which kind it is.\n\nNEWS and FACTION LOG are the same feed at two scopes. Your faction's identity is read on FACTION LOG and edited on OPTIONS. LIST was commented out when DIPLOMACY grew its own faction list — the consolidation already started by accident."
+    },
+    {
+      "id": "note-main",
+      "page": "page-1",
+      "x": 1060,
+      "y": -230,
+      "w": 960,
+      "text": "PROPOSED — OVERVIEW. Built and deployed.\n\nNEWS and FACTION LOG collapsed into one feed with a scope switch. Both lists already carried a source filter, so this added one control and removed a tab.\n\nIdentity sits beside the feed, so what you read about your faction is where you act on it. Power draws its three inputs, because the number is on an arbitrary scale and says nothing on its own.\n\nThe queues became a strip that is only there when something is waiting. 'Invites you sent' did not make the cut — it is waiting on somebody else, so it belongs beside the member list.\n\nTHE COLOURED PIP ON EVERY FEED ROW IS BUILT, and it is a ScrollableTableList feature rather than a faction one: Row.getAccentColor() returns null by default, so every existing table is unchanged and costs nothing, and a list that mixes kinds of thing overrides it. Two strips per row rather than one shared - adaptWidths insets the normal background by two pixels and leaves the highlight background at the row edge, so a single strip attached to both would jump sideways the moment you hovered.\n\nThe faction feed had no type to colour by. FactionNewsPost.op turned out to be the AUTHOR - a player name, or a stand-in like 'Faction Point Reporter' - and permission is 0 everywhere, so a category is new state: six of them (general, diplomacy, war, territory, economy, alert), set at all nineteen places a post is created, persisted by NAME rather than ordinal so this one enum can be reordered without corrupting saves the way every other faction enum can. Posts written before it read as general, which is also what they look like: a row with no colour claimed for it.\n\nThe galaxy half of the feed already had a type - NPCFactionNewsEventType - so it needed only a mapping, and it had to be the SAME six categories: the two lists sit behind one scope switch, so a colour that meant different things on either side would mean nothing on both.\n\nNot done, and worth considering: a category dropdown filter. The list already carries a text filter on the left and a PLAYER/NPC dropdown on the right, and those two share one row - a third control needs a second filter row.\n\nRECONCILED with what shipped, so the picture and the panel agree:\n\n- The power key is real. Three coloured segments over three plain numbers connected nothing to nothing; each term now carries the bar's own swatch, and the bar and the key read one set of colour constants so they cannot drift apart. The key says what a term is made of - '6 systems claimed' - rather than its weighted value, because the weight is what the bar's proportions already show and the count is the part a player can act on.\n- 'Ships are not counted yet' is on the card. The code claimed the bar made the missing military term 'visible by its absence'; absence is not visible, and a three-segment bar does not look like a four-segment bar with one missing. Now it says so.\n- Points surplus is green or red by sign instead of parenthesised. Gaining or bleeding is the part of that row anybody reads.\n- The scope switch says OUR LOG / GALAXY. It shipped as US / OTHERS, which named the subject rather than the thing you are about to read.\n- Corrected in this artboard rather than in the code: the tab strip was drawn before ASSETS and FEDERATION got their placeholders, and the 'Invites you sent' chip was still on the queue strip after the decision to move it beside the member list.\n\nStill only a reserved slot: the emblem box. It needs the emblem model, which is phase 6.\n\nDropped on the way: showing the strongest other faction's power beside your own. The key and the breakdown already give the number something to mean; a leaderboard on the card you open to read your own faction is a different screen's job."
+    },
+    {
+      "id": "note-members",
+      "page": "page-1",
+      "x": 0,
+      "y": 660,
+      "w": 960,
+      "text": "MEMBERS — built and deployed.\n\nA bar above the list carries INVITE PLAYER and RANKS, both moved off the options grid because both are about the people in the list beside them. Ranks is a shortcut — the ladder is defined under governance with the government type that names its rungs — but this is where you are standing when you want it. INVITES SENT sits on the right, appearing only when there are any.\n\nCORRECTION to the first version of this mock, which drew five action buttons on every row and a footer bar to replace them: the list never had per-row buttons. They are already in an expansion drawer you open by clicking a member, the same idiom both news lists use. Swapping that for a footer bar would have made this tab the odd one out for no gain, so the drawer stays and the mock now shows what is actually there.\n\nAlso already better than assumed: PROMOTE, DEMOTE and KICK each hide themselves when your rank cannot use them, via a draw() override. The 'permission denied' popups behind them were unreachable for the permission cases. What survives is the state cases — 'you cannot promote any further' — which is right: you should never see a control your rank cannot use, but you should be told when one simply does not apply yet.\n\nWhat did change in the table: the POSITION column held raw last-seen coordinates, which duplicated what NAV TO does and pushed the actual last-seen TIME into the drawer. Time is what a roster is read for, so it takes the column (sorted on lastSeenTime, one unit: '18 min ago', '2 d ago') and the coordinates join the exact stamp on the drawer line, next to the button that acts on them.\n\nTwo latent NPEs fixed in passing: three permission lookups dereferenced getMembersUID().get(ownName) with no null check, and the kick handler logged factionPermission.toString() two lines above its own null check. Null is reachable — it is what a member kicked while the panel is open sees for a frame.\n\nRECONCILED with what shipped:\n\n- The status dot became the row's own edge strip - the same ScrollableTableList.getAccentColor() hook the overview feed uses. Worth doing that way rather than as a member-list dot: it is the second list to want one, which is the only real test of whether the hook earned its keep, and a roster and a feed now say 'this row is a kind of thing' in the same visual language.\n- Making it work here changed the hook. A news post's category never changes, so the accent was read once at init; a member logs in while you are looking at the list. It is now read every frame and pushed into both strips - which is also why the contract says return a shared constant rather than a new vector.\n- The strip reads PlayerStatusColorPalette, the same four colours the status WORD already used, which killed a duplicated four-way branch in the process: the column and the strip now call one statusColor(), so they cannot drift, and a server restyling that palette in GuiConfig.xml restyles both.\n- Corrected on this board rather than in the code: the last tab is SETTINGS, not OPTIONS. The board was drawn while the old name was still on it."
+    },
+    {
+      "id": "note-settings",
+      "page": "page-1",
+      "x": 1060,
+      "y": 660,
+      "w": 960,
+      "text": "SETTINGS — built and deployed.\n\nEvery row says what the setting does. 'Consider neutrals enemy:' is a label with a trailing colon and no consequence attached; 'our turrets open fire on anyone we have no agreement with' is the same toggle a player can actually reason about.\n\nGOVERNANCE is the new section: government type, the rank ladder, succession, and which decisions get put to a vote. It is the constitutional layer — what kind of polity this is — as opposed to Standing orders, which is what the guns do while nobody is looking.\n\nTwo things it makes visible that are invisible today. Succession: FactionPermission.lastSeenTime and isOverInactiveLimit() already exist and FactionActivityConfig.SetInactiveAfterHours already ships, but nothing consumes them, so an abandoned faction just rots. And voting stays OFF unless switched on — the standing decision is that role permissions gate negotiation, never a quorum somebody did not ask for.\n\nRanks now live here rather than on MEMBERS. It is one dialog and 'who may do what' is governance; MEMBERS keeps a button to it as a shortcut, the same way the faction list keeps a shortcut to the diplomacy tab.\n\nAlso dropped: the 'Name — Locked' row. A row whose only content is that you cannot change it is filler, and the name is already on the tab and the overview.\n\nStill open, and yours to call: today a control your rank cannot use is drawn greyed — isVisible is hardcoded true and isActive carries the permission. Hiding it is cleaner, but it makes a rank's ceiling invisible. The mock hides.\n\nRECONCILED with what shipped:\n\n- GOVERNANCE IS IN, holding the one row that has a model behind it: the rank ladder. Its description is the ladder itself, read top down and live, so a member whose rank may not edit ranks still gets to see what the rungs are - only the button goes. The other three rows stay on this board dimmed, because they are still the design; they are not in the panel, because a row whose only content is that you cannot use it yet is the same filler as the 'Name - Locked' row this tab already dropped.\n- The emblem row went, for that same reason. It was drawn here as a dashed square and a disabled 'Soon' button, which is a row that exists to say nothing has happened. The overview keeps the corner reserved; that costs no row.\n- The map colour swatch is real. The picker is a dialog, so without it the row said a colour existed and then made you open something to find out which one.\n- Individual enemies counts them. 'Players you have marked' told you the row existed; '4 marked' tells you whether to open it.\n- Corrected on this board rather than in the code: leaving the faction disbands it if you are the last MEMBER, not the last founder - which is what the confirmation dialog has always said."
+    },
+    {
+      "id": "note-b",
+      "page": "page-2",
+      "x": 0,
+      "y": -230,
+      "w": 960,
+      "text": "DIRECTION B — two tabs: MY FACTION and GALAXY.\n\nEverything about your own faction becomes sections inside one tab; everything about other factions moves to GALAXY beside diplomacy.\n\nFor: the clearest split in the whole panel is 'us' versus 'them', and this is the only scheme that names it.\n\nAgainst: it is a rewrite rather than a consolidation. The section rail is a new control with no precedent in the game's GUI, DIPLOMACY stops being a tab you can point someone at, and the tab-restore-by-name path in recreateTabs has to be reworked."
+    },
+    {
+      "id": "note-c",
+      "page": "page-2",
+      "x": 1060,
+      "y": -230,
+      "w": 960,
+      "text": "DIRECTION C — keep the five tabs, fix only OPTIONS.\n\nGroup the button grid into four labelled sections, and move the three queues into a title-bar counter that is visible from every tab.\n\nFor: the smallest diff by a long way. No tab is renamed, so the selection-restore-by-name path is untouched, and nothing outside FactionOptionFactionContent moves.\n\nAgainst: NEWS and FACTION LOG stay two tabs for one idea, and your faction's identity is still read in one place and edited in another."
+    },
+    {
+      "id": "note-assets",
+      "page": "page-3",
+      "x": 0,
+      "y": -270,
+      "w": 960,
+      "text": "ASSETS — a routing screen, not a second fleet menu. Built, minus the routing half.\n\nTHE UNRESOLVED PIECE is production while nobody is watching - a route is only worth having if the station at each end does something between deliveries. That is a soft-loading problem and an engine capability rather than an assets feature: it would serve factories, shipyards, mining and NPC stations equally. Out of scope here, but the page should not be designed as though it is solved.\n\nGroundwork that already exists, so soft-loading is not from scratch: Universe.getSector(pos, activate) already separates loading a sector's record from ACTIVATING it, and fleets already move through unloaded sectors by updating a persisted FleetMember position rather than simulating anything. A soft-load tier should extend those two rather than introduce a third notion of 'loaded'.\n\nA fleet IO block is still worth having whichever way that lands: its real job is to be the CONTRACT SURFACE - the thing that declares 'this station offers X, wants Y' so a route has something to bind to.\n\nOpen: a route with no fleet assigned is drawn as a warning rather than hidden. A station quietly starving because nobody was carrying for it is the failure mode worth designing against.\n\nRECONCILED with what shipped:\n\n- HOLDINGS AND FLEETS ARE IN; ROUTING IS NOT. The routing half needs the fleet manager block, so it is a strip at the bottom of the page saying what will live there - the boundary paragraph above, written where somebody will look for it rather than on a board.\n- IT NEEDED NEW WIRE. A station a faction owns exists nowhere on a client until somebody flies to it, so the list is a server query over the entity table - which had no index on FACTION either - answered over the per-client channel and cached per faction for 30 seconds. The request carries nothing at all: the server answers for the sender's own faction, so a query that cannot name a target cannot be pointed at one.\n- IT SAYS HOW OLD IT IS. A snapshot drawn as though it were live is worse than one that admits it, so the refresh button's caption is the age of the answer. One thing to press, one thing to know, and they are the same thing.\n- THE EDGE STRIP ANSWERS ONE QUESTION: is this inside our own borders. Gold homebase, green in a system we claim, grey standing outside - the board's 'Unclaimed holdings' group done as a colour instead of a heading, so it survives sorting. Third list to use the ScrollableTableList accent hook.\n- WHAT EACH ONE MAKES, HOLDS AND WANTS IS NOT HERE. It needs the station loaded, which is the soft-loading problem above - an engine capability, not an assets feature. The row says so rather than showing empty bars.\n- Claimed systems the query lists nothing in still get a row: they ride the faction blob, so they are on the page before the first answer arrives, and a claim with nothing standing in it is paying upkeep for nothing.\n- GATED: the holdings half needs the new 'See what we hold' rank right (see the RANKS board). Without it the tab still opens and still lists claimed systems - anyone can read those off the map - and the refresh button says RANK CANNOT SEE HOLDINGS rather than showing an empty list with no explanation. The server checks the same right; the client only skips asking a question it knows the answer to.\n- FLEETS COST NOTHING TO PUT HERE: FleetManager already hands the client the fleets this player may command - no query, no cache, no new right. A fleet's own access level decides who sees it, the same rule the fleet menu uses, so the two cannot disagree; which also means fleets show whether or not you hold 'See what we hold'. Gating them behind it would take away access people already have. It is also the half routing will bind to.\n- Loose ships stay out. Every faction-tagged hull anyone ever built would bury the handful of things this page is about; a fleet is the unit an order is given to.\n- An empty fleet is a name with nothing in it: not listed, not counted.\n- A FLEET'S ACCESS LABEL WAS UPSIDE DOWN and is fixed here: Fleet.canAccess reads the byte as distance down the ladder (0 = founder only) and getFactionAccessString restated it as a rank index, so 'FOUNDER' opened a fleet to the whole faction and 'RANK 4' locked everyone out but the founder. Neither half was wrong on its own terms, which is why nothing caught it. The label is now derived from the rule instead of sitting beside it, reads 'RANK n AND UP', and Fleet_test reads the rule back by brute force so the two cannot drift again. Stored values are untouched, so no fleet changes hands - owners just find out what they actually set.\n- A fleet moves and the asset answer does not change when it does, so the list observes the fleet manager and the system column reads live. The edge strip says what was true at the last rebuild, which any fleet change triggers.\n- Corrected on this board rather than in the code: the last tab is SETTINGS, not OPTIONS."
+    },
+    {
+      "id": "note-federation",
+      "page": "page-3",
+      "x": 1060,
+      "y": -270,
+      "w": 960,
+      "text": "FEDERATION — a bloc, not a pact. Placeholder tab is in; phase 5 already specifies the substrate.\n\nThe Governance pane is deliberately the same pane as the faction's own, one scope up: same rows, same anatomy, different subject. That is not a styling choice — one FactionVote object serves both (scope FACTION or FEDERATION) and both ride the phase 2 proposal pipeline, gated by the FEDERATION_VOTE permission phase 2 already activated. One mechanism shown twice rather than two features.\n\nWhy its own tab rather than a corner of diplomacy: diplomacy already carries four things at once, and a federation has its own membership and its own open business. Co-membership synthesises a federation treaty so the derived relation keeps one code path.\n\nTHE ONE REAL DECISION on this pane is the last row: whether a carried vote binds a member that voted against it. Everything above it is bookkeeping. Bind everyone and a federation is a real polity that can drag you into a war; bind only those who voted for and it is a mailing list with a flag. Worth settling before any tally code is written.\n\nSecond: whether votes weigh equally or by faction power — which decides whether the biggest member can be outvoted by the small ones, and so whether anyone strong ever joins."
+    },
+    {
+      "id": "note-ranks",
+      "page": "page-1",
+      "x": 0,
+      "y": 1470,
+      "w": 960,
+      "text": "RANKS — built and deployed. The dialog MEMBERS points at.\n\nIt was a 300x450 modal: one column of five rank names, sorted with compareToIgnoreCase - so the ladder, which is the only thing a rank index means, was destroyed by the only column the table had. Clicking a row opened a drawer with eleven checkboxes in one column. Fifty-five booleans, eleven visible at a time, for one rank, with no way to compare two. 'Who may do what' is a comparison question, and it was answered by an accordion.\n\nSo: a grid. Ranks are columns in ladder order, rights are rows grouped by kind - which also makes the sort question disappear, because there is nothing left to sort.\n\nTHE BIGGEST FIX IS THAT THE SCREEN USED TO LIE ABOUT WHAT WOULD HAPPEN. FactionRoles.applyLimited clamps every rewrite server-side: a rank above the editor's own is left untouched, and no rank may be granted a right the editor's own rank does not hold. The old screen drew all fifty-five checkboxes as freely settable, sent the lot, and the server quietly dropped what it would not take — no error, no diff, the dialog just closed. Now a cell you cannot set is not a checkbox at all: it is a dot when the right is held and blank when it is not. The mock shows both clamps — EMPEROR out of reach for an Archduke editor, and 'Declare war and peace' dotted across every column because the editor does not hold it.\n\nA MODEL BUG FELL OUT OF DRAWING THAT. The clamp was 'role = incoming & grantable', which does not only refuse to grant — it CLEARS. A rewrite carries all five ranks at once, so an officer who merely renamed a rank stripped every right they did not personally hold from every rank at or below their own, silently. Now an ungrantable bit keeps the value it had: '(incoming & grantable) | (held & ~grantable)'. One line, plus a self-check that fails if it comes back.\n\nLabels: \"'Permission Edit' Permission\", 'Relationships Permission' and 'Homebase set/clear' were internal names, one with the word Permission in it twice. PermType now says the act — 'Edit ranks', 'Declare war and peace', 'Set the homebase' — which fixes them in the legacy panel too.\n\nKICK-ON-FRIENDLY-FIRE IS NOT LISTED. It points the other way from every other bit - a rule imposed on a rank rather than a power it wields, which is why applyLimited excludes it from the clamp. But friendly fire is off, so the rule cannot fire, and a toggle for something that never happens is worse than no toggle. The bit rides the rewrite untouched, so leaving it out changes nothing about its value.\n\nAlso dropped between mock and build: the per-row description line. It doubled row height for eleven rows in a dialog that has to fit on a screen, and once a right is called 'Set the homebase' the group heading above it does the rest.\n\nRank names are the rename control - the name IS the button, which is where you would click anyway, and it replaces the CHANGE NAME button that used to live in the drawer. A rank out of your reach is flat text instead, because applyLimited leaves an unreachable rank's NAME alone as well as its rights: a founder who cannot be disarmed by a lieutenant cannot be renamed by one either.\n\nTHE FOUNDER GUARD, added after the first build: a founder editing their own rank could strip it of 'Edit ranks'. The clamp only ever looked upward, and a right can never travel upward, so a faction that gave the top rank's rank-editing away could not restore it at ANY rank — frozen at whatever it happened to hold, with a server admin the only way out and, on a server without one, no way out at all. applyLimited now re-asserts that one bit on the top rank unconditionally, editor and server admin alike: it is an invariant of the faction rather than a question about who is editing, and there is no rank above that one to act from afterwards. Everything else a founder may still surrender, which is what keeps a charter worth writing.\n\nThe grid shows it as a dot rather than a checkbox that springs back - a control that undoes itself teaches nothing. One dot, one meaning: held, not yours to change here. The three reasons are in the legend rather than in three tints of dot.\n\nADDED AFTER THE SECURITY PASS:\n\n- 'See what we hold' (Territory). The assets list is an order of battle - the one screen that says where a faction's undefended yards are - so it is a right a rank is given, not something every member gets on joining. Claimed systems stay ungated on purpose: they are on the galaxy map in the faction's own colour for the whole server to read, so hiding them here would protect nothing and only make the tab look broken.\n- A new right has to go into ADMIN_PERMISSIONS or applyLimited does not clamp it, and anyone who can edit ranks can then write it onto their own rank. That is a one-line omission with no symptom until somebody tries it, so FactionRoles_test now walks every active PermType and fails on any capability outside the set - kick-on-friendly-fire excepted, which is a faction policy rather than an authority."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

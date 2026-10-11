@@ -1,0 +1,127 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira:wght@400;500;600&display=swap">
+  <style>
+    body{margin:0;background:#0b0d10;}
+    a{color:#72dce7;} a:hover{color:#32e9fc;}
+    .win{width:960px;height:620px;box-sizing:border-box;background:#191f24;border:1px solid #424242;
+         display:flex;flex-direction:column;color:#fafafa;
+         font:12px/1.45 "Blender Pro","Saira","Segoe UI",sans-serif;}
+    .title{flex:0 0 28px;background:#15151a;border-bottom:1px solid #424242;
+           display:flex;align-items:center;justify-content:center;font-size:15px;letter-spacing:.1em;}
+    .tabs{flex:0 0 29px;background:#0f1118;display:flex;border-bottom:1px solid #424242;}
+    .tab{display:flex;align-items:center;padding:0 14px;font-size:12px;letter-spacing:.09em;
+         color:#8d959b;border-right:1px solid #424242;}
+    .tab.on{background:#191f24;color:#fafafa;margin-bottom:-1px;border-bottom:1px solid #191f24;}
+    .body{flex:1 1 auto;display:flex;flex-direction:column;gap:6px;padding:6px;min-height:0;}
+    .bar{display:flex;align-items:center;gap:6px;height:30px;}
+    .btn{display:inline-flex;align-items:center;justify-content:center;height:22px;padding:0 12px;
+         background:#3a77a0;color:#72dce7;border:1px solid #4d8fbd;font-size:11px;
+         letter-spacing:.08em;text-transform:uppercase;box-sizing:border-box;}
+    .btn.warn{background:#a44e0c;border-color:#c4671f;color:#ffad3b;}
+    .field{display:flex;align-items:center;height:24px;background:#121216;border:1px solid #43434d;
+           padding:0 8px;color:#8d959b;font-size:12px;gap:6px;box-sizing:border-box;}
+    .hdr{display:flex;height:24px;align-items:center;background:#15151a;border-bottom:1px solid #424242;
+         font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8d959b;}
+    .hdr > div, .row > div{padding:0 10px;box-sizing:border-box;}
+    .row{display:flex;height:28px;align-items:center;font-size:12px;}
+    .row:nth-child(odd){background:rgba(20,26,33,.55);}
+    .row:nth-child(even){background:rgba(11,13,17,.55);}
+    .row.sel{background:#373737;}
+    .c-name{flex:3 1 0;min-width:0;}
+    .c-status{flex:1 1 0;}
+    .c-rank{flex:1 1 0;}
+    .c-seen{flex:1 1 0;color:#c2c2c2;}
+    .pip{flex:0 0 3px;align-self:stretch;padding:0 !important;}
+    .hdr .pip{background:transparent;}
+    .drawer{background:#121216;border-top:1px solid #424242;border-bottom:1px solid #424242;
+            padding:8px 10px;display:flex;flex-direction:column;gap:8px;}
+  </style>
+</helmet>
+
+<div class="win">
+  <div class="title">FACTION</div>
+  <div class="tabs">
+    <div class="tab">OVERVIEW</div>
+    <div class="tab">ASSETS</div>
+    <div class="tab on">MEMBERS</div>
+    <div class="tab">DIPLOMACY</div>
+    <div class="tab">FEDERATION</div>
+    <div class="tab">SETTINGS</div>
+  </div>
+
+  <div class="body">
+
+    <div class="bar">
+      <div class="btn">Invite player</div>
+      <div class="btn">Ranks</div>
+      <div style="flex:1 1 auto;"></div>
+      <div class="btn">Invites sent (3)</div>
+    </div>
+
+    <div style="flex:1 1 auto;min-height:0;border:1px solid #424242;background:#1f262c;
+                display:flex;flex-direction:column;">
+      <div style="display:flex;padding:4px;background:#0f1118;border-bottom:1px solid #424242;">
+        <div class="field" style="flex:1 1 auto;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path>
+          </svg>
+          Search
+        </div>
+      </div>
+      <div class="hdr">
+        <div class="pip"></div>
+        <div class="c-name">Name</div>
+        <div class="c-status">Status</div>
+        <div class="c-rank">Rank</div>
+        <div class="c-seen">Last seen</div>
+      </div>
+      <div style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column;">
+        <div class="row"><span class="pip" style="background:#38b400;"></span><div class="c-name">Halvard</div>
+          <div class="c-status" style="color:#38b400;">ONLINE</div><div class="c-rank">Founder</div>
+          <div class="c-seen">now</div></div>
+
+        <div class="row sel"><span class="pip" style="background:#38b400;"></span><div class="c-name">Ryska</div>
+          <div class="c-status" style="color:#38b400;">ONLINE</div><div class="c-rank">Officer</div>
+          <div class="c-seen">now</div></div>
+        <div class="drawer">
+          <div style="color:#c2c2c2;font-size:11px;">Last seen Sep 14, 2026 - 09:31:04 AM at 3, 5, -7</div>
+          <div style="display:flex;gap:8px;">
+            <div class="btn">Mail</div>
+            <div class="btn">Nav to</div>
+            <div class="btn">Promote</div>
+            <div class="btn warn">Demote</div>
+            <div class="btn warn">Kick</div>
+          </div>
+        </div>
+
+        <div class="row"><span class="pip" style="background:#2b8314;"></span><div class="c-name">Temmin</div>
+          <div class="c-status" style="color:#2b8314;">ONLINE(I)</div><div class="c-rank">Officer</div>
+          <div class="c-seen">18 min ago</div></div>
+        <div class="row"><span class="pip" style="background:#c02700;"></span><div class="c-name">Calder</div>
+          <div class="c-status" style="color:#c02700;">OFFLINE</div><div class="c-rank">Member</div>
+          <div class="c-seen">14 h ago</div></div>
+        <div class="row"><span class="pip" style="background:#c02700;"></span><div class="c-name">Vos</div>
+          <div class="c-status" style="color:#c02700;">OFFLINE</div><div class="c-rank">Member</div>
+          <div class="c-seen">2 d ago</div></div>
+        <div class="row"><span class="pip" style="background:#681c0a;"></span><div class="c-name">Marisse</div>
+          <div class="c-status" style="color:#681c0a;">OFFLINE(I)</div><div class="c-rank">Member</div>
+          <div class="c-seen">43 d ago</div></div>
+        <div class="row"><span class="pip" style="background:#681c0a;"></span><div class="c-name">Doran</div>
+          <div class="c-status" style="color:#681c0a;">OFFLINE(I)</div><div class="c-rank">Recruit</div>
+          <div class="c-seen">48 d ago</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

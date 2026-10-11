@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira:wght@400;500&display=swap">
+  <style>
+    body{margin:0;background:#0b0d10;}
+    a{color:#72dce7;} a:hover{color:#32e9fc;}
+    .win{width:960px;height:620px;box-sizing:border-box;background:#14181c;border:1px solid #4a545c;
+         display:flex;flex-direction:column;color:#c9d1d7;
+         font:12px/1.45 "Saira","Segoe UI",sans-serif;}
+    .title{flex:0 0 28px;border-bottom:1px solid #4a545c;display:flex;align-items:center;
+           justify-content:space-between;padding:0 10px;font-size:13px;letter-spacing:.1em;color:#7e8a93;}
+    .tabs{flex:0 0 29px;display:flex;border-bottom:1px solid #4a545c;}
+    .tab{display:flex;align-items:center;padding:0 16px;font-size:12px;letter-spacing:.09em;
+         color:#6d7880;border-right:1px solid #4a545c;}
+    .tab.on{color:#e8eef2;box-shadow:inset 0 -2px 0 #8fa3b0;}
+    .body{flex:1 1 auto;display:flex;flex-direction:column;gap:10px;padding:10px;min-height:0;}
+    .grp{border:1px solid #4a545c;display:flex;flex-direction:column;}
+    .grphead{height:22px;display:flex;align-items:center;padding:0 10px;border-bottom:1px solid #3d474e;
+             font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#7e8a93;}
+    .items{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:6px;padding:8px;}
+    .item{border:1px dashed #56626b;height:26px;display:flex;align-items:center;padding:0 10px;
+          font-size:12px;color:#9aa5ad;box-sizing:border-box;}
+    .item.danger{border-color:#8a5049;color:#c58a83;}
+    .bell{display:flex;align-items:center;gap:6px;font-size:11px;color:#9aa5ad;}
+    .badge{display:flex;align-items:center;justify-content:center;min-width:16px;height:15px;padding:0 4px;
+           border:1px solid #8fa3b0;font-size:10px;}
+  </style>
+</helmet>
+
+<div class="win">
+  <div class="title">
+    <span>FACTION</span>
+    <span class="bell">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M6 9a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6z"></path><path d="M10 20h4"></path>
+      </svg>
+      Waiting on you <span class="badge">3</span>
+      <span style="margin-left:14px;font-size:10px;letter-spacing:.16em;">WIREFRAME &mdash; DIRECTION C</span>
+    </span>
+  </div>
+  <div class="tabs">
+    <div class="tab">NEWS</div>
+    <div class="tab">DIPLOMACY</div>
+    <div class="tab">FACTION LOG</div>
+    <div class="tab">MEMBERS</div>
+    <div class="tab on">OPTIONS</div>
+  </div>
+
+  <div class="body">
+    <div class="grp">
+      <div class="grphead">Membership</div>
+      <div class="items">
+        <div class="item">Invite player</div>
+        <div class="item">Edit ranks</div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="grphead">Identity</div>
+      <div class="items">
+        <div class="item">Edit description</div>
+        <div class="item">Map colour</div>
+        <div class="item">Post news</div>
+        <div class="item">Faction points</div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="grphead">Standing orders</div>
+      <div class="items">
+        <div class="item">Return fire automatically</div>
+        <div class="item">Treat neutrals as enemies</div>
+        <div class="item">Open to join</div>
+        <div class="item">Individual enemies</div>
+      </div>
+    </div>
+
+    <div class="grp" style="border-color:#8a5049;">
+      <div class="grphead" style="color:#c58a83;border-bottom-color:#6b3c37;">Cannot be undone</div>
+      <div class="items">
+        <div class="item danger">Reset homebase</div>
+        <div class="item danger">Leave faction</div>
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:#6d7880;padding:0 2px;">Queues (invites in, invites out, diplomacy
+      offers) move out of this grid into the title-bar counter, which is visible from every tab.</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

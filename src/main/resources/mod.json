@@ -1,14 +1,15 @@
 {
-  "name": "BetterFactions",
-  "author": "VideoGoose",
-  "description": "Reworks faction interaction and diplomacy for a more immersive experience.",
-  "version": "0.2.0 - Beta",
-  "starmade_version": "0.303.10",
-  "client_mod": false,
-  "server_mod": false,
-  "main_class": "videogoose.betterfactions.BetterFactions",
-  "smd_resource_id": 8504,
-  "dependencies": [
-    -1
-  ]
+	"id": "videogoose.betterfactions",
+	"name": "BetterFactions",
+	"author": "VideoGoose",
+	"description": "Treaties, opinion, federations and emblems for player and NPC factions alike.",
+	"version": "0.3.0",
+	"starmade_version": "0.4.509",
+	"starloader_version": "2.0",
+	"client_mod": true,
+	"server_mod": true,
+	"main_class": "videogoose.betterfactions.BetterFactions",
+	"smd_resource_id": 8504,
+	"dependencies": [],
+	"optional_dependencies": []
 }
