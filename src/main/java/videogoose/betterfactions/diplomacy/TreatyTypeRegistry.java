@@ -63,34 +63,34 @@ public final class TreatyTypeRegistry {
      */
     private static void registerVanilla() {
         register(VANILLA, new TreatyType.Builder("war")
-                .displayName("War").asymmetric().implies(FactionRelation.RType.ENEMY).unilateral().opinion(-10000)
+                .displayName("War").asymmetric().implies(FactionRelation.RType.ENEMY).unilateral()
                 .names("The {from}-{to} War", "The {toHome} Campaign",
                         "The War for {ceded}", "The {ceded} War"));
         register(VANILLA, new TreatyType.Builder("non_aggression")
-                .displayName("Non-Aggression Pact").implies(FactionRelation.RType.NEUTRAL).opinion(50)
+                .displayName("Non-Aggression Pact").implies(FactionRelation.RType.NEUTRAL)
                 .names("The {fromHome} Accord", "The Truce of {toHome}", "The {fromHome} Non-Aggression Pact",
                         "The {ceded} Concession", "The Concession of {ceded}"));
         register(VANILLA, new TreatyType.Builder("defensive_pact")
-                .displayName("Defensive Pact").implies(FactionRelation.RType.FRIEND).opinion(500)
+                .displayName("Defensive Pact").implies(FactionRelation.RType.FRIEND)
                 .names("The {fromHome} Pact", "The Shield of {toHome}", "The {from}-{to} Defensive Pact"));
         register(VANILLA, new TreatyType.Builder("alliance")
-                .displayName("Alliance").implies(FactionRelation.RType.FRIEND).opinion(1000)
+                .displayName("Alliance").implies(FactionRelation.RType.FRIEND)
                 .names("The {from}-{to} Alliance", "The Grand Alliance of {fromHome}", "The {fromHome} Concord"));
         register(VANILLA, new TreatyType.Builder("trade_agreement")
-                .displayName("Trade Agreement").opinion(100)
+                .displayName("Trade Agreement")
                 .names("The {fromHome} Trade Compact", "The {from}-{to} Trade Agreement", "The {toHome} Charter"));
         register(VANILLA, new TreatyType.Builder("intel_sharing")
-                .displayName("Intel Sharing").opinion(100)
+                .displayName("Intel Sharing")
                 .names("The {fromHome} Understanding", "The {from}-{to} Intelligence Accord"));
         register(VANILLA, new TreatyType.Builder("vassalage")
-                .displayName("Vassalage").asymmetric().implies(FactionRelation.RType.FRIEND).opinion(200)
+                .displayName("Vassalage").asymmetric().implies(FactionRelation.RType.FRIEND)
                 .names("The {to} Submission", "The Vassalage of {to}", "The {ceded} Settlement"));
         register(VANILLA, new TreatyType.Builder("tributary")
-                .displayName("Tributary").asymmetric().implies(FactionRelation.RType.NEUTRAL).opinion(100)
+                .displayName("Tributary").asymmetric().implies(FactionRelation.RType.NEUTRAL)
                 .names("The {to} Tribute", "The {to} Indemnity", "The Tribute of {toHome}",
                         "The {ceded} Concession"));
         register(VANILLA, new TreatyType.Builder("federation")
-                .displayName("Federation").implies(FactionRelation.RType.FRIEND).unilateral().unbreakable().opinion(500));
+                .displayName("Federation").implies(FactionRelation.RType.FRIEND).unilateral().unbreakable());
     }
 
     /**

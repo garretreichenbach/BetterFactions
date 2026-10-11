@@ -101,6 +101,16 @@ public interface DiplomacySettings {
     String getDiplomacyRefusal(String treatyId);
 
     /**
+     * What has to hold before war may be declared with a goal of this kind, or null if it never may.
+     */
+    DiplomacyConditionGroup getCasusBelli(SettlementTerm.Kind kind);
+
+    /**
+     * What the declarer is told when that casus belli does not hold, or null.
+     */
+    String getCasusBelliRefusal(SettlementTerm.Kind kind);
+
+    /**
      * How much a spare faction point per period counts toward how strong a faction looks.
      *
      * <p>The surplus, not the balance: see {@code FactionStrength.pointSurplus(Faction)} for why the

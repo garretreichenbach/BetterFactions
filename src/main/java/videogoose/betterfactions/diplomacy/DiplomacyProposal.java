@@ -8,6 +8,8 @@ import org.schema.schine.resource.tag.Tag;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Something one faction asks another to agree to, and the answer coming back.
@@ -27,7 +29,9 @@ import java.io.IOException;
  */
 public class DiplomacyProposal extends FactionRelation implements SerialializationInterface {
 
-    private static final byte VERSION = 4;
+    private static final byte VERSION = 6;
+    /** Server-enforced; also what keeps the wire count in one byte. */
+    public static final int MAX_TERMS = 8;
     private static final Action[] ACTIONS = Action.values();
     /**
      * The {@link TreatyType} being proposed, or null for a plain relation change (white peace).
@@ -45,6 +49,12 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
      */
     public boolean serverAuthored;
     /**
+     * Server only, never saved or sent: a war that is itself the answer to a call to arms (or set by an
+     * admin), so it does not call the other side's pact partners in turn. Without it every pact on
+     * both sides would chain into one galaxy-wide war.
+     */
+    public transient boolean noCallToArms;
+    /**
      * Only meaningful on a {@link Action#QUERY_RESULT}: whether they would say yes. When they would
      * not, {@link #getMessage()} carries the reasons the acceptance rule gave.
      */
@@ -55,6 +65,17 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
      * it - which is also what makes renaming a renegotiation rather than a unilateral edit.
      */
     public String name = "";
+    /**
+     * What changes hands at signing, on top of {@link #typeId}. Applied all together or not at all;
+     * see {@link SettlementTerm}. A response carries none: accepting means accepting the stored offer's.
+     */
+    public final List<SettlementTerm> terms = new ArrayList<>();
+    /**
+     * Non-zero only on a call to arms: the faction {@link #a}, attacked, asks its pact partner
+     * {@link #b} to declare war on this one. {@link #expiresAt} is then the answer deadline, not a
+     * treaty term. Only the server makes these; it zeroes the field on anything a client sends.
+     */
+    public int against;
     private String message;
     private String initiator;
 
@@ -105,7 +126,14 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
      */
     public static DiplomacyProposal counterTo(DiplomacyProposal proposal, String initiator,
                                               String typeId, long expiresAt, String message, String name) {
+        return counterTo(proposal, initiator, typeId, expiresAt, message, name, List.of());
+    }
+
+    public static DiplomacyProposal counterTo(DiplomacyProposal proposal, String initiator, String typeId,
+                                              long expiresAt, String message, String name,
+                                              List<SettlementTerm> terms) {
         DiplomacyProposal r = new DiplomacyProposal();
+        r.terms.addAll(terms);
         r.a = proposal.a;
         r.b = proposal.b;
         r.typeId = typeId;
@@ -123,7 +151,13 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
      * Asks whether a treaty would be accepted, without offering it.
      */
     public static DiplomacyProposal query(String initiator, int from, int to, String typeId) {
+        return query(initiator, from, to, typeId, List.of());
+    }
+
+    public static DiplomacyProposal query(String initiator, int from, int to, String typeId,
+                                          List<SettlementTerm> terms) {
         DiplomacyProposal q = new DiplomacyProposal();
+        q.terms.addAll(terms);
         q.a = from;
         q.b = to;
         q.typeId = typeId;
@@ -147,6 +181,8 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
         r.b = q.b;
         r.rel = q.rel;
         r.typeId = q.typeId;
+        //echoed so the asking dialog can tell an answer about these terms from one about older ones
+        r.terms.addAll(q.terms);
         r.message = accepted ? "" : nullToEmpty(reasons);
         r.initiator = q.initiator;
         r.action = Action.QUERY_RESULT;
@@ -175,6 +211,8 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
 		p.typeId = typeId;
 		p.expiresAt = expiresAt;
 		p.message = message;
+		p.name = name;
+		p.terms.addAll(terms);
 		p.initiator = initiator;
 		p.action = Action.PROPOSE;
 		p.serverAuthored = serverAuthored;
@@ -234,7 +272,7 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
 
 	@Override
 	public String toString() {
-		return "Proposal[" + action + " " + a + "->" + b + ", " + (typeId != null ? typeId : getRelation().name()) + "]";
+		return "Proposal[" + action + " " + a + "->" + b + ", " + (typeId != null ? typeId : getRelation().name()) + (terms.isEmpty() ? "" : ", " + terms) + "]";
 	}
 
 	@Override
@@ -256,6 +294,11 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
 		}
 		expiresAt = subs.length > 7 && subs[7].getType() != Tag.Type.FINISH ? (Long) subs[7].getValue() : 0L;
         name = subs.length > 8 && subs[8].getType() != Tag.Type.FINISH ? (String) subs[8].getValue() : "";
+        terms.clear();
+        if (subs.length > 9 && subs[9].getType() != Tag.Type.FINISH) {
+            SettlementTerm.listFromTag(subs[9], terms);
+        }
+        against = subs.length > 10 && subs[10].getType() != Tag.Type.FINISH ? (Integer) subs[10].getValue() : 0;
 		if (action == null) {
             action = Action.PROPOSE;
         }
@@ -273,6 +316,8 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
                 DiplomacyTags.write(action),
                 new Tag(Tag.Type.LONG, null, expiresAt),
                 new Tag(Tag.Type.STRING, null, nullToEmpty(name)),
+                SettlementTerm.listToTag(terms),
+                new Tag(Tag.Type.INT, null, against),
                 FinishTag.INST});
     }
 
@@ -297,6 +342,12 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
         initiator = b.readUTF();
         accepted = b.readBoolean();
         name = nullToEmpty(TreatyNames.sanitize(b.readUTF()));
+        terms.clear();
+        int n = b.readUnsignedByte();
+        for (int i = 0; i < n; i++) {
+            terms.add(SettlementTerm.deserialize(b));
+        }
+        against = b.readInt();
     }
 
     @Override
@@ -312,6 +363,11 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
         b.writeUTF(nullToEmpty(initiator));
 		b.writeBoolean(accepted);
         b.writeUTF(nullToEmpty(name));
+        b.writeByte(terms.size());
+        for (SettlementTerm t : terms) {
+            t.serialize(b);
+        }
+        b.writeInt(against);
 	}
 
     @Override

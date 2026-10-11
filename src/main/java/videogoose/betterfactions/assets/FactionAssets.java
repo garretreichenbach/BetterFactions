@@ -67,6 +67,77 @@ public class FactionAssets {
         }
     }
 
+    /**
+     * A fleet running a Resources Reorganized route - see {@link FleetRoutes}. Keyed on the fleet's dbid,
+     * which the client already holds for the fleets it may see, so the row is the fleet's own row.
+     */
+    public static final class Route {
+        public long fleetDbId;
+        /**
+         * The logistics order this run is carrying ("40 Iron: A -> B"), or empty for a standing route.
+         */
+        public String order = "";
+        public String status = "";
+        /**
+         * 1-based, 0 while the fleet undocks from a schedule that was replaced under it.
+         */
+        public int stop;
+        public int stops;
+        public String station = "";
+        public boolean paused;
+        /**
+         * Rough time left to the current stop as of the answer, 0 when unknown or not travelling.
+         */
+        public long etaMs;
+        /**
+         * Local clock when this arrived, so {@link #etaLeft} counts down between answers without trusting
+         * the two machines' clocks to agree.
+         */
+        private final long receivedAt = System.currentTimeMillis();
+
+        public Route() {
+        }
+
+        public Route(long fleetDbId, String order, String status, int stop, int stops, String station, boolean paused,
+                     long etaMs) {
+            this.fleetDbId = fleetDbId;
+            this.order = order;
+            this.status = status;
+            this.stop = stop;
+            this.stops = stops;
+            this.station = station;
+            this.paused = paused;
+            this.etaMs = etaMs;
+        }
+
+        /**
+         * @return ms still to go on the estimate, 0 when there is none or it has run out
+         */
+        public long etaLeft() {
+            return etaMs <= 0 ? 0 : Math.max(0, etaMs - (System.currentTimeMillis() - receivedAt));
+        }
+
+        public boolean isDelivery() {
+            return !order.isEmpty();
+        }
+
+        void serialize(DataOutput out) throws IOException {
+            out.writeLong(fleetDbId);
+            out.writeUTF(order);
+            out.writeUTF(status);
+            out.writeInt(stop);
+            out.writeInt(stops);
+            out.writeUTF(station);
+            out.writeBoolean(paused);
+            out.writeLong(etaMs);
+        }
+
+        static Route deserialize(DataInput in) throws IOException {
+            return new Route(in.readLong(), in.readUTF(), in.readUTF(), in.readInt(), in.readInt(), in.readUTF(),
+                    in.readBoolean(), in.readLong());
+        }
+    }
+
     public int factionId;
     /**
      * Server clock at the moment the table was read, so the screen can say how stale it is.
@@ -77,6 +148,10 @@ public class FactionAssets {
      */
     public boolean truncated;
     public final List<Asset> assets = new ObjectArrayList<Asset>();
+    /**
+     * Filled fresh on every answer rather than cached with the holdings: a route moves on in seconds.
+     */
+    public final List<Route> routes = new ObjectArrayList<Route>();
 
     public FactionAssets() {
     }
@@ -94,6 +169,10 @@ public class FactionAssets {
         for (Asset a : assets) {
             a.serialize(out);
         }
+        out.writeInt(routes.size());
+        for (Route r : routes) {
+            r.serialize(out);
+        }
     }
 
     public void deserialize(DataInput in) throws IOException {
@@ -105,6 +184,23 @@ public class FactionAssets {
         for (int i = 0; i < n; i++) {
             assets.add(Asset.deserialize(in));
         }
+        routes.clear();
+        n = in.readInt();
+        for (int i = 0; i < n; i++) {
+            routes.add(Route.deserialize(in));
+        }
+    }
+
+    /**
+     * The route this fleet is running, or null.
+     */
+    public Route route(long fleetDbId) {
+        for (Route r : routes) {
+            if (r.fleetDbId == fleetDbId) {
+                return r;
+            }
+        }
+        return null;
     }
 
     @Override

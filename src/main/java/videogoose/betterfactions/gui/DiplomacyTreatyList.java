@@ -9,6 +9,7 @@ import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionPermission;
 import videogoose.betterfactions.diplomacy.DiplomacyProposal;
 import videogoose.betterfactions.diplomacy.FactionTreaty;
+import videogoose.betterfactions.diplomacy.SettlementTerm;
 import videogoose.betterfactions.diplomacy.TreatyType;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
@@ -101,24 +102,9 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
     @Override
     public void initColumns() {
         //"Standing" rather than "Treaty": a war sits in this list too, and it is not an agreement
-        addColumn(Lng.str("Standing"), 3.0f, new Comparator<FactionTreaty>() {
-            @Override
-            public int compare(FactionTreaty o1, FactionTreaty o2) {
-                return name(o1).compareToIgnoreCase(name(o2));
-            }
-        });
-        addFixedWidthColumn(Lng.str("Held For"), 120, new Comparator<FactionTreaty>() {
-            @Override
-            public int compare(FactionTreaty o1, FactionTreaty o2) {
-                return Long.compare(o2.signedAt, o1.signedAt);
-            }
-        });
-        addFixedWidthColumn(Lng.str("Term"), 120, new Comparator<FactionTreaty>() {
-            @Override
-            public int compare(FactionTreaty o1, FactionTreaty o2) {
-                return Long.compare(o1.expiresAt, o2.expiresAt);
-            }
-        });
+        addColumn(Lng.str("Standing"), 3.0f, (o1, o2) -> name(o1).compareToIgnoreCase(name(o2)));
+        addFixedWidthColumn(Lng.str("Held For"), 120, (o1, o2) -> Long.compare(o2.signedAt, o1.signedAt));
+        addFixedWidthColumn(Lng.str("Term"), 120, Comparator.comparingLong(o -> o.expiresAt));
 
         //the two things you can actually do on this screen live on the list's own button row rather
         //than in a box of their own, which is what leaves the opinion list its height
@@ -212,7 +198,12 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
             heldText.setTextSimple(new Object() {
                 @Override
                 public String toString() {
-                    return StringTools.formatTimeFromMS(Math.max(0, System.currentTimeMillis() - t.signedAt));
+                    //whole hours only: a ticking seconds count is noise for something held for days
+                    long held = Math.max(0, System.currentTimeMillis() - t.signedAt);
+                    long hour = 3_600_000L;
+                    return held < hour
+                            ? Lng.str("Under an hour")
+                            : StringTools.formatTimeFromMS(held - held % hour);
                 }
             });
             termText.setTextSimple(new Object() {
@@ -264,9 +255,16 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
             @Override
             public String toString() {
                 String s = t.clause == null ? "" : t.clause.trim();
-                return s.isEmpty()
+                String text = s.isEmpty()
                         ? Lng.str("%s. No clause attached.", typeName(t))
                         : Lng.str("%s. %s", typeName(t), s);
+                if (!t.goals.isEmpty()) {
+                    text += "\n" + Lng.str("War goals:") + "\n" + SettlementTerm.describeAll(t.goals, id -> {
+                        Faction f = ((GameClientState) getState()).getFactionManager().getFaction(id);
+                        return f != null ? f.getName() : String.valueOf(id);
+                    }, t.from, t.to, "");
+                }
+                return text;
             }
         });
         clause.setPos(4, 2, 0);

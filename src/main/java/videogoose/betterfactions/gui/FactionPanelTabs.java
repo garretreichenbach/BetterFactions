@@ -1,54 +1,39 @@
 package videogoose.betterfactions.gui;
 
-import videogoose.betterfactions.diplomacy.FactionStrength;
-import org.schema.game.client.view.gui.faction.newfaction.FactionMemberScrollableListNew;
-import org.schema.game.client.view.gui.faction.newfaction.FactionIncomingInvitesPlayerInputNew;
-import org.schema.game.client.view.gui.faction.newfaction.FactionOutgoingInvitesPlayerInputNew;
-import org.schema.game.client.view.gui.faction.newfaction.FactionNewsScrollableListNew;
-import org.schema.game.client.view.gui.faction.newfaction.FactionPanelNew;
-import org.schema.game.client.view.gui.faction.newfaction.FactionScrollableListNew;
-import videogoose.betterfactions.DiplomacyManager;
-import videogoose.betterfactions.Perms;
-import java.util.Map;
-import java.util.WeakHashMap;
-
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.schema.common.util.StringTools;
 import org.schema.game.client.controller.PlayerCreateFactionNewsInputNew;
 import org.schema.game.client.controller.PlayerFactionPointDialogNew;
-import org.schema.game.client.controller.manager.ingame.faction.FactionRolesDialogNew;
-import org.schema.game.client.data.GameClientState;
-import videogoose.betterfactions.emblem.GUIFactionEmblem;
-import videogoose.betterfactions.gui.DiplomacyFactionList;
-import videogoose.betterfactions.gui.FederationList;
-import videogoose.betterfactions.gui.FederationMemberList;
 import org.schema.game.client.controller.PlayerTextInput;
-import org.schema.schine.common.TextCallback;
-import org.schema.schine.graphicsengine.core.settings.PrefixNotFoundException;
-import videogoose.betterfactions.gui.DiplomacyOpinionList;
-import videogoose.betterfactions.gui.DiplomacyTreatyList;
+import org.schema.game.client.data.GameClientState;
+import org.schema.game.client.view.gui.faction.newfaction.*;
 import org.schema.game.client.view.gui.npc.GUINPCFactionNewsScrollableList;
 import org.schema.game.common.data.fleet.Fleet;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
-import videogoose.betterfactions.assets.FactionAssets;
 import org.schema.game.common.data.player.faction.FactionRelation;
-import videogoose.betterfactions.diplomacy.DiplomacyEntity;
-import videogoose.betterfactions.diplomacy.Federation;
-import videogoose.betterfactions.diplomacy.FederationCommand;
-import videogoose.betterfactions.diplomacy.FactionStrength;
+import org.schema.schine.common.TextCallback;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
-import org.schema.schine.graphicsengine.core.Timer;
+import org.schema.schine.graphicsengine.core.settings.PrefixNotFoundException;
 import org.schema.schine.graphicsengine.forms.font.FontLibrary;
 import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActiveInterface;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIMainWindow;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUITextOverlayTable;
-import org.schema.schine.input.InputState;
+import videogoose.betterfactions.DiplomacyManager;
+import videogoose.betterfactions.Perms;
+import videogoose.betterfactions.assets.FactionAssets;
+import videogoose.betterfactions.diplomacy.DiplomacyEntity;
+import videogoose.betterfactions.diplomacy.FactionStrength;
+import videogoose.betterfactions.diplomacy.Federation;
+import videogoose.betterfactions.diplomacy.FederationCommand;
+import videogoose.betterfactions.emblem.GUIFactionEmblem;
 
 import javax.vecmath.Vector4f;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -323,7 +308,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
             }
         };
         GUITextButton ranks = new GUITextButton(getState(), 70, CHIP_HEIGHT, GUITextButton.ColorPalette.OK,
-                Lng.str("RANKS"), press(() -> new FactionRolesDialogNew(getState(), getOwnFaction()).activate())) {
+                Lng.str("RANKS"), press(() -> new FactionRankDialog(getState(), getOwnFaction()).activate())) {
             @Override
             public void draw() {
                 if (getOwnPlayer().getFactionController().hasPermissionEditPermission()) {
@@ -872,8 +857,8 @@ public class FactionPanelTabs implements GUIActiveInterface {
      * of the bloc that sent it.
      */
     private void fillFoundingBar(GUIAnchor box) {
-        ObjectArrayList<Chip> chips = new ObjectArrayList<Chip>();
-        chips.add(chip(CHIP_WIDTH, Lng.str("FOUND ONE"),
+        ObjectArrayList<Chip> chips = new ObjectArrayList<>();
+        chips.add(chip(CHIP_WIDTH, Lng.str("FOUND"),
                 () -> maySpeak() && getOwnFaction() != null,
                 () -> federationText(Lng.str("Name the federation"), "",
                         name -> send(new FederationCommand(FederationCommand.Kind.CREATE, 0).text(name)))));
@@ -884,7 +869,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
      * Who is in the bloc: asking somebody in, and walking out.
      */
     private void fillMembershipBar(GUIAnchor box) {
-        ObjectArrayList<Chip> chips = new ObjectArrayList<Chip>();
+        ObjectArrayList<Chip> chips = new ObjectArrayList<>();
         chips.add(chip(CHIP_WIDTH, voteOr(Federation.CHARTER_VOTE_ADMISSION, Lng.str("VOTE TO ADMIT"), Lng.str("INVITE")),
                 () -> mayRaise(Federation.CHARTER_VOTE_ADMISSION),
                 () -> pickFaction(Lng.str("Faction to invite"), FederationCommand.Kind.INVITE)));
@@ -939,7 +924,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
         federationText(title, "", name -> {
             String wanted = name.trim();
             for (Faction f : getState().getFactionManager().getFactionCollection()) {
-                if (f.getName().equalsIgnoreCase(wanted)) {
+                if (DiplomacyFactionList.isParty(f) && f.getName().equalsIgnoreCase(wanted)) {
                     sendToShown(new FederationCommand(kind, 0).target(f.getIdFaction()));
                     return;
                 }

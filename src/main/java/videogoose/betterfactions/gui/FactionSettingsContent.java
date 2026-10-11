@@ -6,7 +6,6 @@ import org.schema.game.client.controller.PlayerGameOkCancelInput;
 import org.schema.game.client.controller.PlayerTextAreaInput;
 import org.schema.game.client.controller.manager.ingame.faction.FactionDialogNew;
 import org.schema.game.client.controller.manager.ingame.faction.FactionPersonalEnemyDialog;
-import org.schema.game.client.controller.manager.ingame.faction.FactionRolesDialogNew;
 import org.schema.game.client.data.GameClientState;
 import org.schema.game.client.view.gui.faction.FactionColorPickerDialog;
 import videogoose.betterfactions.emblem.GUIFactionEmblem;
@@ -147,7 +146,7 @@ public class FactionSettingsContent extends GUIAnchor {
                 },
                 button(Lng.str("EDIT RANKS"), GUITextButton.ColorPalette.OK,
                         () -> getOwnPlayer().getFactionController().hasPermissionEditPermission(),
-                        () -> new FactionRolesDialogNew(getState(), getOwnFaction()).activate())));
+                        () -> new FactionRankDialog(getState(), getOwnFaction()).activate())));
 
         add(list, section(Lng.str("Standing orders"), HEADING));
         add(list, row(Lng.str("Return fire automatically"),

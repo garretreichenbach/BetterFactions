@@ -5,7 +5,9 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.schema.game.client.data.GameClientState;
 
 import org.schema.game.common.data.player.faction.Faction;
+import org.schema.game.common.data.player.faction.FactionManager;
 import org.schema.game.common.data.player.faction.FactionRelation;
+import videogoose.betterfactions.diplomacy.DiplomacyEntity;
 import videogoose.betterfactions.diplomacy.FactionTreaty;
 import videogoose.betterfactions.diplomacy.TreatyType;
 import org.schema.schine.common.language.Lng;
@@ -72,6 +74,17 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
     }
 
     /**
+     * Their opinion of us: of the viewer's faction, or of the viewer when they have none. The same
+     * number the overview's opinion line shows.
+     */
+    private int standing(Faction f) {
+        int own = ownFactionId();
+        long subject = own != 0 ? own : client().getPlayer().getDbId();
+        DiplomacyEntity e = DiplomacyManager.client().diplomacyOf(f).entities.get(subject);
+        return e != null ? e.getPoints() : 0;
+    }
+
+    /**
      * Treaty type names in force between the viewer's faction and this one.
      */
     private String treatySummary(Faction f) {
@@ -98,7 +111,7 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
     public void initColumns() {
         addColumn(Lng.str("Name"), 3.0f, (o1, o2) -> o1.getName().compareToIgnoreCase(o2.getName()));
         addFixedWidthColumn(Lng.str("Relation"), 90, (o1, o2) -> relationTo(o1).sortWeight - relationTo(o2).sortWeight);
-        addColumn(Lng.str("Standing"), 3.0f, (o1, o2) -> treatySummary(o1).compareToIgnoreCase(treatySummary(o2)));
+        addColumn(Lng.str("Standing"), 3.0f, (o1, o2) -> Integer.compare(standing(o1), standing(o2)));
 
         addTextFilter(new GUIListFilterText<>() {
             @Override
@@ -161,13 +174,21 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
         List<Faction> d = new ObjectArrayList<Faction>();
         int own = ownFactionId();
         for (Faction f : client().getFactionManager().getFactionCollection()) {
-            //id 0 is "no faction" rather than a party you can negotiate with, and there is no
-            //foreign policy to have with yourself
-            if (f.getIdFaction() != 0 && f.getIdFaction() != own && f.isShowInHub()) {
+            //there is no foreign policy to have with yourself
+            if (f.getIdFaction() != own && isParty(f)) {
                 d.add(f);
             }
         }
         return d;
+    }
+
+    /**
+     * Whether a faction is somebody you can have diplomacy with. Id 0 is "no faction", and the
+     * Trading Guild is the engine's shop owner rather than a polity - the NPC traders who fly for it
+     * are a faction of their own, and that is the one listed.
+     */
+    public static boolean isParty(Faction f) {
+        return f.getIdFaction() != 0 && f.getIdFaction() != FactionManager.TRAIDING_GUILD_ID && f.isShowInHub();
     }
 
     @Override
@@ -201,7 +222,8 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
             treatyText.setTextSimple(new Object() {
                 @Override
                 public String toString() {
-                    return treatySummary(f);
+                    int points = standing(f);
+                    return points > 0 ? "+" + points : String.valueOf(points);
                 }
             });
 

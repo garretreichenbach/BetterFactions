@@ -29,10 +29,9 @@ public final class TreatyType {
     private final FactionRelation.RType implies;
     private final boolean needsAcceptance;
     private final boolean breakable;
-    private final int opinionModifier;
     private final String[] nameTemplates;
 
-    TreatyType(String id, String registeredBy, String displayName, boolean symmetric, FactionRelation.RType implies, boolean needsAcceptance, boolean breakable, int opinionModifier, String[] nameTemplates) {
+    TreatyType(String id, String registeredBy, String displayName, boolean symmetric, FactionRelation.RType implies, boolean needsAcceptance, boolean breakable, String[] nameTemplates) {
         this.nameTemplates = nameTemplates;
         this.id = id;
         this.registeredBy = registeredBy;
@@ -41,7 +40,6 @@ public final class TreatyType {
         this.implies = implies;
         this.needsAcceptance = needsAcceptance;
         this.breakable = breakable;
-        this.opinionModifier = opinionModifier;
     }
 
 
@@ -153,13 +151,6 @@ public final class TreatyType {
         return breakable;
     }
 
-    /**
-     * Opinion the ledger carries while this treaty is held.
-     */
-    public int getOpinionModifier() {
-        return opinionModifier;
-    }
-
     @Override
     public String toString() {
         return id;
@@ -185,7 +176,6 @@ public final class TreatyType {
         private FactionRelation.RType implies;
         private boolean needsAcceptance = true;
         private boolean breakable = true;
-        private int opinionModifier;
         private String[] nameTemplates = new String[0];
 
         public Builder(String name) {
@@ -218,11 +208,6 @@ public final class TreatyType {
             return this;
         }
 
-        public Builder opinion(int v) {
-            opinionModifier = v;
-            return this;
-        }
-
         /**
          * Templates for naming an unnamed treaty of this type. More than one is worth having: the
          * same two factions signing the same kind of agreement twice should not produce the same
@@ -234,7 +219,7 @@ public final class TreatyType {
         }
 
         TreatyType build(String namespace) {
-            return new TreatyType(namespace + ":" + name, namespace, displayName, symmetric, implies, needsAcceptance, breakable, opinionModifier, nameTemplates);
+            return new TreatyType(namespace + ":" + name, namespace, displayName, symmetric, implies, needsAcceptance, breakable, nameTemplates);
         }
 
         String getName() {

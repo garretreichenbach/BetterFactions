@@ -3,6 +3,9 @@ package videogoose.betterfactions.diplomacy;
 import org.schema.schine.resource.tag.FinishTag;
 import org.schema.schine.resource.tag.Tag;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * One agreement in force between two factions.
  *
@@ -42,6 +45,11 @@ public class FactionTreaty {
      * Both signatories see the same name, because it is agreed as part of the offer.
      */
     public String name = "";
+    /**
+     * War only: what the declaring side said it was fighting for. A peace proposal starts from these,
+     * and either side haggles from there; accepting them unchanged is surrender.
+     */
+    public final List<SettlementTerm> goals = new ArrayList<>();
 
     /**
      * The name to show: the agreed one, falling back to the type for a treaty from a save that
@@ -102,6 +110,7 @@ public class FactionTreaty {
                 new Tag(Tag.Type.LONG, null, expiresAt),
                 new Tag(Tag.Type.STRING, null, clause == null ? "" : clause),
                 new Tag(Tag.Type.STRING, null, name == null ? "" : name),
+                SettlementTerm.listToTag(goals),
                 FinishTag.INST,
         });
     }
@@ -120,6 +129,10 @@ public class FactionTreaty {
         clause = t[6].getString();
         //appended after treaties already existed, so a save or a client one version behind stops here
         name = t.length > 7 && t[7].getType() != Tag.Type.FINISH ? t[7].getString() : "";
+        goals.clear();
+        if (t.length > 8 && t[8].getType() != Tag.Type.FINISH) {
+            SettlementTerm.listFromTag(t[8], goals);
+        }
         return TreatyTypeRegistry.exists(typeId);
     }
 }

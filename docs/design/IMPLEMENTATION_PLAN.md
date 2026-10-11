@@ -2,6 +2,8 @@
 
 > The original engine-side implementation plan, kept for its design decisions. See the note at the top of
 > `DIPLOMACY_PLAN.md` for how it maps onto the mod.
+>
+> **History, not reference.** For how the mod works now and the current roadmap, see `../DEVELOPER.md`.
 
 
 ## Context

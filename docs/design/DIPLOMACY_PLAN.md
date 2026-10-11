@@ -4,6 +4,10 @@
 > engine file and line references below describe that branch, not the mod. The mod reaches the engine only
 > through the hooks on `nf/faction-mod-hooks` (relation query, faction delete, diplomacy action, faction
 > panel, client disconnect, and the UNDEF5-7 permission bits).
+>
+> **History, not reference.** For how the mod works now and the current roadmap, see `../DEVELOPER.md`. Where
+> this disagrees with it (emblems shipped as uploads with no atlas, config lives in `moddata/BetterFactions/`), the
+> developer guide is right.
 
 
 Audited 2026-09-14 on `experimental/faction-diplomacy-rework`, branched off the modding-API work.
@@ -309,8 +313,8 @@ rank may be granted a right the editor's own rank lacks - so the one right such 
 longer enough to write every other right onto their own rank, or to disarm the founder. Only the rights in
 `ADMIN_PERMISSIONS` are clamped: a bit outside it is a faction policy toggle rather than a capability.
 
-**Admin treaty commands exist, and go through the pipeline.** `/faction treaty_sign`, `treaty_break` and
-`treaty_list` end at the same apply a negotiated proposal does, so an admin-made agreement is a treaty like
+**Admin treaty commands exist, and go through the pipeline.** `/faction_treaty_sign`, `/faction_treaty_break` and
+`/faction_treaty_list` end at the same apply a negotiated proposal does, so an admin-made agreement is a treaty like
 any other rather than a relation written behind the model's back.
 
 ### Still open
@@ -488,8 +492,8 @@ The full phase breakdown, decisions and verification steps live in the approved 
 - **Only the rights that confer authority are clamped.** `KICK_ON_FRIENDLY_FIRE` is a rule a faction
   imposes on itself rather than a capability anyone wields, and it is not in `ADMIN_PERMISSIONS` - so
   clamping it to what the editor holds would have made it unsettable by anyone, the founder included.
-- **Admin treaty commands go through the pipeline.** `/faction treaty_sign`, `treaty_break` and
-  `treaty_list` end at the same apply a negotiated proposal does, so an admin-made agreement is the same
+- **Admin treaty commands go through the pipeline.** `/faction_treaty_sign`, `/faction_treaty_break` and
+  `/faction_treaty_list` end at the same apply a negotiated proposal does, so an admin-made agreement is the same
   record a player can then see, break or renegotiate. The other half of that finding was already closed:
   `setRelationServer` clears the treaties that were forcing a relation, so `FACTION_MOD_RELATION` has not
   left the relation and the treaty set disagreeing since phase 2.

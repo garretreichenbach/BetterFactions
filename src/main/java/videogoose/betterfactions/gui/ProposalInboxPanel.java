@@ -7,6 +7,7 @@ import org.schema.game.client.data.GameClientState;
 import org.schema.game.client.view.gui.GUIInputPanel;
 import org.schema.game.common.data.player.faction.Faction;
 import videogoose.betterfactions.diplomacy.DiplomacyProposal;
+import videogoose.betterfactions.diplomacy.SettlementTerm;
 import videogoose.betterfactions.diplomacy.TreatyType;
 import videogoose.betterfactions.diplomacy.TreatyTypeRegistry;
 import org.schema.schine.common.language.Lng;
@@ -32,6 +33,8 @@ import java.util.Observer;
 public class ProposalInboxPanel extends GUIInputPanel implements Observer {
 
     private static final int ROW_HEIGHT = 124;
+    /** Extra height per settlement term, one line each. */
+    private static final int TERM_LINE = 16;
     /**
      * Narrowest a row is allowed to get, whatever the player does to the window.
      */
@@ -79,6 +82,9 @@ public class ProposalInboxPanel extends GUIInputPanel implements Observer {
      * What kind of agreement is being offered, which the title stops saying once it carries a name.
      */
     public static String typeOf(DiplomacyProposal offer) {
+        if (offer.against != 0) {
+            return Lng.str("Call to Arms");
+        }
         if (offer.typeId == null) {
             return Lng.str("Peace Offer");
         }
@@ -139,7 +145,7 @@ public class ProposalInboxPanel extends GUIInputPanel implements Observer {
             this.offer = offer;
             //no fill of its own: the panel behind it is already a readable surface, and a banded row
             //only earned its keep back when this was a table of one-line entries
-            row = new GUIAnchor(getState(), MIN_ROW_WIDTH, ROW_HEIGHT) {
+            row = new GUIAnchor(getState(), MIN_ROW_WIDTH, rowHeight()) {
                 @Override
                 public void draw() {
                     layout(this);
@@ -165,6 +171,10 @@ public class ProposalInboxPanel extends GUIInputPanel implements Observer {
             textColumn.setWidth(Math.max(120, x - 14));
         }
 
+        private int rowHeight() {
+            return ROW_HEIGHT + TERM_LINE * offer.terms.size();
+        }
+
         private GameClientState client() {
             return (GameClientState) getState();
 		}
@@ -182,8 +192,8 @@ public class ProposalInboxPanel extends GUIInputPanel implements Observer {
 
             //an unattached anchor purely to wrap against: the text column is narrower than the row,
             //and wrapping on the row itself would run the clause under the buttons
-            textColumn = new GUIAnchor(getState(), MIN_ROW_WIDTH - BUTTON_WIDTH - 24, ROW_HEIGHT);
-            GUITextOverlay info = new GUITextOverlay(MIN_ROW_WIDTH, ROW_HEIGHT - 8, getState());
+            textColumn = new GUIAnchor(getState(), MIN_ROW_WIDTH - BUTTON_WIDTH - 24, rowHeight());
+            GUITextOverlay info = new GUITextOverlay(MIN_ROW_WIDTH, rowHeight() - 8, getState());
             info.autoWrapOn = textColumn;
             info.setTextSimple(new Object() {
                 @Override
@@ -191,10 +201,28 @@ public class ProposalInboxPanel extends GUIInputPanel implements Observer {
                     StringBuilder b = new StringBuilder();
                     b.append(titleOf(offer).toUpperCase(java.util.Locale.ENGLISH)).append("\n");
                     b.append(Lng.str("From: [%s] %s  (%s)", from.getName(), offer.getInitiator(), typeOf(offer))).append("\n");
-                    b.append(offer.expiresAt > 0
+                    Faction enemy = offer.against != 0 ? client().getFactionManager().getFaction(offer.against) : null;
+                    if (offer.against != 0) {
+                        b.append(Lng.str("Against: %s", enemy != null ? enemy.getName() : String.valueOf(offer.against))).append("\n");
+                    }
+                    b.append(offer.against != 0
+                            ? Lng.str("Answer within: %s", StringTools.formatTimeFromMS(
+                            Math.max(0, offer.expiresAt - System.currentTimeMillis())))
+                            : offer.expiresAt > 0
                             ? Lng.str("Term: %s", StringTools.formatTimeFromMS(
                             Math.max(0, offer.expiresAt - System.currentTimeMillis())))
                             : Lng.str("Term: none"));
+                    if (offer.typeId == null && !DiplomacyManager.client().warGoals(offer.a, offer.b).isEmpty()) {
+                        b.append("\n").append(offer.terms.equals(DiplomacyManager.client().warGoals(offer.a, offer.b))
+                                ? Lng.str("Exactly the war goals.")
+                                : Lng.str("Differs from the war goals."));
+                    }
+                    for (SettlementTerm t : offer.terms) {
+                        b.append("\n- ").append(t.describe(id -> {
+                            Faction f = client().getFactionManager().getFaction(id);
+                            return f != null ? f.getName() : String.valueOf(id);
+                        }, offer.a, offer.b));
+                    }
                     String note = offer.getMessage() == null ? "" : offer.getMessage().trim();
                     if (!note.isEmpty()) {
                         b.append("\n").append(note);
@@ -250,13 +278,14 @@ public class ProposalInboxPanel extends GUIInputPanel implements Observer {
                         }
                     });
 
-            buttons = new GUIElement[]{accept, counter, decline};
+            //a call to arms is answered yes or no; there is nothing to haggle over
+            buttons = offer.against != 0 ? new GUIElement[]{accept, decline} : new GUIElement[]{accept, counter, decline};
             layout(row);
 
             row.attach(info);
-            row.attach(accept);
-            row.attach(counter);
-            row.attach(decline);
+            for (GUIElement button : buttons) {
+                row.attach(button);
+            }
 		}
 	}
 }

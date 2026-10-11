@@ -33,6 +33,8 @@ public final class FactionAssets_test {
                 (byte) 2, new Vector3i(8, 3, -2)));
         a.assets.add(new FactionAssets.Asset("ENTITY_SHOP_Ring Depot", "", (byte) 1,
                 new Vector3i(-100, 0, 4000)));
+        a.routes.add(new FactionAssets.Route(42L, "40 Iron: Tarsis Yard -> Ring Depot", "Travelling to Ring Depot",
+                2, 2, "Ring Depot", true, 90000L));
         return a;
     }
 
@@ -57,6 +59,10 @@ public final class FactionAssets_test {
         assert back.queriedAt == 1234567890123L : back.queriedAt;
         assert back.truncated : "the truncation flag was dropped, so a clipped list would read as a whole one";
         assert back.assets.size() == 2 : back.assets.size();
+        FactionAssets.Route r = back.route(42L);
+        assert r != null && r.isDelivery() && r.paused && r.stop == 2 && r.stops == 2 && r.etaMs == 90000L
+                && "Ring Depot".equals(r.station) && "Travelling to Ring Depot".equals(r.status) : "a route did not survive the wire";
+        assert back.route(43L) == null;
 
         FactionAssets.Asset first = back.assets.get(0);
         assert "ENTITY_SPACESTATION_Tarsis Yard".equals(first.uid) : first.uid;

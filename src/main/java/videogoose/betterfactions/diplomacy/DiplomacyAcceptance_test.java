@@ -38,6 +38,7 @@ public final class DiplomacyAcceptance_test {
         everyShippedRuleSaysNoInItsOwnWords();
         refusalsSurviveXml();
         whatIsDemandedRatherThanOffered();
+        casusBelliDefaultsAndOverrides();
         System.out.println("DiplomacyAcceptance_test: OK");
     }
 
@@ -158,9 +159,9 @@ public final class DiplomacyAcceptance_test {
      * The point of per-archetype config: three presets that behave the same are three of one.
      */
     private static void shippedPresetsDiffer() throws Exception {
-        DiplomacyConfig outcasts = loadPreset("Outcasts.xml");
-        DiplomacyConfig scavengers = loadPreset("Scavengers.xml");
-        DiplomacyConfig guild = loadPreset("Trading Guild.xml");
+        DiplomacyConfig outcasts = loadPreset("outcasts.xml");
+        DiplomacyConfig scavengers = loadPreset("scavengers.xml");
+        DiplomacyConfig guild = loadPreset("trading guild.xml");
 
         //the raider will not sign a defensive pact at any price; the merchant will, for a reason
         assert outcasts.getAcceptance(TreatyTypeRegistry.DEFENSIVE_PACT) == null;
@@ -276,6 +277,10 @@ public final class DiplomacyAcceptance_test {
         File[] files = new File(PRESETS).listFiles((d, n) -> n.endsWith(".xml"));
         assert files != null : "no NPC presets at " + new File(PRESETS).getAbsolutePath();
         for (File f : files) {
+            //the engine lowercases preset names, and a jar lookup is case-sensitive: a capitalised
+            //file is never found and its faction silently speaks with default.xml's lines
+            assert f.getName().equals(f.getName().toLowerCase(java.util.Locale.ENGLISH))
+                    : "preset file names must be lowercase to be found: " + f.getName();
             l.add(f.getName());
         }
         assert l.size() >= 4 : "expected the three shipped presets plus the default, got " + l;
@@ -310,5 +315,31 @@ public final class DiplomacyAcceptance_test {
     private static Document newDocument() throws Exception {
         DocumentBuilder b = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         return b.newDocument();
+    }
+
+    /**
+     * Every war-goal kind has a default casus belli, so a fresh server can fight over anything it can
+     * settle; and a server's own section replaces the defaults outright, so leaving a kind out is how a
+     * server forbids claiming it. A kind this build does not know is skipped, not fatal.
+     */
+    private static void casusBelliDefaultsAndOverrides() throws Exception {
+        DiplomacyConfig c = new DiplomacyConfig();
+        for (SettlementTerm.Kind k : SettlementTerm.Kind.values()) {
+            assert c.casusBelli.get(k) != null : "no default casus belli for " + k;
+            assert c.casusBelliRefusals.get(k) != null : "no refusal for " + k;
+        }
+
+        String xml = "<Diplomacy><CasusBelli>"
+                + "<Goal><Kind>transfer_faction_points</Kind><Refusal>Not over money.</Refusal>"
+                + "<And><Condition><Type>TOTAL_POINTS</Type><Value>-100</Value></Condition></And></Goal>"
+                + "<Goal><Kind>CEDE_THE_MOON</Kind><And/></Goal>"
+                + "</CasusBelli></Diplomacy>";
+        Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+                .parse(new java.io.ByteArrayInputStream(xml.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        c.parse(doc.getDocumentElement(), false);
+        assert c.casusBelli.size() == 1 : c.casusBelli.keySet();
+        assert c.casusBelli.get(SettlementTerm.Kind.TRANSFER_FACTION_POINTS) != null;
+        assert "Not over money.".equals(c.casusBelliRefusals.get(SettlementTerm.Kind.TRANSFER_FACTION_POINTS));
+        assert c.casusBelli.get(SettlementTerm.Kind.SIGN_TREATY) == null : "an omitted kind stayed claimable";
     }
 }

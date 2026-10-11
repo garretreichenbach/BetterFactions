@@ -21,7 +21,9 @@ import javax.vecmath.Vector4f;
 import java.util.regex.Pattern;
 
 /**
- * Who may do what, laid out as what it is: a grid of five ranks against the rights each one holds.
+ * Who may do what, laid out as what it is: a grid of the faction's ranks against the rights each one
+ * holds. The founder can add a rank below the lowest or remove the lowest; see {@link FactionRoles} for
+ * why ranks only change at the bottom.
  */
 public class FactionRankMatrix extends GUIAnchor {
 
@@ -29,7 +31,10 @@ public class FactionRankMatrix extends GUIAnchor {
      * The right's name column. Everything to the right of it is divided evenly between the ranks.
      */
     private static final int NAME_WIDTH = 236;
-    private static final int MIN_COLUMN_WIDTH = 68;
+    /**
+     * Wide enough for a 16-character rank name, the longest {@link #rename} allows.
+     */
+    private static final int MIN_COLUMN_WIDTH = 112;
     private static final int HEADER_HEIGHT = 44;
     private static final int SECTION_HEIGHT = 22;
     private static final int ROW_HEIGHT = 26;
@@ -46,7 +51,7 @@ public class FactionRankMatrix extends GUIAnchor {
      */
     private final FactionRoles edited = new FactionRoles();
     /**
-     * Highest rank index this player may rewrite, {@link FactionRoles#ROLE_COUNT} for a server admin
+     * Highest rank index this player may rewrite, {@link FactionRoles#MAX_ROLES} for a server admin
      * who is bound by nothing, or -1 for somebody who may not edit at all. Mirrors the server's own
      * {@code rolesEditRank}.
      */
@@ -58,7 +63,7 @@ public class FactionRankMatrix extends GUIAnchor {
      * the rank as it stands rather than as this screen leaves it.
      */
     private final long grantable;
-    private final int[] memberCount = new int[FactionRoles.ROLE_COUNT];
+    private final int[] memberCount = new int[FactionRoles.MAX_ROLES];
 
     public FactionRankMatrix(InputState state, Faction faction) {
         super(state);
@@ -67,13 +72,13 @@ public class FactionRankMatrix extends GUIAnchor {
             edited.factionId = faction.getIdFaction();
             edited.apply(faction.getRoles());
             for (FactionPermission p : faction.getMembersUID().values()) {
-                if (p.role >= 0 && p.role < FactionRoles.ROLE_COUNT) {
+                if (p.role >= 0 && p.role < FactionRoles.MAX_ROLES) {
                     memberCount[p.role]++;
                 }
             }
         }
         editRank = ownEditRank();
-        grantable = editRank >= FactionRoles.ROLE_COUNT
+        grantable = editRank >= FactionRoles.MAX_ROLES
                 ? -1L
                 : editRank < 0
                 ? 0L
@@ -82,12 +87,12 @@ public class FactionRankMatrix extends GUIAnchor {
 
     private int ownEditRank() {
         if (getState().getPlayer() != null && getState().getPlayer().isAdmin()) {
-            return FactionRoles.ROLE_COUNT;
+            return FactionRoles.MAX_ROLES;
         }
         FactionPermission p = faction == null || getState().getPlayer() == null
                 ? null
                 : faction.getMembersUID().get(getState().getPlayer().getName());
-        if (p == null || p.role < 0 || p.role >= FactionRoles.ROLE_COUNT) {
+        if (p == null || p.role < 0 || p.role >= FactionRoles.MAX_ROLES) {
             return -1;
         }
         return p.role;
@@ -105,9 +110,27 @@ public class FactionRankMatrix extends GUIAnchor {
         return (GameClientState) super.getState();
     }
 
+    /**
+     * Whether this player may add or remove ranks. The server checks again: reshaping the ladder moves
+     * members, so it is the founder's call alone.
+     */
+    public boolean mayReshape() {
+        return editRank >= FactionRoles.INDEX_ADMIN_ROLE;
+    }
+
+    private void reshape(int count) {
+        edited.setCount(count);
+        getChilds().clear();
+        build();
+    }
+
     @Override
     public void onInit() {
         super.onInit();
+        build();
+    }
+
+    private void build() {
         GUIElementList list = new GUIElementList(getState());
 
         if (faction == null) {
@@ -146,19 +169,19 @@ public class FactionRankMatrix extends GUIAnchor {
     }
 
     private float columnWidth() {
-        return Math.max(MIN_COLUMN_WIDTH, (rowWidth() - NAME_WIDTH) / FactionRoles.ROLE_COUNT);
+        return Math.max(MIN_COLUMN_WIDTH, (rowWidth() - NAME_WIDTH) / edited.getCount());
     }
 
     private float rowWidth() {
-        return Math.max(NAME_WIDTH + MIN_COLUMN_WIDTH * FactionRoles.ROLE_COUNT, getWidth() - 8);
+        return Math.max(NAME_WIDTH + MIN_COLUMN_WIDTH * edited.getCount(), getWidth() - 8);
     }
 
     /**
      * Column x for a rank, with the small inset every cell and caption shares so the grid reads as
-     * columns rather than as five loose stacks.
+     * columns rather than as loose stacks. Lowest rank first, so the founder is always the last column.
      */
     private float columnX(int rank) {
-        return NAME_WIDTH + rank * columnWidth() + 6;
+        return NAME_WIDTH + (rank - edited.getLowestIndex()) * columnWidth() + 6;
     }
 
     /**
@@ -166,15 +189,16 @@ public class FactionRankMatrix extends GUIAnchor {
      * people are in it, which one is yours, and which are out of your reach.
      */
     private GUIAnchor header() {
-        GUIElement[] names = new GUIElement[FactionRoles.ROLE_COUNT];
-        GUITextOverlay[] subs = new GUITextOverlay[FactionRoles.ROLE_COUNT];
+        GUIElement[] names = new GUIElement[FactionRoles.MAX_ROLES];
+        GUITextOverlay[] subs = new GUITextOverlay[FactionRoles.MAX_ROLES];
+        int lowest = edited.getLowestIndex();
 
         GUIAnchor h = new GUIAnchor(getState(), 100, HEADER_HEIGHT) {
             @Override
             public void draw() {
                 setWidth(rowWidth());
                 float cw = columnWidth();
-                for (int i = 0; i < FactionRoles.ROLE_COUNT; i++) {
+                for (int i = lowest; i < FactionRoles.MAX_ROLES; i++) {
                     if (names[i] instanceof GUITextButton b) {
                         b.setWidth(cw - 10);
                     }
@@ -190,14 +214,22 @@ public class FactionRankMatrix extends GUIAnchor {
         caption.setColor(DIM);
         caption.setPos(8, 26, 0);
         h.attach(caption);
+        if (mayReshape()) {
+            h.attach(reshapeButton(Lng.str("+ RANK"), 8, () -> edited.getCount() < FactionRoles.MAX_ROLES, edited.getCount() + 1));
+            h.attach(reshapeButton(Lng.str("- RANK"), 80, () -> edited.getCount() > FactionRoles.MIN_ROLES, edited.getCount() - 1));
+        }
 
-        for (int i = 0; i < FactionRoles.ROLE_COUNT; i++) {
+        for (int i = lowest; i < FactionRoles.MAX_ROLES; i++) {
             FactionRole role = edited.getRoles()[i];
             boolean mine = i == editRank;
             names[i] = i <= editRank ? renameButton(role) : rankLabel(role);
             subs[i] = new GUITextOverlay(10, 10, FontLibrary.getBlenderProMedium14(), getState());
             subs[i].setTextSimple(i > editRank
                     ? Lng.str("out of reach")
+                    : i < faction.getRoles().getLowestIndex()
+                    ? Lng.str("new")
+                    : moving(i) > 0
+                    ? Lng.str("%s here, %s moving in", memberCount[i], moving(i))
                     : mine
                     ? Lng.str("you, %s here", memberCount[i])
                     : Lng.str("%s here", memberCount[i]));
@@ -206,6 +238,38 @@ public class FactionRankMatrix extends GUIAnchor {
             h.attach(subs[i]);
         }
         return h;
+    }
+
+    /**
+     * Members of ranks this edit removes: they move up into the new lowest rank when it is applied.
+     */
+    private int moving(int rank) {
+        if (rank != edited.getLowestIndex()) {
+            return 0;
+        }
+        int n = 0;
+        for (int i = 0; i < rank; i++) {
+            n += memberCount[i];
+        }
+        return n;
+    }
+
+    private GUITextButton reshapeButton(Object label, int x, java.util.function.BooleanSupplier enabled, int count) {
+        GUITextButton b = new GUITextButton(getState(), 64, 18, GUITextButton.ColorPalette.OK, label, new GUICallback() {
+            @Override
+            public void callback(GUIElement callingGuiElement, MouseEvent event) {
+                if (event.pressedLeftMouse() && enabled.getAsBoolean()) {
+                    reshape(count);
+                }
+            }
+
+            @Override
+            public boolean isOccluded() {
+                return !isActive() || !enabled.getAsBoolean();
+            }
+        });
+        b.setPos(x, 4, 0);
+        return b;
     }
 
     /**
@@ -268,17 +332,18 @@ public class FactionRankMatrix extends GUIAnchor {
     }
 
     /**
-     * One right against all five ranks.
+     * One right against every rank.
      */
     private GUIAnchor row(FactionPermission.PermType right) {
-        GUIElement[] cells = new GUIElement[FactionRoles.ROLE_COUNT];
+        GUIElement[] cells = new GUIElement[FactionRoles.MAX_ROLES];
+        int lowest = edited.getLowestIndex();
         boolean mineToGive = (grantable & right.value) == right.value;
 
         GUIAnchor r = new GUIAnchor(getState(), 100, ROW_HEIGHT) {
             @Override
             public void draw() {
                 setWidth(rowWidth());
-                for (int i = 0; i < FactionRoles.ROLE_COUNT; i++) {
+                for (int i = lowest; i < FactionRoles.MAX_ROLES; i++) {
                     cells[i].setPos(columnX(i), 4, 0);
                 }
                 super.draw();
@@ -286,14 +351,14 @@ public class FactionRankMatrix extends GUIAnchor {
         };
 
         GUITextOverlay n = new GUITextOverlay(10, 10, FontLibrary.getBlenderProMedium16(), getState());
-        n.setTextSimple(Perms.label(right));
+        n.setTextSimple(right.getName());
         if (!mineToGive) {
             n.setColor(DIM);
         }
         n.setPos(8, 4, 0);
         r.attach(n);
 
-        for (int i = 0; i < FactionRoles.ROLE_COUNT; i++) {
+        for (int i = lowest; i < FactionRoles.MAX_ROLES; i++) {
             cells[i] = mineToGive && settable(i, right)
                     ? checkBox(edited.getRoles()[i], right)
                     : mark(edited.getRoles()[i], right);

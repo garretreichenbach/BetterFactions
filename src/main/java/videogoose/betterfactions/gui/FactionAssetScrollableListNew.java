@@ -16,6 +16,7 @@ import org.schema.schine.input.InputState;
 import videogoose.betterfactions.DiplomacyManager;
 import videogoose.betterfactions.Perms;
 import videogoose.betterfactions.assets.FactionAssets;
+import videogoose.betterfactions.assets.FleetRoutes;
 
 import javax.vecmath.Vector4f;
 import java.util.*;
@@ -227,13 +228,40 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
             return Lng.str("Claim only");
         }
         if (h.isFleet()) {
-            return Lng.str("Fleet (%s)", h.fleet.getMembers().size());
+            FactionAssets.Route r = routeOf(h);
+            if (r == null) {
+                return Lng.str("Fleet (%s)", h.fleet.getMembers().size());
+            }
+            return r.isDelivery() ? Lng.str("Delivery (%s)", h.fleet.getMembers().size())
+                    : Lng.str("On route (%s)", h.fleet.getMembers().size());
         }
         if (h.home) {
             return Lng.str("Homebase");
         }
         SimpleTransformableSendableObject.EntityType t = typeOf(h.asset);
         return t != null ? t.getName() : Lng.str("Holding");
+    }
+
+    /**
+     * The Resources Reorganized route a fleet row is running, read off the latest answer so it moves on
+     * without the row being rebuilt. Null for anything else, or without that mod.
+     */
+    private static FactionAssets.Route routeOf(Holding h) {
+        FactionAssets a = DiplomacyManager.client().getFactionAssets();
+        return h.isFleet() && a != null ? a.route(h.fleet.dbid) : null;
+    }
+
+    /**
+     * One line on where a route has got to, ahead of the fleet's own description.
+     */
+    private static String routeLine(FactionAssets.Route r) {
+        String where = r.stop > 0 ? Lng.str("stop %s/%s, %s", r.stop, r.stops, r.station) : Lng.str("between schedules");
+        long eta = r.etaLeft();
+        String status = r.status + (r.paused ? Lng.str(" (paused)") : "")
+                + (eta <= 0 ? "" : eta < 60000 ? Lng.str(", arriving in under a minute")
+                : Lng.str(", about %s min out", (eta + 30000) / 60000));
+        return r.isDelivery() ? Lng.str("Delivering %s - %s: %s", r.order, where, status)
+                : Lng.str("On route, %s: %s", where, status);
     }
 
     private static String name(Holding h) {
@@ -324,6 +352,8 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
 
     @Override
     public void draw() {
+        //keeps routes moving while the tab is open; throttled to one ask per 30s in the channel
+        DiplomacyManager.client().requestFactionAssets(false);
         FactionAssets a = DiplomacyManager.client().getFactionAssets();
         long stamp = a == null ? -1 : a.queriedAt;
         if (stamp != builtFrom) {
@@ -388,7 +418,12 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
             GUITextOverlayTable systemText = new GUITextOverlayTable(10, 10, getState());
 
             nameText.setTextSimple(name(h));
-            kindText.setTextSimple(kind(h));
+            kindText.setTextSimple(new Object() {
+                @Override
+                public String toString() {
+                    return kind(h);
+                }
+            });
             systemText.setTextSimple(new Object() {
                 @Override
                 public String toString() {
@@ -422,7 +457,9 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
      * to answer, which is a feature of its own rather than a line here.
      */
     private GUIAnchor expandedFor(Holding h) {
-        GUIAnchor c = new GUIAnchor(getState(), 100, 56) {
+        //a route adds a line above the fleet's own description
+        boolean routed = h.isFleet() && FleetRoutes.installed();
+        GUIAnchor c = new GUIAnchor(getState(), 100, routed ? 76 : 56) {
             @Override
             public void draw() {
                 setWidth(parent.getWidth());
@@ -439,7 +476,8 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
                             + "It costs faction points every period either way.", systemName(h.system));
                 }
                 if (h.isFleet()) {
-                    return Lng.str("%s ships under %s, %s, in sector %s of %s. Open to %s. Composition "
+                    FactionAssets.Route r = routeOf(h);
+                    return (r != null ? routeLine(r) + "\n" : "") + Lng.str("%s ships under %s, %s, in sector %s of %s. Open to %s. Composition "
                                     + "and orders are the fleet menu's.",
                             h.fleet.getMembers().size(), h.fleet.getOwner(), h.fleet.missionString,
                             h.fleet.getFlagShip().getSector().toStringPure(), systemName(systemOf(h)),
@@ -470,7 +508,7 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
                 }
             }
         });
-        navButton.setPos(4, 28, 0);
+        navButton.setPos(4, routed ? 48 : 28, 0);
 
         c.attach(where);
         c.attach(navButton);

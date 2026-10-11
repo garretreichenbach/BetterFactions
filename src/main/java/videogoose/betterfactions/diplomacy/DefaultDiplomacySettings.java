@@ -48,6 +48,9 @@ public final class DefaultDiplomacySettings implements DiplomacySettings {
         if (diplomacy == null) {
             diplomacy = new DiplomacyConfig();
             diplomacy.addDefaultActions();
+            //player factions read nothing else from disk, but whether they may go to war over
+            //something is a server's call to make
+            loadCasusBelli(diplomacy);
         }
         this.diplomacy = diplomacy;
         STATUS_CHECK_DELAY = npc != null ? npc.diplomacyStatusCheckDelay : 60000;
@@ -66,19 +69,43 @@ public final class DefaultDiplomacySettings implements DiplomacySettings {
 
     /**
      * An NPC preset's settings: its own timings from the vanilla preset config, and its point
-     * tables and acceptance rules from {@code moddata/BetterFactions/npc/<preset>.xml}, falling back
+     * tables and acceptance rules from {@code moddata/BetterFactions/npc/<preset>.xml} (lowercase, e.g. {@code trading guild.xml}), falling back
      * to the copy shipped in the mod jar, then to the mod's {@code default.xml}.
      *
      * <p>Kept out of the vanilla {@code npcConfig.xml}: that parser resets the diplomacy section on a
      * version it does not know, so the new vocabulary would never survive a load there.</p>
      */
     public static DiplomacySettings forPreset(NPCFactionConfig npc) {
-        String name = npc.getPreset() != null ? npc.getPreset().factionPresetName : "default";
+        //the engine already lowercases preset names from their folder; lowercased again so the file
+        //lookup cannot drift if it ever stops. A jar lookup is case-sensitive, and a miss silently
+        //falls back to default.xml - every archetype then speaks with one generic voice
+        String name = npc.getPreset() != null && npc.getPreset().factionPresetName != null
+                ? npc.getPreset().factionPresetName.toLowerCase(java.util.Locale.ENGLISH) : "default";
         return PRESETS.computeIfAbsent(name, n -> new DefaultDiplomacySettings(loadPreset(n), npc));
     }
 
     public static void clearPresets() {
         PRESETS.clear();
+    }
+
+    /**
+     * An optional {@code moddata/BetterFactions/casus_belli.xml} whose root holds a {@code <CasusBelli>}
+     * section; see {@link DiplomacyConfig#parseCasusBelli}.
+     */
+    private static void loadCasusBelli(DiplomacyConfig into) {
+        File f = new File("moddata/BetterFactions/casus_belli.xml");
+        if (!f.exists()) {
+            return;
+        }
+        try (InputStream in = new FileInputStream(f)) {
+            Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(in);
+            org.w3c.dom.Element root = doc.getDocumentElement();
+            org.w3c.dom.NodeList sections = "casusbelli".equalsIgnoreCase(root.getNodeName())
+                    ? null : root.getElementsByTagName("CasusBelli");
+            into.parseCasusBelli(sections == null ? root : sections.getLength() > 0 ? sections.item(0) : root);
+        } catch (Exception e) {
+            System.err.println("[BetterFactions] could not read casus_belli.xml, keeping the defaults: " + e);
+        }
     }
 
     private static DiplomacyConfig loadPreset(String name) {
@@ -206,6 +233,16 @@ public final class DefaultDiplomacySettings implements DiplomacySettings {
     @Override
     public String getDiplomacyRefusal(String treatyId) {
         return diplomacy.getRefusal(treatyId);
+    }
+
+    @Override
+    public DiplomacyConditionGroup getCasusBelli(SettlementTerm.Kind kind) {
+        return diplomacy.casusBelli.get(kind);
+    }
+
+    @Override
+    public String getCasusBelliRefusal(SettlementTerm.Kind kind) {
+        return diplomacy.casusBelliRefusals.get(kind);
     }
 
     @Override

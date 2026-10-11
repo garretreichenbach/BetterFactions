@@ -11,15 +11,20 @@ import api.event.EventResult;
 import api.event.lifecycle.ServerInitializeListener;
 import api.event.lifecycle.ServerUpdateListener;
 import api.event.player.PlayerJoinWorldListener;
+import api.event.player.ShopPriceListener;
+import org.schema.common.util.StringTools;
+import org.schema.schine.common.language.Lng;
 import api.event.world.WorldSaveListener;
 import api.mod.StarMod;
 import api.network.packets.PacketUtil;
+import org.schema.game.client.view.mainmenu.GuidesRegistry;
 import org.schema.game.common.data.world.Universe;
 import org.schema.game.server.data.GameServerState;
 import videogoose.betterfactions.assets.FactionAssetIndex;
 import videogoose.betterfactions.commands.DiplomacyCommands;
 import videogoose.betterfactions.diplomacy.DefaultDiplomacySettings;
 import videogoose.betterfactions.diplomacy.DiplomacyAction;
+import videogoose.betterfactions.diplomacy.TreatyTypeRegistry;
 import videogoose.betterfactions.gui.FactionPanelTabs;
 import videogoose.betterfactions.net.BFPacket;
 
@@ -50,13 +55,26 @@ public final class BetterFactions extends StarMod {
 	@Override
 	public void onEnable() {
 		BFConfig.initialize(this);
+		Perms.define();
 		PacketUtil.registerPacket(this, BFPacket.class);
 		registerEvents();
 		DiplomacyCommands.register(this);
 	}
 
 	@Override
+	public void onRegisterGuides(GuidesRegistry.ModGuideRegistrar registrar) {
+		//same section key and title as the built-in factions guide, which replaces it
+		registrar.registerFromResource("07-multiplayer", "Multiplayer", "Factions", "guides/factions.md", this);
+		registrar.registerFromResource("betterfactions", "BetterFactions", "Treaties", "guides/treaties.md", this);
+		registrar.registerFromResource("betterfactions", "BetterFactions", "Opinion and NPC Factions", "guides/opinion.md", this);
+		registrar.registerFromResource("betterfactions", "BetterFactions", "Federations", "guides/federations.md", this);
+		registrar.registerFromResource("betterfactions", "BetterFactions", "Server Administration", "guides/server-admins.md", this);
+	}
+
+	@Override
 	public void onDisable() {
+		//drops types other mods registered with us, so a re-enable does not stack duplicates
+		TreatyTypeRegistry.unregisterAll();
 		if (GameServerState.instance != null) {
 			BFStore.save(DiplomacyManager.server());
 		}
@@ -74,6 +92,9 @@ public final class BetterFactions extends StarMod {
 			DiplomacyAction.DiplActionType mine = DiplomacyAction.DiplActionType.fromVanilla(type);
 			if (mine != null) {
 				DiplomacyManager.server().diplomacyAction(mine, toFaction, otherDbId);
+			}
+			if (mine == DiplomacyAction.DiplActionType.ATTACK) {
+				DiplomacyManager.server().onAttacked(toFaction, otherDbId);
 			}
 		}, this);
 
@@ -111,6 +132,15 @@ public final class BetterFactions extends StarMod {
 				assetIndex.invalidate(context.getNewFaction());
 			}
 			return EventResult.CONTINUE;
+		}, this);
+
+		//a trade agreement's whole effect: better prices at the partner's shops, server side only
+		ShopPriceListener.TYPE.register((player, shop, type, price, playerBuys) -> {
+			int adjusted = DiplomacyManager.server().shopPrice(shop.getFactionId(), player.getFactionId(), price, playerBuys);
+			if (adjusted != price) {
+				player.sendServerMessagePlayerInfo(Lng.astr("Trade agreement: %s credits per unit instead of %s.", StringTools.formatSeperated(adjusted), StringTools.formatSeperated(price)));
+			}
+			return adjusted;
 		}, this);
 
 		FactionPanelCreateListener.TYPE.register(FactionPanelTabs::addTabs, this);

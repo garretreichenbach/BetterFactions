@@ -237,20 +237,6 @@
                 </Condition>
             </AND>
         </Reaction>
-        <Reaction>
-            <Name>Note the trespass</Name>
-            <Message>Your ships have been through our space. We counted them. We count everything out here.
-            </Message>
-            <Action>SEND_FACTION_MAIL</Action>
-            <Treaty></Treaty>
-            <AND>
-                <Condition>
-                    <Type>ACTION_COUNTER</Type>
-                    <Action>TERRITORY</Action>
-                    <Value>1.0</Value>
-                </Condition>
-            </AND>
-        </Reaction>
     </Reactions>
     <PowerWeights>
         <!--What this faction counts when sizing another up. Used by the POWER status and the RELATIVE_STRENGTH condition, which compare the two totals as a ratio - so only the weights relative to each other matter, and scaling all three changes nothing. PointSurplus is faction points spare per period, not the balance.-->

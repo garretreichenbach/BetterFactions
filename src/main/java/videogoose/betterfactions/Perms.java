@@ -22,20 +22,13 @@ public final class Perms {
 	}
 
 	/**
-	 * What a right is called. The engine's spare bits carry no name of their own, so the mod's are
-	 * named here.
+	 * Names the spare bits, which is what puts them in the rank editor. On every enable: the engine
+	 * hides them again whenever mods are reset.
 	 */
-	public static String label(PermType type) {
-		if (type == TREATIES) {
-			return Lng.str("Sign Treaties");
-		}
-		if (type == FEDERATION_VOTE) {
-			return Lng.str("Federation Vote");
-		}
-		if (type == ASSETS_VIEW) {
-			return Lng.str("View Holdings");
-		}
-		return type.getName();
+	public static void define() {
+		TREATIES.define(en -> Lng.str("Sign treaties"));
+		FEDERATION_VOTE.define(en -> Lng.str("Speak for us in the federation"));
+		ASSETS_VIEW.define(en -> Lng.str("View holdings"));
 	}
 
 	public static boolean has(Faction f, FactionPermission member, PermType type) {

@@ -36,6 +36,10 @@ public final class DiplomacyProposal_test {
         responseKeepsTheOffersDirection();
         queriesAreNeitherOffersNorResponses();
         queryResultRoundTripsThroughTheWire();
+        counterKeepsItsName();
+        termsSurviveWireAndTag();
+        counterKeepsWhoPays();
+        termsAreCheckedOnTheirOwn();
         System.out.println("DiplomacyProposal_test: OK");
     }
 
@@ -203,6 +207,71 @@ public final class DiplomacyProposal_test {
         assert no.action == DiplomacyProposal.Action.DECLINE;
         assert no.isResponse();
         assert !offer.isResponse();
+    }
+
+    /**
+     * A counter-offer is a proposal of its own, so the name it asks for has to come with it.
+     */
+    private static void counterKeepsItsName() {
+        DiplomacyProposal counter = new DiplomacyProposal();
+        counter.set("Target", 11, 22, RType.FRIEND.code, "how about this", false);
+        counter.name = "The Better Accord";
+        DiplomacyProposal back = counter.asCounterProposal();
+        assert "The Better Accord".equals(back.name) : back.name;
+        assert back.a == 22 && back.b == 11 : "the counter is asked the other way round";
+    }
+
+    private static DiplomacyProposal settlement() {
+        DiplomacyProposal p = new DiplomacyProposal();
+        p.set("Someone", 3, 4, null, RType.NEUTRAL.code, "enough", DiplomacyProposal.Action.PROPOSE);
+        p.terms.add(SettlementTerm.points(4, 500));
+        p.terms.add(SettlementTerm.signTreaty(4, TreatyTypeRegistry.ALLIANCE));
+        p.terms.add(SettlementTerm.breakTreaty(3, TreatyTypeRegistry.DEFENSIVE_PACT, 9));
+        return p;
+    }
+
+    /**
+     * Terms are what a peace is worth; one dropped in transit signs a different deal than was agreed.
+     */
+    private static void termsSurviveWireAndTag() throws IOException {
+        DiplomacyProposal p = settlement();
+        assert wire(p, 1).terms.equals(p.terms) : wire(p, 1).terms;
+        DiplomacyProposal back = new DiplomacyProposal();
+        back.fromTagStructure(p.toTagStructure());
+        assert back.terms.equals(p.terms) : back.terms;
+        //a call to arms names who it is against; losing that would turn it into war on the caller
+        p.against = 77;
+        assert wire(p, 1).against == 77;
+        back.fromTagStructure(p.toTagStructure());
+        assert back.against == 77 : back.against;
+        //and a query's answer echoes them, so a stale preview is not read as this one's
+        DiplomacyProposal q = DiplomacyProposal.query("Asker", 3, 4, null, p.terms);
+        assert DiplomacyProposal.queryResult(q, false, "no").terms.equals(p.terms);
+    }
+
+    /**
+     * The pair flips on a counter; who pays must not. Givers are faction ids for exactly this reason.
+     */
+    private static void counterKeepsWhoPays() {
+        DiplomacyProposal p = settlement();
+        DiplomacyProposal c = DiplomacyProposal.counterTo(p, "Other", null, 0L, "", "", p.terms).asCounterProposal();
+        assert c.a == 4 && c.b == 3;
+        assert c.terms.equals(p.terms) : c.terms;
+        assert c.terms.get(0).receiver(c.a, c.b) == 3 : "the payer's points went to the wrong side";
+    }
+
+    private static void termsAreCheckedOnTheirOwn() {
+        assert SettlementTerm.problem(settlement().terms, 3, 4) == null : SettlementTerm.problem(settlement().terms, 3, 4);
+        assert SettlementTerm.points(7, 10).problem(3, 4) != null : "a third faction was made to pay";
+        assert SettlementTerm.points(3, 0).problem(3, 4) != null;
+        assert SettlementTerm.points(3, Float.NaN).problem(3, 4) != null;
+        assert SettlementTerm.points(3, -50).problem(3, 4) != null : "a negative payment is a demand in disguise";
+        assert SettlementTerm.signTreaty(3, TreatyTypeRegistry.WAR).problem(3, 4) != null : "war is not agreed";
+        assert SettlementTerm.signTreaty(3, TreatyTypeRegistry.FEDERATION).problem(3, 4) != null;
+        assert SettlementTerm.signTreaty(3, "nobody:nothing").problem(3, 4) != null;
+        assert SettlementTerm.breakTreaty(3, TreatyTypeRegistry.ALLIANCE, 3).problem(3, 4) != null;
+        assert SettlementTerm.breakTreaty(3, TreatyTypeRegistry.ALLIANCE, 0).breakWith(3, 4) == 4;
+        assert new SettlementTerm(null, 3, "", 0, 0).problem(3, 4) != null : "an unknown kind slipped through";
     }
 
     private static DiplomacyProposal wire(DiplomacyProposal p, int senderStateId) throws IOException {

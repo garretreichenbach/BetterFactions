@@ -33,7 +33,9 @@ public final class FactionTreaty_test {
         derivesStrongestRelation();
         hostilityBeatsFriendship();
         nonImplyingTreatiesDeferToTheRelationTable();
+        tradeAgreementPricesTheCounter();
         expiryIsHonoured();
+        warGoalsSurviveTheRoundTrip();
         System.out.println("FactionTreaty_test: OK");
     }
 
@@ -223,5 +225,30 @@ public final class FactionTreaty_test {
         t[t.length - 1] = org.schema.schine.resource.tag.FinishTag.INST;
         return new org.schema.schine.resource.tag.Tag(
                 org.schema.schine.resource.tag.Tag.Type.STRUCT, null, t);
+    }
+
+    /**
+     * Goals ride the treaty to every client and into the save; a peace offer starts from them, so
+     * losing them would quietly turn every surrender into a white peace.
+     */
+    private static void warGoalsSurviveTheRoundTrip() {
+        FactionTreaty war = new FactionTreaty(1, 2, TreatyTypeRegistry.WAR, 5L);
+        war.goals.add(SettlementTerm.points(2, 1000));
+        war.goals.add(SettlementTerm.breakTreaty(2, TreatyTypeRegistry.ALLIANCE, 7));
+        FactionTreaty back = new FactionTreaty();
+        assert back.fromTag(war.toTag());
+        assert back.goals.equals(war.goals) : back.goals;
+
+        FactionTreaty none = new FactionTreaty();
+        assert none.fromTag(new FactionTreaty(1, 2, TreatyTypeRegistry.WAR, 5L).toTag());
+        assert none.goals.isEmpty();
+    }
+
+    private static void tradeAgreementPricesTheCounter() {
+        assert videogoose.betterfactions.DiplomacyManager.tradePrice(100, 10, true) == 90;
+        assert videogoose.betterfactions.DiplomacyManager.tradePrice(100, 10, false) == 110;
+        assert videogoose.betterfactions.DiplomacyManager.tradePrice(1, 10, true) == 1;
+        assert videogoose.betterfactions.DiplomacyManager.tradePrice(100, 0, true) == 100;
+        assert videogoose.betterfactions.DiplomacyManager.tradePrice(Integer.MAX_VALUE, 50, false) == Integer.MAX_VALUE;
     }
 }

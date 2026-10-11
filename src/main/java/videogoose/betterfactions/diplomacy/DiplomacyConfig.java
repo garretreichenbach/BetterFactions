@@ -42,13 +42,28 @@ public class DiplomacyConfig {
     public double powerSystemWeight = 20;
     public double powerMemberWeight = 10;
 
+    /**
+     * Casus belli: what has to be true of a faction before war may be declared on it with a goal of
+     * this kind. Read from the declarer's own ledger of the target, so the conditions speak of what
+     * the target did to the declarer. A kind with no rule here cannot be claimed as a war goal; a war
+     * with no goals needs none, and can only end in a peace the two sides negotiate.
+     */
+    public final java.util.EnumMap<SettlementTerm.Kind, DiplomacyConditionGroup> casusBelli = new java.util.EnumMap<>(SettlementTerm.Kind.class);
+    /**
+     * Keyed like {@link #casusBelli}: what the declarer is told when the claim does not hold.
+     */
+    public final java.util.EnumMap<SettlementTerm.Kind, String> casusBelliRefusals = new java.util.EnumMap<>(SettlementTerm.Kind.class);
+
     public DiplomacyConfig() {
         addDefaultAcceptance();
+        addDefaultCasusBelli();
 
 
         for (DiplomacyAction.DiplActionType t : DiplomacyAction.DiplActionType.values()) {
             actionTimeoutMap.put(t, 60000 * 5);
         }
+        //an NPC will not re-offer a treaty while the refusal is live, so this is how long "no" lasts
+        actionTimeoutMap.put(DiplomacyAction.DiplActionType.TREATY_REFUSED, 60000 * 60);
         for (DiplomacyAction.DiplActionType t : DiplomacyAction.DiplActionType.values()) {
             DiplomacyConfigElement c = new DiplomacyConfigElement();
             c.actionType = t;
@@ -425,6 +440,9 @@ public class DiplomacyConfig {
             if (node.getNodeType() == Node.ELEMENT_NODE && "acceptance".equals(node.getNodeName().toLowerCase(Locale.ENGLISH))) {
                 parseAcceptance(node);
             }
+            if (node.getNodeType() == Node.ELEMENT_NODE && "casusbelli".equals(node.getNodeName().toLowerCase(Locale.ENGLISH))) {
+                parseCasusBelli(node);
+            }
         }
     }
 
@@ -449,6 +467,95 @@ public class DiplomacyConfig {
                 System.err.println("[DIPLOMACY][CONFIG] bad power weight for " + n + ": " + item.getTextContent());
             }
         }
+    }
+
+    /**
+     * {@code <CasusBelli><Goal><Kind>TRANSFER_FACTION_POINTS</Kind><Refusal>..</Refusal><Or>..</Or></Goal></CasusBelli>}.
+     * A section that is present replaces the defaults entirely, so a server can also take a kind away.
+     */
+    public void parseCasusBelli(Node node) {
+        casusBelli.clear();
+        casusBelliRefusals.clear();
+        NodeList childs = node.getChildNodes();
+        for (int i = 0; i < childs.getLength(); i++) {
+            Node item = childs.item(i);
+            if (item.getNodeType() != Node.ELEMENT_NODE || !"goal".equals(item.getNodeName().toLowerCase(Locale.ENGLISH))) {
+                continue;
+            }
+            SettlementTerm.Kind kind = null;
+            String refusal = null;
+            DiplomacyConditionGroup rule = null;
+            NodeList parts = item.getChildNodes();
+            for (int c = 0; c < parts.getLength(); c++) {
+                Node part = parts.item(c);
+                if (part.getNodeType() != Node.ELEMENT_NODE) {
+                    continue;
+                }
+                String n = part.getNodeName().toLowerCase(Locale.ENGLISH);
+                try {
+                    if ("kind".equals(n)) {
+                        kind = DiplomacyTags.byName(SettlementTerm.Kind.class, part.getTextContent().trim().toUpperCase(Locale.ENGLISH));
+                    } else if ("refusal".equals(n)) {
+                        refusal = part.getTextContent().trim();
+                    } else if (DiplomacyConditionGroup.canParse(part)) {
+                        rule = DiplomacyConditionGroup.parse(part);
+                    }
+                } catch (ConfigParserException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (kind == null || rule == null) {
+                System.err.println("[DIPLOMACY][CONFIG] skipping a casus belli with no known kind or no rule");
+                continue;
+            }
+            casusBelli.put(kind, rule);
+            if (refusal != null && !refusal.isEmpty()) {
+                casusBelliRefusals.put(kind, refusal);
+            }
+        }
+    }
+
+    private static DiplomacyConditionGroup or(DiplomacyConditionGroup... parts) {
+        DiplomacyConditionGroup g = and(parts);
+        g.mod = DiplomacyConditionGroup.ConditionMod.OR;
+        return g;
+    }
+
+    private static DiplomacyConditionGroup not(DiplomacyConditionGroup part) {
+        DiplomacyConditionGroup g = and(part);
+        g.mod = DiplomacyConditionGroup.ConditionMod.NOT;
+        return g;
+    }
+
+    private static DiplomacyCondition did(DiplomacyAction.DiplActionType action) {
+        DiplomacyCondition c = new DiplomacyCondition();
+        c.type = DiplomacyCondition.ConditionType.EXISTS_ACTION;
+        c.argumentAction = action;
+        return c;
+    }
+
+    /**
+     * A grievance: they attacked us, broke a treaty with us, declared war on us, or we simply loathe
+     * them. Reparations and imposed treaties need one; dismantling their alliance also accepts their
+     * being allied with our enemies.
+     */
+    public void addDefaultCasusBelli() {
+        casusBelli.clear();
+        casusBelliRefusals.clear();
+        casusBelli.put(SettlementTerm.Kind.TRANSFER_FACTION_POINTS, grievance());
+        casusBelli.put(SettlementTerm.Kind.SIGN_TREATY, grievance());
+        casusBelli.put(SettlementTerm.Kind.BREAK_TREATY, or(grievance(), did(DiplomacyAction.DiplActionType.ALLIANCE_WITH_ENEMY)));
+        casusBelliRefusals.put(SettlementTerm.Kind.TRANSFER_FACTION_POINTS, Lng.str("They have done nothing to you that would justify reparations."));
+        casusBelliRefusals.put(SettlementTerm.Kind.SIGN_TREATY, Lng.str("They have done nothing to you that would justify imposing a treaty."));
+        casusBelliRefusals.put(SettlementTerm.Kind.BREAK_TREATY, Lng.str("Neither a grievance nor an alliance with your enemies justifies breaking up their treaties."));
+    }
+
+    private static DiplomacyConditionGroup grievance() {
+        return or(
+                did(DiplomacyAction.DiplActionType.ATTACK),
+                did(DiplomacyAction.DiplActionType.TREATY_BROKEN),
+                did(DiplomacyAction.DiplActionType.DECLARATION_OF_WAR),
+                not(rawPoints(-500)));
     }
 
     private void parseAcceptance(Node node) {

@@ -477,8 +477,18 @@ public class DiplomacyEntity implements LogInterface {
         setNTChanged();
     }
 
+    /**
+     * Every live action of this type, whatever it was about - a broken treaty is recorded under the
+     * treaty's id, and a rule asking about broken treaties means all of them.
+     */
     public int getActionCount(DiplomacyAction.DiplActionType type) {
-        return getActionCount(type, null);
+        int n = 0;
+        for (DiplomacyAction a : actions.values()) {
+            if (a.type == type) {
+                n += a.counter;
+            }
+        }
+        return n;
     }
 
     public int getActionCount(DiplomacyAction.DiplActionType type, String subject) {
@@ -791,16 +801,12 @@ public class DiplomacyEntity implements LogInterface {
             if (nPCExecuteDiplomacyReactionResult.isConsumed()) break;
         }
         if (nPCExecuteDiplomacyReactionResult.isCanceled()) return false;
-        switch (r.reaction) {
-            case PROPOSE_TREATY:
-                return proposeTreaty(r);
-            case WITHDRAW_PROPOSAL:
-                return withdrawProposal(r);
-            case BREAK_TREATY:
-                return breakTreaty(r);
-            case SEND_FACTION_MAIL:
-                return sendFactionMail(r);
-            case SEND_POPUP_MESSAGE:
+        return switch (r.reaction) {
+            case PROPOSE_TREATY -> proposeTreaty(r);
+            case WITHDRAW_PROPOSAL -> withdrawProposal(r);
+            case BREAK_TREATY -> breakTreaty(r);
+            case SEND_FACTION_MAIL -> sendFactionMail(r);
+            case SEND_POPUP_MESSAGE -> {
                 if (!reactionsFired.containsKey(r.index)) {
                     if (isSinglePlayer()) {
                         PlayerState playerState = ((GameServerState) state).getPlayerStatesByDbId().get(dbId);
@@ -816,11 +822,10 @@ public class DiplomacyEntity implements LogInterface {
                         }
                     }
                 }
-                return true;
-            default:
-                break;
-        }
-        return false;
+                yield true;
+            }
+            default -> false;
+        };
     }
 
     /**
@@ -866,6 +871,11 @@ public class DiplomacyEntity implements LogInterface {
             return false;
         }
         if (findOwnProposal(r.treatyId) != null) {
+            return false;
+        }
+        //they said no; the reaction's condition still holds, so without this it re-offers every turn
+        //until the refusal times out of the ledger (TREATY_REFUSED in ActionTimeouts)
+        if (getActionCount(DiplomacyAction.DiplActionType.TREATY_REFUSED, r.treatyId) > 0) {
             return false;
         }
         if (type == null && getFaction().getRelationshipWithFactionOrPlayer(dbId) != FactionRelation.RType.ENEMY) {
@@ -947,18 +957,39 @@ public class DiplomacyEntity implements LogInterface {
     }
 
     /**
-     * Whether this faction would agree to the given treaty if it were offered right now, and if not,
-     * what it is holding out for.
+     * Whether this faction - the ledger's owner - has a casus belli against the other for every goal
+     * listed. Each kind is checked once, however many goals share it.
      *
-     * <p>This is the whole of NPC acceptance. It replaces the four {@code ACCEPT_*}/{@code REJECT_*}
-     * reactions, which only ran on the diplomacy turn and had the treaty type baked into the Java
-     * rather than the config - so an archetype could not be given a personality without editing the
-     * engine. Because it is a plain query it also answers the GUI's "would they accept?" preview
-     * without committing to anything.</p>
-     *
-     * @param typeId treaty type being offered, or null for plain peace
-     * @param unmet  if non-null, filled with the conditions that were not met
+     * @param unmet if non-null, filled with a line per kind that is not justified
      */
+    public boolean hasCasusBelli(List<SettlementTerm> goals, List<String> unmet) {
+        boolean all = true;
+        java.util.EnumSet<SettlementTerm.Kind> seen = java.util.EnumSet.noneOf(SettlementTerm.Kind.class);
+        for (SettlementTerm g : goals) {
+            if (g.kind == null || !seen.add(g.kind)) {
+                continue;
+            }
+            DiplomacyConditionGroup rule = getConfig().getCasusBelli(g.kind);
+            List<String> why = unmet != null ? new java.util.ArrayList<String>() : null;
+            if (rule != null && rule.satisfied(this, why)) {
+                continue;
+            }
+            all = false;
+            if (unmet == null) {
+                return false;
+            }
+            String refusal = getConfig().getCasusBelliRefusal(g.kind);
+            if (refusal != null) {
+                unmet.add(refusal);
+            } else if (rule == null) {
+                unmet.add(Lng.str("Nothing justifies that war goal on this server."));
+            } else {
+                unmet.addAll(why);
+            }
+        }
+        return all;
+    }
+
     public boolean wouldAccept(String typeId, List<String> unmet) {
         TreatyType offered = typeId != null ? TreatyTypeRegistry.get(typeId) : null;
         if (offered != null && offered.getKind() == TreatyType.Kind.DEMAND) {
@@ -1005,14 +1036,11 @@ public class DiplomacyEntity implements LogInterface {
         if (type == null) {
             return Lng.str("they are not interested in peace with you");
         }
-        switch (type.getKind()) {
-            case DEMAND:
-                return Lng.str("they do not submit to anyone");
-            case DECLARATION:
-                return Lng.str("that is not something they answer");
-            default:
-                return Lng.str("they do not enter into agreements of that kind");
-        }
+        return switch (type.getKind()) {
+            case DEMAND -> Lng.str("they do not submit to anyone");
+            case DECLARATION -> Lng.str("that is not something they answer");
+            default -> Lng.str("they do not enter into agreements of that kind");
+        };
     }
 
     /**
@@ -1051,7 +1079,7 @@ public class DiplomacyEntity implements LogInterface {
         double ours = Math.max(1, strengthOf(us));
         double theirs = Math.max(1, theirStrength());
         double doublings = Math.log(theirs / ours) / Math.log(2);
-        return Math.max(-STRENGTH_CLAMP, Math.min(STRENGTH_CLAMP, doublings));
+        return Math.clamp(doublings, -STRENGTH_CLAMP, STRENGTH_CLAMP);
     }
 
     /**
@@ -1151,79 +1179,19 @@ public class DiplomacyEntity implements LogInterface {
     }
 
     public enum DiplStatusType {
-        IN_WAR(new Translatable() {
-            @Override
-            public String getName(Enum en) {
-                return Lng.str("At war with them");
-            }
-        }),
-        IN_WAR_WITH_ENEMY(new Translatable() {
-            @Override
-            public String getName(Enum en) {
-                return Lng.str("At war with their enemies");
-            }
-        }),
-        POWER(new Translatable() {
-            @Override
-            public String getName(Enum en) {
-                return Lng.str("They see a difference in power");
-            }
-        }),
-        PIRATE(new Translatable() {
-            @Override
-            public String getName(Enum en) {
-                return Lng.str("They are pirates");
-            }
-        }),
-        ALLIANCE(new Translatable() {
-            @Override
-            public String getName(Enum en) {
-                return Lng.str("You are in an alliance");
-            }
-        }),
-        ALLIANCE_WITH_ENEMY(new Translatable() {
-            @Override
-            public String getName(Enum en) {
-                return Lng.str("You're in an alliance with their enemies");
-            }
-        }),
-        NON_AGGRESSION(new Translatable() {
-            @Override
-            public String getName(Enum en) {
-                return Lng.str("No agression");
-            }
-        }),
-        ALLIANCE_WITH_FRIENDS(new Translatable() {
-            @Override
-            public String getName(Enum en) {
-                return Lng.str("You're in an alliance with their friends");
-            }
-        }),
-        IN_WAR_WITH_FRIENDS(new Translatable() {
-            @Override
-            public String getName(Enum en) {
-                return Lng.str("You're in at war with their friends");
-            }
-        }),
-        FACTION_MEMBER_AT_WAR_WITH_US(new Translatable() {
-            @Override
-            public String getName(Enum en) {
-                return Lng.str("One or more of your faction members is at war with us");
-            }
-        }),
-        FACTION_MEMBER_WE_DONT_LIKE(new Translatable() {
-            @Override
-            public String getName(Enum en) {
-                return Lng.str("We don't like one or more of your faction members");
-            }
-        }),
-        TRUST(new Translatable() {
-            @Override
-            public String getName(Enum en) {
-                return Lng.str("We have kept agreements with each other");
-            }
-        }),
-        ;
+        IN_WAR(en -> Lng.str("At war with them")),
+        IN_WAR_WITH_ENEMY(en -> Lng.str("At war with their enemies")),
+        POWER(en -> Lng.str("They see a difference in power")),
+        PIRATE(en -> Lng.str("They are pirates")),
+        ALLIANCE(en -> Lng.str("You are in an alliance")),
+        ALLIANCE_WITH_ENEMY(en -> Lng.str("You're in an alliance with their enemies")),
+        NON_AGGRESSION(en -> Lng.str("No agression")),
+        ALLIANCE_WITH_FRIENDS(en -> Lng.str("You're in an alliance with their friends")),
+        IN_WAR_WITH_FRIENDS(en -> Lng.str("You're at war with their friends")),
+        FACTION_MEMBER_AT_WAR_WITH_US(en -> Lng.str("One or more of your faction members is at war with us")),
+        FACTION_MEMBER_WE_DONT_LIKE(en -> Lng.str("We don't like one or more of your faction members")),
+        TRUST(en -> Lng.str("We have kept agreements with each other"));
+
         private final Translatable description;
 
         DiplStatusType(Translatable description) {
