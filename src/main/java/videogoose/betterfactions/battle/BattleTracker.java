@@ -94,7 +94,7 @@ public final class BattleTracker {
 	 * and have them counted in the same fight and report, rather than starting a second battle (or,
 	 * after a break-off, landing in the sector's hit hold and not being counted at all).
 	 */
-	static final long QUIET_MS = 5 * 60_000;
+	static final long QUIET_MS = 2 * 60_000;
 	/** How long a loaded sector gets to start a battle before it is released. */
 	static final long START_MS = 60_000;
 	/** A soft-loaded battle is released after this long however it is going. */
@@ -180,6 +180,8 @@ public final class BattleTracker {
 		boolean survivors;
 		/** Retreated: its fleets were sent home by auto-resolve, or every one of them was ordered away mid-fight; see {@link #noteRetreats}. */
 		boolean withdrew;
+		/** Came to attack: one of its fleets here was ordered to; see {@link #attacks}. A side that never was defended. */
+		boolean attacking;
 		/**
 		 * The most this side had in the fight at once, counting what it had already lost: so a side that
 		 * pours in reinforcements is judged on the share it lost, not the raw count; see {@link #commit}.
@@ -228,6 +230,13 @@ public final class BattleTracker {
 		double avgMs;
 		int entities;
 		final Int2ObjectOpenHashMap<Side> sides = new Int2ObjectOpenHashMap<>();
+		/** Given when it is reported; see {@link BattleNames}. */
+		String name;
+		/**
+		 * Every root ship and station seen fighting, by UID, as last seen: the full report's tables.
+		 * ponytail: not saved with the battle, so a fight carried over a restart reports only what it saw after.
+		 */
+		final Object2ObjectOpenHashMap<String, BattleReports.Unit> units = new Object2ObjectOpenHashMap<>();
 
 		Battle(int sectorId, Vector3i pos, long start) {
 			this.sectorId = sectorId;
@@ -424,17 +433,51 @@ public final class BattleTracker {
 		}
 	}
 
+	/** Most units a battle's full report lists; past it new arrivals are left out, losses still land. */
+	static final int MAX_UNITS = 300;
+
+	/**
+	 * A ship or station in its own right: not docked to anything, nor waiting to dock, as turrets and
+	 * docked ships are for a moment after their sector loads. What every ship and station count counts.
+	 */
+	public static boolean root(SegmentController sc) {
+		return !sc.railController.isDockedOrDirty() && !sc.railController.hasInitialRailRequest();
+	}
+
+	/**
+	 * The faction {@code sc} fought for. A ship whose faction block is shot off turns unaffiliated before
+	 * it dies; it is still a loss for the side it was on when the battle first saw it.
+	 */
+	static int factionOf(Battle b, SegmentController sc) {
+		if (sc.getFactionId() != 0) {
+			return sc.getFactionId();
+		}
+		BattleReports.Unit u = b.units.get(sc.getUniqueIdentifier());
+		return u != null ? u.faction() : 0;
+	}
+
+	/** Records {@code sc} as it stands now for the full report; once lost it stays lost. */
+	static void note(Battle b, SegmentController sc, boolean lost) {
+		String uid = sc.getUniqueIdentifier();
+		BattleReports.Unit was = b.units.get(uid);
+		if (was != null && was.lost() || was == null && !lost && b.units.size() >= MAX_UNITS) {
+			return;
+		}
+		b.units.put(uid, new BattleReports.Unit(sc.getRealName(), factionOf(b, sc), (byte) sc.getType().dbTypeId,
+				sc.getMassWithDocks(), lost ? 0 : (float) sc.getHpController().getHpPercent(), CombatRatings.rate(sc), lost));
+	}
+
 	/** Server: {@code victim} accepted a hit from {@code damager}. Called per hit, so it stays cheap. */
 	public void onHit(SegmentController victim, Damager damager) {
 		if (damager instanceof Sector || !(victim instanceof Ship || victim instanceof SpaceStation)) {
 			return; //stars and black holes are not a side, and mining an asteroid is not a battle
 		}
-		int a = victim.getFactionId();
-		int b = damager.getFactionId();
-		if (a == b) {
-			return;
-		}
 		Battle battle = battles.get(victim.getSectorId());
+		int a = battle != null ? factionOf(battle, victim) : victim.getFactionId();
+		int b = battle != null && damager instanceof SegmentController d ? factionOf(battle, d) : damager.getFactionId();
+		if (a == b || a == 0 || b == 0) {
+			return; //unaffiliated ships are nobody's side: shooting one is not a battle
+		}
 		if (battle == null) {
 			Sector sector = GameServerState.instance.getUniverse().getSector(victim.getSectorId());
 			if (sector == null) {
@@ -455,12 +498,13 @@ public final class BattleTracker {
 	/** Server: {@code sc} started overheating, which is how a ship dies. */
 	public void onOverheat(SegmentController sc) {
 		Battle battle = battles.get(sc.getSectorId());
-		if (battle == null || sc.railController.isDocked()) {
-			return; //a turret is part of the ship it sits on, not a loss of its own
+		if (battle == null || !root(sc) || factionOf(battle, sc) == 0) {
+			return; //a turret is part of the ship it sits on, not a loss of its own; and neutrals are no side
 		}
-		Side side = battle.side(sc.getFactionId());
+		Side side = battle.side(factionOf(battle, sc));
 		side.lost++;
 		side.lostRating += CombatRatings.rate(sc);
+		note(battle, sc, true);
 	}
 
 	/** Server tick. */
@@ -502,7 +546,7 @@ public final class BattleTracker {
 			Sector sector = universe.getSector(b.sectorId);
 			//an encounter is asked first: past the soft-load cap it breaks off rather than being capped
 			noteRetreats(state, sector, b, now);
-			if (sector == null || breaksOff(state, b, now) || isOver(b, now)) {
+			if (sector == null || breaksOff(state, b, now) || isOver(b, now) || foughtOut(b, sector, state.getFactionManager())) {
 				if (ended == null) {
 					ended = new ArrayList<>();
 				}
@@ -575,6 +619,23 @@ public final class BattleTracker {
 				|| (b.soft && now - b.opened > SOFT_MAX_MS);
 	}
 
+	/**
+	 * Over without waiting out {@link #QUIET_MS}: it has fought and no one left in the sector is at war
+	 * with anyone else there, so there is nothing for reinforcements to join. Paused and held battles wait.
+	 */
+	private static boolean foughtOut(Battle b, Sector sector, FactionManager fm) {
+		if (b.lastHit == 0 || b.paused || b.heldAt > 0) {
+			return false;
+		}
+		IntOpenHashSet here = new IntOpenHashSet();
+		for (SimpleTransformableSendableObject<?> o : sector.getEntities()) {
+			if (o instanceof SegmentController sc && root(sc) && !sc.isCoreOverheating()) {
+				here.add(sc.getFactionId());
+			}
+		}
+		return !anyEnemies(here, fm);
+	}
+
 	/** Whether the server has time to spare for a new soft-loaded battle. {@code startPct} 0 always does. */
 	static boolean spare(double otherMs, int startPct) {
 		return startPct <= 0 || otherMs < BUDGET_MS * startPct / 100.0;
@@ -622,6 +683,11 @@ public final class BattleTracker {
 		}
 	}
 
+	/** Whether a fleet under {@code o} is attacking {@code pos}: ordered to attack, or moving there on purpose. */
+	static boolean attacks(Order o, Vector3i pos) {
+		return o.type == FleetCommandTypes.FLEET_ATTACK || o.type == FleetCommandTypes.MOVE_FLEET && pos.equals(o.target);
+	}
+
 	/**
 	 * Marks a side {@link Side#withdrew} once every one of its fleets in the battle has been ordered
 	 * away: a fleet's order changed since it was first seen here, and now points elsewhere. Pulling one
@@ -648,6 +714,9 @@ public final class BattleTracker {
 			}
 			if (first == null) {
 				continue;
+			}
+			if (attacks(first, b.pos) || b.pos.equals(flag.getSector()) && attacks(Order.of(f), b.pos)) {
+				b.side(f.getFactionId()).attacking = true;
 			}
 			//once ordered away it stays away: arriving home later clears its move target
 			if (b.retreated.contains(f.dbid) || retreats(first, Order.of(f), b.pos)) {
@@ -677,10 +746,11 @@ public final class BattleTracker {
 		Int2DoubleOpenHashMap rating = new Int2DoubleOpenHashMap();
 		Int2DoubleOpenHashMap ships = new Int2DoubleOpenHashMap();
 		for (SimpleTransformableSendableObject<?> o : sector.getEntities()) {
-			if (o instanceof SegmentController sc && !sc.railController.isDocked() && !sc.isCoreOverheating()
+			if (o instanceof SegmentController sc && root(sc) && !sc.isCoreOverheating()
 					&& b.sides.containsKey(sc.getFactionId())) {
 				rating.put(sc.getFactionId(), rating.get(sc.getFactionId()) + CombatRatings.rate(sc));
 				ships.put(sc.getFactionId(), ships.get(sc.getFactionId()) + 1);
+				note(b, sc, false);
 			}
 		}
 		for (Side s : b.sides.values()) {
@@ -861,6 +931,9 @@ public final class BattleTracker {
 			s.survivors = faction == winner || !fm.isEnemy(faction, winner);
 		}
 		for (Fleet f : fleets) {
+			if (attacks(Order.of(f), pos)) {
+				b.side(f.getFactionId()).attacking = true;
+			}
 			if (fm.isEnemy(f.getFactionId(), winner)) {
 				retreat(f, pos, fm);
 				b.side(f.getFactionId()).withdrew = true;
@@ -1164,11 +1237,12 @@ public final class BattleTracker {
 		f.sendFleetCommand(FleetCommandTypes.MOVE_FLEET, to);
 	}
 
+	/** Unaffiliated (0) is at war with no one here: its ships are not a side. */
 	private static boolean anyEnemies(IntSet factions, FactionManager fm) {
 		int[] ids = factions.toIntArray();
 		for (int i = 0; i < ids.length; i++) {
 			for (int j = i + 1; j < ids.length; j++) {
-				if (fm.isEnemy(ids[i], ids[j])) {
+				if (ids[i] != 0 && ids[j] != 0 && fm.isEnemy(ids[i], ids[j])) {
 					return true;
 				}
 			}
@@ -1362,10 +1436,11 @@ public final class BattleTracker {
 		reports.put(new Vector3i(b.pos), reports.getInt(b.pos) + 1);
 		if (sector != null) {
 			for (SimpleTransformableSendableObject<?> o : sector.getEntities()) {
-				if (o instanceof SegmentController sc && !sc.railController.isDocked() && !sc.isCoreOverheating()) {
+				if (o instanceof SegmentController sc && root(sc) && !sc.isCoreOverheating()) {
 					Side s = b.sides.get(sc.getFactionId());
 					if (s != null) {
 						s.survivors = true;
+						note(b, sc, false);
 					}
 				}
 			}
@@ -1375,6 +1450,7 @@ public final class BattleTracker {
 			Faction f = fm.getFaction(id);
 			return f != null ? f.getName() : id == 0 ? "Unaffiliated" : "Faction " + id;
 		};
+		b.name = nameOf(state, b, name);
 		String body = summarize(b, name, now);
 		recent.addFirst(b.pos + ": " + body.substring(0, body.indexOf('\n')) + " (" + Math.max(1, (now - b.start) / 60_000) + " min"
 				+ (b.soft ? ", soft-loaded" : "") + ")");
@@ -1386,8 +1462,8 @@ public final class BattleTracker {
 			lines.add(new BattleReports.Line(s.faction, name.apply(s.faction), s.lost, s.withdrew));
 		}
 		archive.add(new BattleReports.Report(now, new Vector3i(b.pos), body.substring(0, body.indexOf('\n')), body,
-				now - b.start, b.soft, holder(b), favoured(b), lines));
-		String title = "Battle at " + b.pos;
+				now - b.start, b.soft, holder(b), favoured(b), lines, new ArrayList<>(b.units.values()), b.name));
+		String title = b.name;
 		String news = newsBody(b, body, name);
 		for (Side s : b.sides.values()) {
 			if (fm.getFaction(s.faction) == null) {
@@ -1407,6 +1483,30 @@ public final class BattleTracker {
 		}
 	}
 
+	/** The battle's name, after its system and whoever fleet orders say attacked whom. */
+	private String nameOf(GameServerState state, Battle b, IntFunction<String> name) {
+		String system = DiplomacyManager.systemName(state, b.pos);
+		Side attacker = null;
+		Side defender = null;
+		int ships = 0;
+		for (Side s : b.sides.values()) {
+			ships += s.committedShips;
+			if (s.attacking && attacker == null) {
+				attacker = s;
+			}
+		}
+		for (Side s : b.sides.values()) {
+			if (attacker != null && !s.attacking && state.getFactionManager().isEnemy(s.faction, attacker.faction)) {
+				defender = s;
+				break;
+			}
+		}
+		String base = BattleNames.name(system != null ? system : "Sector " + b.pos.toStringPure(),
+				attacker != null ? name.apply(attacker.faction) : null, defender != null ? name.apply(defender.faction) : null,
+				ships, b.start);
+		return BattleNames.numbered(base, archive.countNamed(base));
+	}
+
 	/** The faction news post: the verdict and the losses; the full report is under Assets. */
 	static String newsBody(Battle b, String body, IntFunction<String> name) {
 		StringBuilder losses = new StringBuilder();
@@ -1422,7 +1522,7 @@ public final class BattleTracker {
 		for (Side s : b.sides.values()) {
 			sides.append(sides.length() == 0 ? "" : " and ").append(name.apply(s.faction));
 		}
-		return "Battle at " + b.pos + " between " + sides + ": " + body.substring(0, body.indexOf('\n'));
+		return (b.name != null ? b.name : "Battle at " + b.pos) + " between " + sides + ": " + body.substring(0, body.indexOf('\n'));
 	}
 
 	/**
@@ -1542,7 +1642,7 @@ public final class BattleTracker {
 		Side[] edge = favoured(b) != Integer.MIN_VALUE ? edge(b) : null;
 		String better = edge == null ? "" : name.apply(edge[0].faction) + " came off better (" + tally(edge, name, shares(b)) + ").";
 		out.append(b.endedByAdmin ? "Ended by an admin."
-				: winner != Integer.MIN_VALUE ? name.apply(winner) + " held the field."
+				: winner != Integer.MIN_VALUE ? name.apply(winner) + (b.sides.get(winner).attacking ? " attacked successfully." : " defended successfully.")
 				: b.disengaged ? edge != null ? "Broke off; " + better : "The fleets broke off and went on their way."
 				: edge != null ? "Inconclusive; " + better : "The battle was inconclusive.").append('\n');
 		if (b.autoResolved) {
@@ -1652,7 +1752,8 @@ public final class BattleTracker {
 				sides[i++] = new Tag(Tag.Type.STRUCT, null, new Tag[]{
 						new Tag(Tag.Type.INT, null, s.faction), new Tag(Tag.Type.INT, null, s.hitsTaken),
 						new Tag(Tag.Type.INT, null, s.lost), new Tag(Tag.Type.DOUBLE, null, s.lostRating),
-						new Tag(Tag.Type.DOUBLE, null, s.committedRating), new Tag(Tag.Type.INT, null, s.committedShips), FinishTag.INST});
+						new Tag(Tag.Type.DOUBLE, null, s.committedRating), new Tag(Tag.Type.INT, null, s.committedShips),
+						new Tag(Tag.Type.BYTE, null, (byte) (s.attacking ? 1 : 0)), FinishTag.INST});
 			}
 			sides[i] = FinishTag.INST;
 			long ran = (b.paused ? b.pausedAt : now) - b.start;
@@ -1690,6 +1791,9 @@ public final class BattleTracker {
 			Tag[] sides = e[5].getStruct();
 			for (int i = 0; i < sides.length - 1; i++) {
 				Tag[] s = sides[i].getStruct();
+				if (s[0].getInt() == 0) {
+					continue; //saved before unaffiliated ships stopped being a side
+				}
 				Side side = b.side(s[0].getInt());
 				side.hitsTaken = s[1].getInt();
 				side.lost = s[2].getInt();
@@ -1698,6 +1802,7 @@ public final class BattleTracker {
 					side.committedRating = (Double) s[4].getValue();
 					side.committedShips = s[5].getInt();
 				}
+				side.attacking = s.length > 7 && s[6].getByte() != 0;
 			}
 			carry(b, now);
 			enqueue(b.pos, now);

@@ -5,6 +5,7 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.client.data.GameClientState;
 import org.schema.game.common.data.fleet.Fleet;
+import org.schema.game.common.data.fleet.FleetMember;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.world.SimpleTransformableSendableObject;
 import org.schema.game.common.data.world.VoidSystem;
@@ -216,6 +217,15 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
         return Lng.str("%s %s", s.getName(), system.toStringPure());
     }
 
+    /** A fleet's ships in their own right: one docked in a carrier rides along and is not counted again. */
+    private static int ships(Fleet f) {
+        int n = 0;
+        for (FleetMember m : f.getMembers()) {
+            n += m.getDockedToRootDbId() > 0 ? 0 : 1;
+        }
+        return n;
+    }
+
     private static SimpleTransformableSendableObject.EntityType typeOf(FactionAssets.Asset a) {
         if (a == null || a.type < 0 || a.type >= SimpleTransformableSendableObject.EntityType.byDbId.length || SimpleTransformableSendableObject.EntityType.byDbId[a.type] == null) {
             return null;
@@ -230,10 +240,10 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
         if (h.isFleet()) {
             FactionAssets.Route r = routeOf(h);
             if (r == null) {
-                return Lng.str("Fleet (%s)", h.fleet.getMembers().size());
+                return Lng.str("Fleet (%s)", ships(h.fleet));
             }
-            return r.isDelivery() ? Lng.str("Delivery (%s)", h.fleet.getMembers().size())
-                    : Lng.str("On route (%s)", h.fleet.getMembers().size());
+            return r.isDelivery() ? Lng.str("Delivery (%s)", ships(h.fleet))
+                    : Lng.str("On route (%s)", ships(h.fleet));
         }
         if (h.home) {
             return Lng.str("Homebase");
@@ -478,7 +488,7 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
                 if (h.isFleet()) {
                     FactionAssets.Route r = routeOf(h);
                     return (r != null ? routeLine(r) + "\n" : "") + Lng.str("%s ships under %s, %s, in sector %s of %s. Open to %s.",
-                            h.fleet.getMembers().size(), h.fleet.getOwner(), h.fleet.missionString,
+                            ships(h.fleet), h.fleet.getOwner(), h.fleet.missionString,
                             h.fleet.getFlagShip().getSector().toStringPure(), systemName(systemOf(h)),
                             h.fleet.getFactionAccessString());
                 }

@@ -38,7 +38,7 @@ public final class BattleTracker_test {
 		b.side(20).lost = 1;
 		b.side(20).survivors = true;
 		String r = BattleTracker.summarize(b, id -> "F" + id, 5 * 60_000);
-		assert r.startsWith("F20 held the field.") : r;
+		assert r.startsWith("F20 defended successfully.") : "no attack order: it defended: " + r;
 		assert r.contains("F10: 3 ships lost") && r.contains("F20: 1 ship lost") : r;
 		assert r.endsWith("Lasted 5 min, unobserved.") : r;
 
@@ -62,13 +62,13 @@ public final class BattleTracker_test {
 		b.autoResolved = true;
 		b.side(10).withdrew = true;
 		r = BattleTracker.summarize(b, id -> "F" + id, 30_000);
-		assert r.startsWith("F20 held the field.\nSettled without") && r.contains("F10: 3 ships lost, withdrew") : r;
+		assert r.startsWith("F20 defended successfully.\nSettled without") && r.contains("F10: 3 ships lost, withdrew") : r;
 
 		BattleTracker.Battle line = new BattleTracker.Battle(1, new Vector3i(2, 3, 4), 0);
 		line.side(10);
 		line.side(20).survivors = true;
 		String galaxy = BattleTracker.galaxyLine(line, BattleTracker.summarize(line, id -> "F" + id, 60_000), id -> "F" + id);
-		assert galaxy.contains("Battle at") && galaxy.contains("F10") && galaxy.contains("F20") && galaxy.endsWith(": F20 held the field.")
+		assert galaxy.contains("Battle at") && galaxy.contains("F10") && galaxy.contains("F20") && galaxy.endsWith(": F20 defended successfully.")
 				: "where, both sides, and the verdict, on one line: " + galaxy;
 		assert !galaxy.contains("\n") : "one line";
 
@@ -83,8 +83,8 @@ public final class BattleTracker_test {
 		assert BattleTracker.isOver(b, t + BattleTracker.START_MS + 1) : "and is released if nobody does";
 
 		b.lastHit = t + 5 * 60_000;
-		assert !BattleTracker.isOver(b, b.lastHit + 4 * 60_000) : "a lull while reinforcements come is still the same fight";
-		assert BattleTracker.isOver(b, b.lastHit + BattleTracker.QUIET_MS + 1) : "five minutes without a hit ends it";
+		assert !BattleTracker.isOver(b, b.lastHit + BattleTracker.QUIET_MS) : "a lull while reinforcements come is still the same fight";
+		assert BattleTracker.isOver(b, b.lastHit + BattleTracker.QUIET_MS + 1) : "two minutes without a hit ends it";
 
 		b.soft = true;
 		assert BattleTracker.isOver(b, t + BattleTracker.SOFT_MAX_MS + 1) : "a soft-loaded fight is capped even mid-fight";
@@ -300,7 +300,14 @@ public final class BattleTracker_test {
 		r.side(20).withdrew = true;
 		assert BattleTracker.holder(r) == 10 : "a side ordered away retreated, even with ships still in the sector";
 		assert BattleTracker.favoured(r) == Integer.MIN_VALUE : "held, so no edge";
-		assert BattleTracker.summarize(r, id -> "F" + id, 60_000).startsWith("F10 held the field.\n");
+		assert BattleTracker.summarize(r, id -> "F" + id, 60_000).startsWith("F10 defended successfully.\n");
+		r.side(10).attacking = true;
+		assert BattleTracker.summarize(r, id -> "F" + id, 60_000).startsWith("F10 attacked successfully.\n") : "its fleets came to attack";
+		r.side(10).attacking = false;
+		assert BattleTracker.attacks(new BattleTracker.Order(FleetCommandTypes.FLEET_ATTACK, null), r.pos);
+		assert BattleTracker.attacks(new BattleTracker.Order(FleetCommandTypes.MOVE_FLEET, new Vector3i(r.pos)), r.pos);
+		assert !BattleTracker.attacks(new BattleTracker.Order(FleetCommandTypes.MOVE_FLEET, new Vector3i(9, 9, 9)), r.pos) : "passing through";
+		assert !BattleTracker.attacks(new BattleTracker.Order(FleetCommandTypes.SENTRY, null), r.pos);
 		r.disengaged = true;
 		assert BattleTracker.holder(r) == 10 : "the encounter running out after does not undo the retreat";
 		r.side(10).withdrew = true;

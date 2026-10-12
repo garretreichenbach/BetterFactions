@@ -106,6 +106,9 @@ public class FactionAssetIndex {
                     .getByFaction(factionId, HOLDING_TYPES, MAX_ASSETS + 1);
             FactionAssets a = new FactionAssets(factionId, now);
             for (DatabaseEntry e : rows) {
+                if (e.dockedTo > 0) {
+                    continue; //docked to another entity: part of it, not a holding of its own
+                }
                 if (a.assets.size() >= MAX_ASSETS) {
                     a.truncated = true;
                     break;

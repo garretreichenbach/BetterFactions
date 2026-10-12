@@ -29,12 +29,21 @@ public final class BattleReports {
 	}
 
 	/**
+	 * One root ship or station in the fight, as last seen: the full report's rows.
+	 * @param type {@code EntityType.dbTypeId}
+	 * @param hp share of its structure left, 0 to 1
+	 */
+	public record Unit(String name, int faction, byte type, float mass, float hp, double rating, boolean lost) {
+	}
+
+	/**
 	 * @param winner the one side left holding the field, or {@link Integer#MIN_VALUE} for none
 	 * @param favoured with no winner, the side that lost clearly less and came off better, or
 	 *                 {@link Integer#MIN_VALUE}; see {@code BattleTracker.favoured}
+	 * @param name     what the battle is called; see {@link BattleNames}
 	 */
 	public record Report(long time, Vector3i pos, String verdict, String body, long lengthMs, boolean soft, int winner, int favoured,
-			List<Line> sides) {
+			List<Line> sides, List<Unit> units, String name) {
 
 		/** Ships {@code faction} lost here; 0 if it was not a side. */
 		public int lostBy(int faction) {
@@ -85,6 +94,18 @@ public final class BattleReports {
 		}
 	}
 
+	/**
+	 * Server: reports named {@code base}, numbered or not; what {@link BattleNames#numbered} counts.
+	 * ponytail: only the {@link #KEPT} newest are counted, so a name worn out long ago starts over.
+	 */
+	synchronized int countNamed(String base) {
+		int n = 0;
+		for (Report r : all) {
+			n += BattleNames.base(r.name).equals(base) ? 1 : 0;
+		}
+		return n;
+	}
+
 	/** Server: the newest {@code max} reports {@code faction} was a side in. */
 	synchronized List<Report> of(int faction, int max) {
 		List<Report> out = new ArrayList<>();
@@ -101,7 +122,10 @@ public final class BattleReports {
 
 	private static final Object2LongOpenHashMap<String> answeredAt = new Object2LongOpenHashMap<>();
 
-	/** Server: at most one answer a second per player; a request is a byte and an answer is a hundred reports. */
+	/**
+	 * Server: at most one answer a second per {@code player}; a request is a byte and an answer is a
+	 * hundred reports. Other requests pass a prefixed name to be limited on their own.
+	 */
 	public static synchronized boolean mayAnswer(String player, long now) {
 		if (now - answeredAt.getLong(player) < 1000) {
 			return false;
@@ -110,13 +134,25 @@ public final class BattleReports {
 		return true;
 	}
 
-	/** Server: the answer to a client's request. */
+	/** Server: the answer to a client's request. Units are left out: a hundred reports of them is too much to send unasked. */
 	public Tag tagFor(int faction) {
-		return toTag(of(faction, SENT));
+		return toTag(of(faction, SENT), false);
+	}
+
+	/** Server: one report's units, if {@code faction} was a side in the report fought at {@code pos} at {@code time}; else null. */
+	public synchronized Tag detailFor(int faction, Tag request) {
+		Tag[] q = request.getStruct();
+		long time = (Long) q[0].getValue();
+		for (Report r : all) {
+			if (r.time == time && r.pos.equals(q[1].getValue()) && r.involves(faction)) {
+				return new Tag(Tag.Type.STRUCT, null, new Tag[]{new Tag(Tag.Type.LONG, null, time), unitsTag(r.units), FinishTag.INST});
+			}
+		}
+		return null;
 	}
 
 	synchronized Tag toTag() {
-		return toTag(new ArrayList<>(all));
+		return toTag(new ArrayList<>(all), true);
 	}
 
 	/** Loads what {@link #toTag()} saved, newest first as it was. */
@@ -125,7 +161,7 @@ public final class BattleReports {
 		all.addAll(listFrom(tag));
 	}
 
-	static Tag toTag(List<Report> reports) {
+	static Tag toTag(List<Report> reports, boolean units) {
 		Tag[] t = new Tag[reports.size() + 1];
 		int i = 0;
 		for (Report r : reports) {
@@ -142,10 +178,35 @@ public final class BattleReports {
 					new Tag(Tag.Type.STRING, null, r.verdict), new Tag(Tag.Type.STRING, null, r.body),
 					new Tag(Tag.Type.LONG, null, r.lengthMs), new Tag(Tag.Type.BYTE, null, (byte) (r.soft ? 1 : 0)),
 					new Tag(Tag.Type.STRUCT, null, sides), new Tag(Tag.Type.INT, null, r.winner),
-					new Tag(Tag.Type.INT, null, r.favoured), FinishTag.INST});
+					new Tag(Tag.Type.INT, null, r.favoured), unitsTag(units ? r.units : List.of()),
+					new Tag(Tag.Type.STRING, null, r.name), FinishTag.INST});
 		}
 		t[i] = FinishTag.INST;
 		return new Tag(Tag.Type.STRUCT, null, t);
+	}
+
+	static Tag unitsTag(List<Unit> units) {
+		Tag[] t = new Tag[units.size() + 1];
+		int i = 0;
+		for (Unit u : units) {
+			t[i++] = new Tag(Tag.Type.STRUCT, null, new Tag[]{
+					new Tag(Tag.Type.STRING, null, u.name), new Tag(Tag.Type.INT, null, u.faction), new Tag(Tag.Type.BYTE, null, u.type),
+					new Tag(Tag.Type.FLOAT, null, u.mass), new Tag(Tag.Type.FLOAT, null, u.hp), new Tag(Tag.Type.DOUBLE, null, u.rating),
+					new Tag(Tag.Type.BYTE, null, (byte) (u.lost ? 1 : 0)), FinishTag.INST});
+		}
+		t[i] = FinishTag.INST;
+		return new Tag(Tag.Type.STRUCT, null, t);
+	}
+
+	static List<Unit> unitsFrom(Tag tag) {
+		List<Unit> out = new ArrayList<>();
+		Tag[] t = tag.getStruct();
+		for (int i = 0; i < t.length - 1; i++) {
+			Tag[] u = t[i].getStruct();
+			out.add(new Unit(u[0].getString(), u[1].getInt(), u[2].getByte(), u[3].getFloat(), u[4].getFloat(),
+					(Double) u[5].getValue(), u[6].getByte() != 0));
+		}
+		return out;
 	}
 
 	static List<Report> listFrom(Tag tag) {
@@ -158,11 +219,15 @@ public final class BattleReports {
 			List<Line> sides = new ArrayList<>();
 			for (int j = 0; j < s.length - 1; j++) {
 				Tag[] l = s[j].getStruct();
+				if (l[0].getInt() == 0) {
+					continue; //saved before unaffiliated ships stopped being a side
+				}
 				sides.add(new Line(l[0].getInt(), l[1].getString(), l[2].getInt(), l[3].getByte() != 0));
 			}
 			out.add(new Report((Long) e[0].getValue(), (Vector3i) e[1].getValue(), e[2].getString(), e[3].getString(),
 					(Long) e[4].getValue(), e[5].getByte() != 0, e[7].getInt(),
-					e.length > 9 ? e[8].getInt() : Integer.MIN_VALUE, sides));
+					e.length > 9 ? e[8].getInt() : Integer.MIN_VALUE, sides, e.length > 10 ? unitsFrom(e[9]) : List.of(),
+					e.length > 11 ? e[10].getString() : "Battle at " + e[1].getValue()));
 		}
 		return out;
 	}
@@ -199,5 +264,26 @@ public final class BattleReports {
 		BFPacket.toServer(BFPacket.Kind.BATTLE_REPORTS_REQUEST,
 				new Tag(Tag.Type.BYTE, null, (byte) 0));
 		return true;
+	}
+
+	/** Client: the units of the report last asked for in full, and which report that is (its time). */
+	private static volatile List<Unit> detail;
+	private static volatile long detailOf = Long.MIN_VALUE;
+
+	public static void detailReceived(Tag tag) {
+		Tag[] t = tag.getStruct();
+		detail = unitsFrom(t[1]);
+		detailOf = (Long) t[0].getValue();
+	}
+
+	/** Client: the units of {@code r}, or null until the server answers. */
+	public static List<Unit> detail(Report r) {
+		return detailOf == r.time ? detail : null;
+	}
+
+	/** Client: asks for one report's units. */
+	public static void requestDetail(Report r) {
+		BFPacket.toServer(BFPacket.Kind.BATTLE_DETAIL_REQUEST, new Tag(Tag.Type.STRUCT, null, new Tag[]{
+				new Tag(Tag.Type.LONG, null, r.time), new Tag(Tag.Type.VECTOR3i, null, new Vector3i(r.pos)), FinishTag.INST}));
 	}
 }

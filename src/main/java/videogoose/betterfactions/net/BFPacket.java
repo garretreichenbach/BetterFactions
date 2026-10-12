@@ -30,7 +30,9 @@ public final class BFPacket extends Packet {
 		// server -> client, to an admin watching a battle: 1 soft-loaded, 2 held for load, 0 stopped watching
 		BATTLE_WATCH,
 		// client -> server, then back: the player's faction's battle reports
-		BATTLE_REPORTS_REQUEST, BATTLE_REPORTS
+		BATTLE_REPORTS_REQUEST, BATTLE_REPORTS,
+		// client -> server, then back: one report's ships and stations, for its full report
+		BATTLE_DETAIL_REQUEST, BATTLE_DETAIL
 	}
 
 	private Kind kind;

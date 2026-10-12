@@ -119,6 +119,8 @@ public final class DiplomacyManager extends Observable {
 	private DiplomacyProposal queryResult;
 	private final CombatRatings combatRatings = new CombatRatings();
 	private long lastMilitarySweep;
+	/** A rated entity was deleted since the totals last went out. */
+	private boolean militaryDirty;
 	private boolean npcRatingsBackfilled;
 	private FactionAssets factionAssets;
 	private boolean factionAssetsPending;
@@ -350,6 +352,14 @@ public final class DiplomacyManager extends Observable {
 					BFPacket.toPlayer(sender, Kind.BATTLE_REPORTS, BattleTracker.get().archive().tagFor(sender.getFactionId()));
 				}
 			}
+			case BATTLE_DETAIL_REQUEST -> {
+				if (sender.getFactionId() != 0 && BattleReports.mayAnswer("detail:" + sender.getName(), System.currentTimeMillis())) {
+					Tag detail = BattleTracker.get().archive().detailFor(sender.getFactionId(), tag);
+					if (detail != null) {
+						BFPacket.toPlayer(sender, Kind.BATTLE_DETAIL, detail);
+					}
+				}
+			}
 			case BATTLE_COMMAND -> {
 				GameServerState st = (GameServerState) state();
 				if (st.isAdmin(sender.getName())) {
@@ -418,6 +428,7 @@ public final class DiplomacyManager extends Observable {
 			}
 			case BATTLES -> BattleAdminList.received(tag);
 			case BATTLE_REPORTS -> BattleReports.received(tag);
+			case BATTLE_DETAIL -> BattleReports.detailReceived(tag);
 			case BATTLE_WATCH -> BattleAdminList.setWatching(GameClientState.instance, tag.getByte());
 			case MILITARY -> {
 				combatRatings.fromTotalsTag(tag);
@@ -464,6 +475,9 @@ public final class DiplomacyManager extends Observable {
 		expireTreaties(wall);
 		syncIntelSharing(wall);
 		rateMilitary(wall);
+		if (militaryDirty) {
+			publishMilitary(false);
+		}
 		checkFederationVotes();
 
 		if (!needsSnapshot.isEmpty()) {
@@ -901,13 +915,29 @@ public final class DiplomacyManager extends Observable {
                 System.err.println("[SERVER][FACTION] combat rating query failed for faction " + f + ": " + e);
             }
         }
-        boolean changed = combatRatings.recomputeTotals();
+        boolean changed = false;
         for (Faction f : s.getFactionManager().getFactionCollection()) {
             if (f instanceof NPCFaction npc && npc.structure != null) {
                 changed |= combatRatings.setNpcSystems(f.getIdFaction(), npc.structure.getTotalSystems());
             }
         }
-        if (changed) {
+        publishMilitary(changed);
+    }
+
+    /**
+     * Server: a ship or station removed for good - destroyed, despawned or deleted - stops counting
+     * now rather than at the next sweep. The totals go out on the next tick, so a battle that kills
+     * twenty ships in one tick sends them once.
+     */
+    public void onEntityDeleted(SegmentController sc) {
+        if (sc.getDbId() > 0 && combatRatings.remove(sc.getDbId())) {
+            militaryDirty = true;
+        }
+    }
+
+    private void publishMilitary(boolean changed) {
+        militaryDirty = false;
+        if (combatRatings.recomputeTotals() | changed) {
             broadcast(Kind.MILITARY, combatRatings.totalsTag());
             changed();
         }
@@ -2430,16 +2460,22 @@ public final class DiplomacyManager extends Observable {
 		if (f == null || !onServer || f.getHomeSector().equals(0, 0, 0)) {
 			return null;
 		}
+		return systemName((GameServerState) state(), f.getHomeSector());
+	}
+
+	/** Server: the name of the star system {@code sector} is in, or null. Never loads a sector. */
+	public static String systemName(GameServerState state, Vector3i sector) {
 		try {
-			Vector3i system = VoidSystem.getContainingSystem(f.getHomeSector(), new Vector3i());
-			Galaxy galaxy = ((GameServerState) state()).getUniverse().getGalaxyFromSystemPos(system);
+			Vector3i system = VoidSystem.getContainingSystem(sector, new Vector3i());
+			Galaxy galaxy = state.getUniverse().getGalaxyFromSystemPos(system);
 			if (galaxy == null) {
 				return null;
 			}
 			//the galaxy's name table is indexed in galaxy-local coordinates, not absolute ones
-			return galaxy.getName(Galaxy.getLocalCoordinatesFromSystem(system, new Vector3i()));
+			String name = galaxy.getName(Galaxy.getLocalCoordinatesFromSystem(system, new Vector3i()));
+			return name == null || name.isEmpty() ? null : name;
 		} catch (Exception e) {
-			System.err.println("[FACTION][TREATY] could not name the home system of " + factionId + ": " + e);
+			System.err.println("[BetterFactions] could not name the system of " + sector + ": " + e);
 			return null;
 		}
 	}

@@ -77,6 +77,20 @@ public class CombatRatings_test {
 
         r.removeFaction(8);
         assert r.totalOf(8) == 0;
+
+        //one faction loses its last ship as another fields an unarmed one: still a change to send
+        CombatRatings swap = new CombatRatings();
+        swap.put(1, 7, 100);
+        swap.recomputeTotals();
+        swap.retain(7, new LongOpenHashSet());
+        swap.put(2, 9, 0);
+        assert swap.recomputeTotals() : "faction 7's total vanished";
+
+        //destroyed while loaded: gone at once, not at the next sweep
+        swap.put(3, 9, 40);
+        swap.recomputeTotals();
+        assert swap.remove(3) && !swap.remove(3);
+        assert swap.recomputeTotals() && swap.totalOf(9) == 0;
         System.out.println("CombatRatings_test: OK");
     }
 }

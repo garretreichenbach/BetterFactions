@@ -47,7 +47,8 @@ public class BattleReportList extends ScrollableTableList<BattleReports.Report> 
 	@Override
 	public void initColumns() {
 		addColumn(Lng.str("When"), 1.6f, (a, b) -> Long.compare(b.time(), a.time()));
-		addColumn(Lng.str("Against"), 2.4f, (a, b) -> a.opponents(own()).compareToIgnoreCase(b.opponents(own())));
+		addColumn(Lng.str("Battle"), 2.2f, (a, b) -> a.name().compareToIgnoreCase(b.name()));
+		addColumn(Lng.str("Against"), 1.6f, (a, b) -> a.opponents(own()).compareToIgnoreCase(b.opponents(own())));
 		addColumn(Lng.str("Result"), 2.4f, (a, b) -> a.verdict().compareToIgnoreCase(b.verdict()));
 		addFixedWidthColumn(Lng.str("Losses"), 56, (a, b) -> a.lostBy(own()) - b.lostBy(own()));
 		addFixedWidthColumn(Lng.str("Kills"), 56, (a, b) -> a.lostByOthers(own()) - b.lostByOthers(own()));
@@ -97,7 +98,7 @@ public class BattleReportList extends ScrollableTableList<BattleReports.Report> 
 		int own = own();
 		for (BattleReports.Report rep : collection) {
 			ReportRow r = new ReportRow(getState(), rep,
-					cell(GuiDateFormats.factionNewsTime.format(new Date(rep.time()))), cell(rep.opponents(own)), cell(rep.verdict()),
+					cell(GuiDateFormats.factionNewsTime.format(new Date(rep.time()))), cell(rep.name()), cell(rep.opponents(own)), cell(shortVerdict(rep.verdict())),
 					cell(String.valueOf(rep.lostBy(own))), cell(String.valueOf(rep.lostByOthers(own))), cell(rep.pos().toStringPure()));
 			GUIAnchor expanded = expandedFor(rep);
 			r.expanded = new GUIElementList(getState());
@@ -106,6 +107,12 @@ public class BattleReportList extends ScrollableTableList<BattleReports.Report> 
 			mainList.addWithoutUpdate(r);
 		}
 		mainList.updateDim();
+	}
+
+	/** The verdict without its tally, which fits the column; the expanded row has it in full. */
+	static String shortVerdict(String verdict) {
+		int cut = verdict.indexOf(" (");
+		return cut < 0 ? verdict : verdict.substring(0, cut) + ".";
 	}
 
 	private GUIClippedRow cell(String value) {
@@ -148,8 +155,23 @@ public class BattleReportList extends ScrollableTableList<BattleReports.Report> 
 			}
 		});
 		nav.setPos(4, textHeight, 0);
+		GUITextButton full = new GUITextButton(getState(), 110, 24, GUITextButton.ColorPalette.NEUTRAL, Lng.str("FULL REPORT"), new GUICallback() {
+			@Override
+			public boolean isOccluded() {
+				return !isActive();
+			}
+
+			@Override
+			public void callback(GUIElement callingGuiElement, MouseEvent event) {
+				if (event.pressedLeftMouse()) {
+					new BattleReportDialog(getState(), rep).activate();
+				}
+			}
+		});
+		full.setPos(100, textHeight, 0);
 		c.attach(body);
 		c.attach(nav);
+		c.attach(full);
 		return c;
 	}
 

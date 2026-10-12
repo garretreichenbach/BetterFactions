@@ -122,7 +122,8 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
         addTextFilter(new GUIListFilterText<>() {
             @Override
             public boolean isOk(String input, Faction f) {
-                return f.getName().toLowerCase(Locale.ENGLISH).contains(input.toLowerCase(Locale.ENGLISH));
+                return f.getName().toLowerCase(Locale.ENGLISH).contains(input.toLowerCase(Locale.ENGLISH))
+                        || (client().getPlayer().isAdmin() && String.valueOf(f.getIdFaction()).equals(input.trim()));
             }
         }, Lng.str("SEARCH"), ControllerElement.FilterRowStyle.LEFT);
 
@@ -216,7 +217,8 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
             nameText.setTextSimple(new Object() {
                 @Override
                 public String toString() {
-                    return f.getName() + (f.isNPC() ? " " + Lng.str("(NPC)") : "");
+                    String s = f.getName() + (f.isNPC() ? " " + Lng.str("(NPC)") : "");
+                    return client().getPlayer().isAdmin() ? s + " [" + f.getIdFaction() + "]" : s;
                 }
             });
             relationText.setTextSimple(new Object() {

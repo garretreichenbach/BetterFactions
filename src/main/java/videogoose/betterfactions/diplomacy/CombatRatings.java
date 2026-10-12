@@ -194,6 +194,11 @@ public final class CombatRatings {
         byEntity.long2ObjectEntrySet().removeIf(e -> e.getValue().faction == faction && !owned.contains(e.getLongKey()));
     }
 
+    /** Server: an entity gone for good. @return whether it had a row */
+    public synchronized boolean remove(long dbId) {
+        return byEntity.remove(dbId) != null;
+    }
+
     public synchronized void removeFaction(int faction) {
         byEntity.values().removeIf(r -> r.faction == faction);
         totals.remove(faction);
@@ -215,7 +220,8 @@ public final class CombatRatings {
         for (Rated r : byEntity.values()) {
             fresh.put(r.faction, fresh.get(r.faction) + r.rating);
         }
-        boolean changed = fresh.size() != totals.size();
+        //key sets, not sizes: one faction dropping out as another arrives is still a change
+        boolean changed = !fresh.keySet().equals(totals.keySet());
         for (Int2DoubleMap.Entry e : fresh.int2DoubleEntrySet()) {
             changed |= Math.abs(totals.get(e.getIntKey()) - e.getDoubleValue()) >= 1;
         }

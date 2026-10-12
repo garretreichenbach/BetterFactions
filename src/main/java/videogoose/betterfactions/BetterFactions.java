@@ -15,7 +15,10 @@ import api.event.player.PlayerJoinWorldListener;
 import api.event.player.ShopPriceListener;
 import org.schema.common.util.StringTools;
 import org.schema.schine.common.language.Lng;
+import api.event.world.ServerSendableRemoveListener;
 import api.event.world.WorldSaveListener;
+import org.schema.game.common.controller.SegmentController;
+import org.schema.schine.network.objects.Sendable;
 import api.mod.StarMod;
 import api.network.packets.PacketUtil;
 import org.schema.game.client.view.mainmenu.GuidesRegistry;
@@ -152,6 +155,16 @@ public final class BetterFactions extends StarMod {
 				BattleTracker.get().onOverheat(sc);
 			}
 			return EventResult.CONTINUE;
+		}, this);
+
+		//removed for good, not unloaded: the sweep would drop its rating within a minute, this drops it now
+		ServerSendableRemoveListener.TYPE.register(new ServerSendableRemoveListener() {
+			@Override
+			public void onPostServerSendableRemove(GameServerState serverState, Sendable s, boolean isServer) {
+				if (s instanceof SegmentController sc && sc.isMarkedForPermanentDelete()) {
+					DiplomacyManager.server().onEntityDeleted(sc);
+				}
+			}
 		}, this);
 
 		PlayerJoinWorldListener.TYPE.register((client, player, isServer) -> {
