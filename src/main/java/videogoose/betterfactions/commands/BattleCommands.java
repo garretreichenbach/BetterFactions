@@ -1,6 +1,7 @@
 package videogoose.betterfactions.commands;
 
 import api.chat.ChatCommand;
+import api.chat.CommandArg;
 import api.chat.CommandContext;
 import api.mod.StarLoader;
 import com.bulletphysics.linearmath.Transform;
@@ -38,10 +39,16 @@ public final class BattleCommands {
 	/** Room left between ships, in metres, on top of the blueprint's own size. */
 	static final float GAP = 40;
 
-	private record Command(String name, String usage, String description, Consumer<CommandContext> run) implements ChatCommand {
+	private record Command(String name, String usage, String description, Consumer<CommandContext> run, CommandArg... args) implements ChatCommand {
 		@Override
 		public String getName() {
 			return name;
+		}
+
+		//the parser enforces these: a command declaring none refuses any argument
+		@Override
+		public CommandArg[] getArgs() {
+			return args;
 		}
 
 		@Override
@@ -62,9 +69,11 @@ public final class BattleCommands {
 	public static void register(BetterFactions mod) {
 		StarLoader.registerCommand(mod, new Command("battle_spawn_fleet", "<factionId> <count> <x> <y> <z> <blueprint name>",
 				"Spawns a fleet of one catalog blueprint for a faction in an unloaded sector, on sentry. The fleet is yours to"
-						+ " command from the fleet menu; its ships are the faction's.", BattleCommands::spawnFleet));
+						+ " command from the fleet menu; its ships are the faction's.", BattleCommands::spawnFleet,
+				CommandArg.integer("factionId", "10001"), CommandArg.integer("count", "3"), CommandArg.integer("x", "2"), CommandArg.integer("y", "2"), CommandArg.integer("z", "2"), CommandArg.greedy("blueprint", "Isanth Type-Zero")));
 		StarLoader.registerCommand(mod, new Command("battle_blueprints", "[filter]",
-				"Lists catalog ship blueprints, heaviest first, for /battle_spawn_fleet.", BattleCommands::listBlueprints));
+				"Lists catalog ship blueprints, heaviest first, for /battle_spawn_fleet.", BattleCommands::listBlueprints,
+				CommandArg.greedy("filter", "isanth").optional()));
 	}
 
 	private static void listBlueprints(CommandContext ctx) {

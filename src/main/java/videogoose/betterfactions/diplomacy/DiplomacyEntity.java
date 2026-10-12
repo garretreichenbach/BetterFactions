@@ -998,11 +998,9 @@ public class DiplomacyEntity implements LogInterface {
     public boolean wouldAccept(String typeId, List<String> unmet) {
         TreatyType offered = typeId != null ? TreatyTypeRegistry.get(typeId) : null;
         if (offered != null && offered.getKind() == TreatyType.Kind.DEMAND) {
-            //An NPC faction never submits to anyone, whatever its archetype says. Two reasons, and
-            //the second outlives the first: nothing yet implements what being a vassal or a tributary
-            //would mean, so a signed one would be a record no behaviour honours - and an NPC faction
-            //is run by the engine rather than by anyone who could be made to answer to a player, so
-            //there is nobody there for the arrangement to bind.
+            //An NPC faction never submits to anyone, whatever its archetype says: it is run by the
+            //engine rather than by anyone who could be made to answer to a player, so there is
+            //nobody there for the arrangement to bind.
             if (unmet != null) {
                 unmet.add(Lng.str("they will not be made subject to anyone"));
             }

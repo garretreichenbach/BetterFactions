@@ -1,6 +1,7 @@
 package videogoose.betterfactions.commands;
 
 import api.chat.ChatCommand;
+import api.chat.CommandArg;
 import api.chat.CommandContext;
 import api.mod.StarLoader;
 import org.schema.game.common.data.player.faction.Faction;
@@ -24,10 +25,16 @@ public final class DiplomacyCommands {
 	private DiplomacyCommands() {
 	}
 
-	private record Command(String name, String usage, String description, Consumer<CommandContext> run) implements ChatCommand {
+	private record Command(String name, String usage, String description, Consumer<CommandContext> run, CommandArg... args) implements ChatCommand {
 		@Override
 		public String getName() {
 			return name;
+		}
+
+		//the parser enforces these: a command declaring none refuses any argument
+		@Override
+		public CommandArg[] getArgs() {
+			return args;
 		}
 
 		@Override
@@ -47,17 +54,25 @@ public final class DiplomacyCommands {
 
 	public static void register(BetterFactions mod) {
 		StarLoader.registerCommand(mod, new Command("faction_treaty_sign", "<factionA> <factionB> <type> [termHours]",
-				"Signs a treaty between two factions, with no offer and no acceptance.", DiplomacyCommands::sign));
+				"Signs a treaty between two factions, with no offer and no acceptance.", DiplomacyCommands::sign,
+				CommandArg.integer("factionA", "10001"), CommandArg.integer("factionB", "10002"), CommandArg.string("type", "starmade:alliance"), CommandArg.integer("termHours", "48").optional()));
 		StarLoader.registerCommand(mod, new Command("faction_treaty_break", "<factionA> <factionB> <type>",
-				"Tears up a treaty between two factions, breakable or not.", DiplomacyCommands::breakTreaty));
+				"Tears up a treaty between two factions, breakable or not.", DiplomacyCommands::breakTreaty,
+				CommandArg.integer("factionA", "10001"), CommandArg.integer("factionB", "10002"), CommandArg.string("type", "starmade:alliance")));
 		StarLoader.registerCommand(mod, new Command("faction_treaty_list", "<faction>",
-				"Lists the treaties a faction holds, and the registered treaty types.", DiplomacyCommands::list));
+				"Lists the treaties a faction holds, and the registered treaty types.", DiplomacyCommands::list,
+				CommandArg.integer("faction", "10001")));
 		StarLoader.registerCommand(mod, new Command("faction_emblem_clear", "<faction>",
-				"Removes a faction's uploaded emblem and tells the faction who did it.", DiplomacyCommands::emblemClear));
+				"Removes a faction's uploaded emblem and tells the faction who did it.", DiplomacyCommands::emblemClear,
+				CommandArg.integer("faction", "10001")));
 		StarLoader.registerCommand(mod, new Command("faction_federation_list", "",
 				"Lists every federation, its leader and its members.", DiplomacyCommands::federationList));
 		StarLoader.registerCommand(mod, new Command("faction_federation_dissolve", "<federationId>",
-				"Winds up a federation, ending the alliances its membership created.", DiplomacyCommands::federationDissolve));
+				"Winds up a federation, ending the alliances its membership created.", DiplomacyCommands::federationDissolve,
+				CommandArg.integer("federationId", "1")));
+		StarLoader.registerCommand(mod, new Command("faction_npc_yield", "<npcFactionId> [on|off]",
+				"DEBUG: makes an NPC faction accept every demand made of it (treaties like vassalage, and terms it gives). NPC factions only; resets on restart.", DiplomacyCommands::npcYield,
+				CommandArg.integer("npcFactionId", "-10000000"), CommandArg.string("onOff", "on").optional()));
 	}
 
 	private static FactionManager fm() {
@@ -177,5 +192,20 @@ public final class DiplomacyCommands {
 			return;
 		}
 		ctx.reply("[SUCCESS] dissolved federation " + id);
+	}
+
+	private static void npcYield(CommandContext ctx) {
+		Faction f = fm().getFaction(ctx.getInt(0));
+		if (f == null) {
+			ctx.reply("[ERROR] no faction with id " + ctx.getInt(0));
+			return;
+		}
+		String arg = ctx.optString(1, "");
+		boolean on = arg.isEmpty() ? !DiplomacyManager.server().isDebugYielding(f.getIdFaction()) : arg.equalsIgnoreCase("on");
+		if (!DiplomacyManager.server().setDebugYielding(f, on)) {
+			ctx.reply("[ERROR] " + f.getName() + " is not an NPC faction");
+			return;
+		}
+		ctx.reply("[SUCCESS] " + f.getName() + (on ? " now accepts every demand (debug)" : " judges demands normally again"));
 	}
 }

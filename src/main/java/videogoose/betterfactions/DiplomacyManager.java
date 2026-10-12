@@ -4,6 +4,7 @@ import org.schema.common.util.StringTools;
 import api.network.packets.PacketUtil;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
@@ -2065,6 +2066,65 @@ public final class DiplomacyManager extends Observable {
     }
 
     /**
+     * The faction holding {@code vassal} in vassalage, or 0 if it answers to nobody.
+     */
+    public int overlordOf(int vassal) {
+        synchronized (treaties) {
+            for (FactionTreatySet set : treaties.values()) {
+                for (FactionTreaty t : set.getTreaties()) {
+                    if (t.to == vassal && TreatyTypeRegistry.VASSALAGE.equals(t.typeId)) {
+                        return t.from;
+                    }
+                }
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Server, once per engine income turn: every tributary pays its overlord a share of what it
+     * earned that turn. Never more than it holds, so tribute alone cannot put a faction in debt.
+     */
+    public void payTribute() {
+        int percent = BFConfig.tributePercent();
+        if (percent <= 0) {
+            return;
+        }
+        List<FactionTreaty> owed = new ObjectArrayList<FactionTreaty>();
+        synchronized (treaties) {
+            for (FactionTreatySet set : treaties.values()) {
+                for (FactionTreaty t : set.getTreaties()) {
+                    if (TreatyTypeRegistry.TRIBUTARY.equals(t.typeId)) {
+                        owed.add(t);
+                    }
+                }
+            }
+        }
+        for (FactionTreaty t : owed) {
+            Faction lord = getFaction(t.from);
+            Faction payer = getFaction(t.to);
+            if (lord == null || payer == null) {
+                continue;
+            }
+            float amount = tributeOwed(payer.lastPointsFromOnline + payer.lastPointsFromOffline, payer.factionPoints, percent);
+            if (amount <= 0) {
+                continue;
+            }
+            payer.factionPoints -= amount;
+            lord.factionPoints += amount;
+            payer.sendFactionPointUpdate(((GameServerState) state()).getGameState());
+            lord.sendFactionPointUpdate(((GameServerState) state()).getGameState());
+        }
+    }
+
+    /**
+     * {@code percent} of what was earned this turn, capped at what is held; never negative.
+     */
+    public static float tributeOwed(float earned, float held, int percent) {
+        return Math.max(0, Math.min(earned * percent / 100f, held));
+    }
+
+    /**
      * What is wrong with a proposal's terms as offered, or null. Run on the server for every offer and
      * counter before it is staged, so a term nobody may offer never reaches the other side's inbox.
      */
@@ -2073,6 +2133,12 @@ public final class DiplomacyManager extends Observable {
         if (offered != null && offered.needsAcceptance() && getRelation(p.a, p.b) == FactionRelation.RType.ENEMY) {
             //at war the only thing on the table is how it ends; anything else rides the peace as a term
             return Lng.str("You are at war. Offer peace, with %s as one of its terms.", offered.getDisplayName());
+        }
+        if (offered != null && offered.getImplies() == FactionRelation.RType.ENEMY && !p.serverAuthored) {
+            int lord = overlordOf(proposer.getIdFaction());
+            if (lord != 0) {
+                return Lng.str("A vassal of %s cannot declare war on its own.", getFactionName(lord));
+            }
         }
         if (p.terms.isEmpty()) {
             return null;
@@ -2187,6 +2253,48 @@ public final class DiplomacyManager extends Observable {
     }
 
     /**
+     * Debug only, never saved: NPC factions an admin set to accept every demand made of them.
+     */
+    private final IntOpenHashSet debugYielding = new IntOpenHashSet();
+
+    /**
+     * Admin debug toggle; see {@code /faction_npc_yield}. Only NPC factions take it.
+     *
+     * @return false if the faction is not an NPC faction
+     */
+    public boolean setDebugYielding(Faction npc, boolean on) {
+        if (!npc.isNPC()) {
+            return false;
+        }
+        if (on) {
+            debugYielding.add(npc.getIdFaction());
+        } else {
+            debugYielding.remove(npc.getIdFaction());
+        }
+        return true;
+    }
+
+    public boolean isDebugYielding(int factionId) {
+        return debugYielding.contains(factionId);
+    }
+
+    /**
+     * Whether the offer asks something of {@code target}: a subjugating treaty, or a term it gives.
+     */
+    private static boolean isDemandOn(DiplomacyProposal offer, int target) {
+        TreatyType type = offer.typeId != null ? TreatyTypeRegistry.get(offer.typeId) : null;
+        if (type != null && type.getKind() == TreatyType.Kind.DEMAND) {
+            return true;
+        }
+        for (SettlementTerm t : offer.terms) {
+            if (t.giver == target) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * An NPC's verdict on an offer to it, with the terms it would sign instead when it would not.
      */
     private record NpcVerdict(boolean accept, List<SettlementTerm> counter) {
@@ -2197,6 +2305,9 @@ public final class DiplomacyManager extends Observable {
      * {@link SettlementPricing}. Fills {@code unmet} with why not.
      */
     private NpcVerdict judgeAsNPC(DiplomacyProposal offer, Faction npc, List<String> unmet) {
+        if (debugYielding.contains(npc.getIdFaction()) && isDemandOn(offer, npc.getIdFaction())) {
+            return new NpcVerdict(true, null);
+        }
         DiplomacyEntity e = diplomacyOf(npc).getEntity(offer.a);
         List<String> ruleUnmet = new ObjectArrayList<>();
         boolean rule = e.wouldAccept(offer.typeId, ruleUnmet);

@@ -36,6 +36,7 @@ public final class FactionTreaty_test {
         tradeAgreementPricesTheCounter();
         expiryIsHonoured();
         warGoalsSurviveTheRoundTrip();
+        tributeIsAShareCappedAtWhatIsHeld();
         System.out.println("FactionTreaty_test: OK");
     }
 
@@ -250,5 +251,12 @@ public final class FactionTreaty_test {
         assert videogoose.betterfactions.DiplomacyManager.tradePrice(1, 10, true) == 1;
         assert videogoose.betterfactions.DiplomacyManager.tradePrice(100, 0, true) == 100;
         assert videogoose.betterfactions.DiplomacyManager.tradePrice(Integer.MAX_VALUE, 50, false) == Integer.MAX_VALUE;
+    }
+
+    private static void tributeIsAShareCappedAtWhatIsHeld() {
+        assert videogoose.betterfactions.DiplomacyManager.tributeOwed(100, 1000, 25) == 25;
+        assert videogoose.betterfactions.DiplomacyManager.tributeOwed(100, 10, 25) == 10;
+        assert videogoose.betterfactions.DiplomacyManager.tributeOwed(-50, 1000, 25) == 0;
+        assert videogoose.betterfactions.DiplomacyManager.tributeOwed(100, -5, 25) == 0;
     }
 }

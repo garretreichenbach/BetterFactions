@@ -23,6 +23,7 @@
 		"ServerTickMixin",
 		"TableAccessor",
 		"TimerAccessor",
+		"TributeTurnMixin",
 		"WatchCcdMixin"
 	],
 	"client": [],

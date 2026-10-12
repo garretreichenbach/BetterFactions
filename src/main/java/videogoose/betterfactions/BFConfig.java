@@ -11,6 +11,7 @@ public final class BFConfig {
 
 	private static SimpleConfigBool customEmblems;
 	private static SimpleConfigInt tradeDiscount;
+	private static SimpleConfigInt tributePercent;
 	private static SimpleConfigInt maxSoftBattles;
 	private static SimpleConfigInt softAiTickDivisor;
 	private static SimpleConfigInt softEntityTickDivisor;
@@ -28,6 +29,8 @@ public final class BFConfig {
 				"If true, factions may upload their own emblem image. Off by default: turn it on only if you are willing to moderate what players upload (admins can remove one with /faction_emblem_clear).");
 		tradeDiscount = new SimpleConfigInt(config, "trade_agreement_shop_discount_percent", 10,
 				"Percent off buying from, and extra when selling to, a shop whose faction has a trade agreement with yours. 0 turns it off.");
+		tributePercent = new SimpleConfigInt(config, "tributary_income_percent", 25,
+				"Percent of a tributary's faction point income paid to its overlord each income period. 0 turns tribute off.");
 		maxSoftBattles = new SimpleConfigInt(config, "max_soft_loaded_battles", 2,
 				"How many battle sectors with no player nearby the server loads at once so unloaded fleets can fight. 0 turns unloaded fleet combat off; more queue.");
 		softAiTickDivisor = new SimpleConfigInt(config, "soft_loaded_ai_tick_divisor", 2,
@@ -86,6 +89,11 @@ public final class BFConfig {
 
 	public static int tradeDiscountPercent() {
 		Integer v = tradeDiscount != null ? tradeDiscount.getValue() : null;
+		return v == null ? 0 : Math.max(0, Math.min(100, v));
+	}
+
+	public static int tributePercent() {
+		Integer v = tributePercent != null ? tributePercent.getValue() : null;
 		return v == null ? 0 : Math.max(0, Math.min(100, v));
 	}
 }
