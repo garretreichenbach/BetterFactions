@@ -1,0 +1,33 @@
+{
+  "id": "betterfactions/battle_unloaded_fleet_sentry",
+  "blocks": [ { "at": [0, 0, 0], "block": "GREY_HULL" } ],
+  "entities": [
+    {
+      "id": "raider", "faction": -1, "sector": [0, 0, -3],
+      "blocks": [
+        { "from": [0, 0, 0], "to": [2, 0, 1], "block": "REACTOR_POWER" },
+        { "from": [0, 1, 0], "to": [2, 1, 1], "block": "SHIELD_CAPACITOR" },
+        { "from": [0, 2, 0], "to": [2, 2, 1], "block": "SHIELD_RECHARGER" },
+        { "from": [0, 3, 0], "to": [4, 3, 4], "block": "GREY_HULL" }
+      ]
+    },
+    {
+      "id": "gunship", "faction": "player", "sector": [0, 0, -3], "offset": [0, 0, 150],
+      "blocks": [
+        { "from": [0, 0, 0], "to": [2, 0, 2], "block": "REACTOR_POWER" },
+        { "from": [0, 1, 0], "to": [2, 1, 2], "block": "THRUSTER_MODULE" },
+        { "at": [1, 2, 0], "block": "CANNON_COMPUTER" },
+        { "from": [1, 2, 1], "to": [1, 2, 4], "block": "CANNON_BARREL", "controller": [1, 2, 0] },
+        { "at": [0, 2, 0], "block": "BOBBY_AI_MODULE" },
+        { "from": [0, 3, 0], "to": [2, 3, 2], "block": "SHIELD_CAPACITOR" }
+      ],
+      "battle": [ { "fleetOrder": "SENTRY", "fleet": "guards", "atTick": 1200 } ]
+    }
+  ],
+  "fleets": [ { "id": "guards", "ships": ["gunship"] } ],
+  "unload": [ { "entity": "gunship", "at": 20 } ],
+  "expect": [
+    { "battle": "raider", "measure": "soft", "count": 1, "by": 6000 },
+    { "battle": "raider", "measure": "hits", "min": 1, "by": 6000 }
+  ]
+}

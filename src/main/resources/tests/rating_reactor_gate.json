@@ -1,0 +1,28 @@
+{
+  "id": "betterfactions/rating_reactor_gate",
+  "blocks": [ { "at": [0, 0, 0], "block": "GREY_HULL" } ],
+  "entities": [
+    {
+      "id": "starved", "sector": [3, 0, 3],
+      "blocks": [
+        { "at": [0, 0, 0], "block": "REACTOR_POWER" },
+        { "at": [0, 1, 0], "block": "CANNON_COMPUTER" },
+        { "from": [0, 1, 1], "to": [0, 1, 80], "block": "CANNON_BARREL", "controller": [0, 1, 0] }
+      ]
+    },
+    {
+      "id": "fed", "sector": [3, 0, 3], "offset": [0, 0, 120],
+      "blocks": [
+        { "from": [0, 0, 0], "to": [4, 4, 4], "block": "REACTOR_POWER" },
+        { "at": [0, 5, 0], "block": "CANNON_COMPUTER" },
+        { "at": [0, 5, 1], "block": "CANNON_BARREL", "controller": [0, 5, 0] }
+      ]
+    }
+  ],
+  "expect": [
+    { "battle": "starved", "measure": "gate", "max": 0.5, "by": 600 },
+    { "battle": "starved", "measure": "rate", "max": 19, "by": 600 },
+    { "battle": "fed", "measure": "gate", "min": 0.99 },
+    { "battle": "fed", "measure": "rate", "min": 0.1, "by": 600 }
+  ]
+}

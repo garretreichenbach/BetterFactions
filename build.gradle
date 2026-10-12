@@ -1,6 +1,5 @@
 plugins {
     id 'java'
-    id 'application'
 }
 
 java {
@@ -12,57 +11,62 @@ def starmadeDirectory = project.property("starmade_root")
 def modName = project.property("mod_name")
 group = project.property('mod_org_id')
 version = project.property('mod_version')
-def mainClassName = group + modName
 
 repositories {
     mavenCentral()
-    maven { url 'https://jitpack.io' }
-    maven { url 'https://repo.spongepowered.org/maven' }
 }
 
 dependencies {
-    compileOnly(files(starmadeDirectory + "StarMade.jar"))
+    // Compile against an engine build's classes when given (-Pstarmade_classes=<engine>/build/classes/java/main),
+    // otherwise against the installed game's jar.
+    if (project.hasProperty("starmade_classes")) {
+        compileOnly(files(project.property("starmade_classes")))
+    } else {
+        compileOnly(files(starmadeDirectory + "StarMade.jar"))
+    }
     compileOnly(fileTree(dir: (starmadeDirectory + "lib"), include: "*.jar"))
-    implementation(fileTree(dir: 'lib', include: '*.jar'))
-
-    compileOnly 'org.spongepowered:mixin:0.8.7'
-    annotationProcessor 'org.spongepowered:mixin:0.8.7:processor'
 }
 
 compileJava {
     options.encoding = 'UTF-8'
-    options.compilerArgs += [
-        '-AmixinTargetObfuscation=notch',
-        '-AmixinDefaultObfuscation=notch'
-    ]
 }
 
 tasks.register("updateVersion") {
     doLast {
         def modJson = file('src/main/resources/mod.json')
-        def modJsonContent = modJson.getText()
-        modJsonContent = modJsonContent.replaceAll(/"version":\s*".*"/, "\"version\": \"" + version + "\"")
-        modJson.write(modJsonContent)
+        modJson.write(modJson.getText().replaceAll(/"version":\s*".*"/, "\"version\": \"" + version + "\""))
     }
 }
 
 jar {
     dependsOn("updateVersion")
-    duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
     destinationDirectory.set(file(starmadeDirectory + "mods"))
     archiveFileName = modName + 'v' + getVersion() + '.jar'
-    manifest {
-        attributes(
-            'Main-Class': mainClassName,
-            'MixinConfigs': 'betterfactions.mixins.json'
-        )
-    }
-    from {
-        configurations.runtimeClasspath.collect {
-            if(!it.getPath().contains("StarMade") && it.getName().endsWith(".jar")) {
-                it.isDirectory() ? it : zipTree(it)
-            } else {
-                return null
+}
+
+interface InjectedExec {
+    @javax.inject.Inject
+    ExecOperations getExec()
+}
+
+// The checks are *_test mains, not JUnit, so `test` itself finds nothing; it runs them instead.
+tasks.named('test') {
+    dependsOn 'selfChecks'
+}
+
+// Runs every *_test class's main with -ea, like the engine's apiSelfChecks.
+tasks.register('selfChecks') {
+    def execOps = project.objects.newInstance(InjectedExec).exec
+    group = 'verification'
+    dependsOn tasks.compileJava
+    doLast {
+        def classesDir = sourceSets.main.output.classesDirs.singleFile
+        fileTree(classesDir).matching { include '**/*_test.class' }.each { f ->
+            def name = classesDir.toPath().relativize(f.toPath()).toString().replace(File.separator, '.') - '.class'
+            execOps.javaexec {
+                classpath = sourceSets.main.output + sourceSets.main.compileClasspath
+                mainClass.set(name)
+                jvmArgs '-ea'
             }
         }
     }

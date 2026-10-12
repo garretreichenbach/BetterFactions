@@ -1,0 +1,315 @@
+<Diplomacy>
+    <!--Diplomacy configuration. There are actions and states. States will add a constant effect on points as long as its active. Actions add/remove over time as long as the action is active. Actions get reset if repeated. Reactions can exist both for actions (checked and executed when that action happens) or general, which are executed on action/status turn.-->
+    <!--Status Types: IN_WAR, IN_WAR_WITH_ENEMY, POWER, PIRATE, ALLIANCE, ALLIANCE_WITH_ENEMY, NON_AGGRESSION, ALLIANCE_WITH_FRIENDS, IN_WAR_WITH_FRIENDS, FACTION_MEMBER_AT_WAR_WITH_US, FACTION_MEMBER_WE_DONT_LIKE, TRUST-->
+    <!--Action Types: ATTACK, ATTACK_ENEMY, MINING, TERRITORY, PEACE_OFFER, DECLARATION_OF_WAR, ALLIANCE_REQUEST, ALLIANCE_CANCEL, TRADING_WITH_US, TRADING_WITH_ENEMY, ALLIANCE_WITH_ENEMY, TREATY_PROPOSED, TREATY_SIGNED, TREATY_REFUSED, TREATY_BROKEN, TREATY_EXPIRED-->
+    <!--Reaction Types: PROPOSE_TREATY, WITHDRAW_PROPOSAL, BREAK_TREATY, SEND_POPUP_MESSAGE, SEND_FACTION_MAIL-->
+    <!--Condition Types: EXISTS_ACTION, EXISTS_STATUS, STATUS_POINTS, STATUS_PERSISTED, ACTION_PERSISTED, ACTION_COUNTER, TOTAL_POINTS, RAW_POINTS, HAS_TREATY, TREATY_COUNT, RELATIVE_STRENGTH, AT_WAR_COUNT, SHARES_ENEMY, SHARES_FRIEND, IS_FACTION_TYPE-->
+    <Version>
+        4<!--To ensure compatibility on updates, the Diplomacy config will reset to a new default, should the version differ with what the game considers to be the latest diplomacy config format version--></Version>
+    <ActionTimeouts>
+        <!--How long actions are valid in milliseconds.-->
+        <Attack>60000</Attack>
+        <Attack_enemy>60000</Attack_enemy>
+        <Mining>60000</Mining>
+        <Territory>60000</Territory>
+        <Peace_offer>60000</Peace_offer>
+        <Declaration_of_war>60000</Declaration_of_war>
+        <Alliance_request>60000</Alliance_request>
+        <Alliance_cancel>60000</Alliance_cancel>
+        <Trading_with_us>60000</Trading_with_us>
+        <Trading_with_enemy>60000</Trading_with_enemy>
+        <Alliance_with_enemy>60000</Alliance_with_enemy>
+    </ActionTimeouts>
+    <DiplomacyElement>
+        <DiplAction>
+            <Name>ATTACK</Name>
+            <UpperLimit>-500<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ExistingModifier>10<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>10<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>1.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>-50<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplAction>
+            <Name>ATTACK_ENEMY</Name>
+            <UpperLimit>500<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ExistingModifier>5<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>5<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>1.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>100<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplAction>
+            <Name>MINING</Name>
+            <UpperLimit>-30<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ExistingModifier>2<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>1<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>1.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>-10<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplAction>
+            <Name>TERRITORY</Name>
+            <UpperLimit>-50<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ExistingModifier>1<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>1<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>10.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>-50<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplAction>
+            <Name>DECLARATION_OF_WAR</Name>
+            <UpperLimit>-1000<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ExistingModifier>1000<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>1000<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>1.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>-1000<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplAction>
+            <Name>ALLIANCE_CANCEL</Name>
+            <UpperLimit>-50<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ExistingModifier>5<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>5<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>1.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>-50<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplAction>
+            <Name>TRADING_WITH_US</Name>
+            <UpperLimit>100<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>10</LowerLimit>
+            <ExistingModifier>2<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>1<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>1.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>10<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplAction>
+            <Name>TRADING_WITH_ENEMY</Name>
+            <UpperLimit>-200<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ExistingModifier>5<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>5<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>1.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>-5<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplAction>
+            <Name>ALLIANCE_WITH_ENEMY</Name>
+            <UpperLimit>-25<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ExistingModifier>1<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>1<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>1.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>-25<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplStatus>
+            <Name>IN_WAR</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>-10000<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>IN_WAR_WITH_ENEMY</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>1000<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>POWER</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>1<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>ALLIANCE</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>1500<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>ALLIANCE_WITH_ENEMY</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>-750<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>NON_AGGRESSION</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>100<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>ALLIANCE_WITH_FRIENDS</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>250<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>IN_WAR_WITH_FRIENDS</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>-250<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>FACTION_MEMBER_AT_WAR_WITH_US</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>-500<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>FACTION_MEMBER_WE_DONT_LIKE</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>-50<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>TRUST</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>1<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+    </DiplomacyElement>
+    <Reactions>
+        <Reaction>
+            <Name>Declare War on bad score</Name>
+            <Message>We were thrown out of better places than yours, and we are still here. You will not be.
+            </Message>
+            <Action>PROPOSE_TREATY</Action>
+            <Treaty>starmade:war</Treaty>
+            <NOT>
+                <Condition>
+                    <Type>TOTAL_POINTS</Type>
+                    <Value>-800.0</Value>
+                </Condition>
+            </NOT>
+        </Reaction>
+        <Reaction>
+            <Name>Declare War on two hostile actions</Name>
+            <Message>Twice now. There will not be a third.</Message>
+            <Action>PROPOSE_TREATY</Action>
+            <Treaty>starmade:war</Treaty>
+            <AND>
+                <Condition>
+                    <Type>ACTION_COUNTER</Type>
+                    <Action>ATTACK</Action>
+                    <Value>2.0</Value>
+                </Condition>
+                <NOT>
+                    <Condition>
+                        <Type>EXISTS_STATUS</Type>
+                        <Status>IN_WAR</Status>
+                    </Condition>
+                </NOT>
+            </AND>
+        </Reaction>
+        <Reaction>
+            <Name>Warn once</Name>
+            <Message>You are a long way from anyone who would miss you.</Message>
+            <Action>SEND_POPUP_MESSAGE</Action>
+            <Treaty></Treaty>
+            <AND>
+                <Condition>
+                    <Type>ACTION_COUNTER</Type>
+                    <Action>ATTACK</Action>
+                    <Value>1.0</Value>
+                </Condition>
+                <NOT>
+                    <Condition>
+                        <Type>EXISTS_STATUS</Type>
+                        <Status>IN_WAR</Status>
+                    </Condition>
+                </NOT>
+            </AND>
+        </Reaction>
+        <Reaction>
+            <Name>Break Alliance on attack</Name>
+            <Message>We knew better than to trust you. Our arrangement is over.</Message>
+            <Action>BREAK_TREATY</Action>
+            <Treaty>starmade:alliance</Treaty>
+            <AND>
+                <Condition>
+                    <Type>ACTION_COUNTER</Type>
+                    <Action>ATTACK</Action>
+                    <Value>1.0</Value>
+                </Condition>
+            </AND>
+        </Reaction>
+        <Reaction>
+            <Name>Offer Peace Deal after a long quiet</Name>
+            <Message>You have kept away from us. Keep away, and we will stop looking for you.</Message>
+            <Action>PROPOSE_TREATY</Action>
+            <Treaty></Treaty>
+            <AND>
+                <Condition>
+                    <Type>STATUS_PERSISTED</Type>
+                    <Status>NON_AGGRESSION</Status>
+                    <Value>10800000.0</Value>
+                </Condition>
+            </AND>
+        </Reaction>
+        <Reaction>
+            <Name>Remove Peace Deal Offer</Name>
+            <Message>We were wrong about you. Forget we said anything.</Message>
+            <Action>WITHDRAW_PROPOSAL</Action>
+            <Treaty></Treaty>
+            <AND>
+                <Condition>
+                    <Type>ACTION_COUNTER</Type>
+                    <Action>ATTACK</Action>
+                    <Value>1.0</Value>
+                </Condition>
+            </AND>
+        </Reaction>
+    </Reactions>
+    <PowerWeights>
+        <!--What this faction counts when sizing another up. Used by the POWER status and the RELATIVE_STRENGTH condition, which compare the two totals as a ratio - so only the weights relative to each other matter, and scaling all four changes nothing. PointSurplus is faction points spare per period, not the balance.-->
+        <PointSurplus>0.5</PointSurplus>
+        <ClaimedSystems>50.0</ClaimedSystems>
+        <Members>62.5</Members>
+        <Military>2.0</Military>
+    </PowerWeights>
+    <Acceptance>
+        <!--Whether this faction agrees when somebody offers it a treaty, one rule per type. A type with no rule here is always refused. An empty Treaty means a plain peace offer.-->
+        <Accept>
+            <Treaty></Treaty>
+            <Refusal>The Outcasts are not done with you.</Refusal>
+            <AND>
+                <Condition>
+                    <Type>RAW_POINTS</Type>
+                    <Value>-1500.0</Value>
+                </Condition>
+                <Condition>
+                    <Type>STATUS_PERSISTED</Type>
+                    <Status>NON_AGGRESSION</Status>
+                    <Value>5400000.0</Value>
+                </Condition>
+            </AND>
+        </Accept>
+        <Accept>
+            <Treaty>starmade:non_aggression</Treaty>
+            <Refusal>The Outcasts promise nothing to anyone.</Refusal>
+            <AND>
+                <Condition>
+                    <Type>RAW_POINTS</Type>
+                    <Value>0.0</Value>
+                </Condition>
+                <Condition>
+                    <Type>STATUS_PERSISTED</Type>
+                    <Status>NON_AGGRESSION</Status>
+                    <Value>5400000.0</Value>
+                </Condition>
+            </AND>
+        </Accept>
+        <Accept>
+            <Treaty>starmade:alliance</Treaty>
+            <Refusal>The Outcasts have no friends, and want none.</Refusal>
+            <AND>
+                <Condition>
+                    <Type>RAW_POINTS</Type>
+                    <Value>3000.0</Value>
+                </Condition>
+                <Condition>
+                    <Type>STATUS_PERSISTED</Type>
+                    <Status>NON_AGGRESSION</Status>
+                    <Value>14400000.0</Value>
+                </Condition>
+                <NOT>
+                    <Condition>
+                        <Type>TREATY_COUNT</Type>
+                        <Value>1.0</Value>
+                        <Argument>starmade:alliance</Argument>
+                    </Condition>
+                </NOT>
+            </AND>
+        </Accept>
+    </Acceptance>
+</Diplomacy>

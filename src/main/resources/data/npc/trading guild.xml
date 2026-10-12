@@ -1,0 +1,391 @@
+<Diplomacy>
+    <!--Diplomacy configuration. There are actions and states. States will add a constant effect on points as long as its active. Actions add/remove over time as long as the action is active. Actions get reset if repeated. Reactions can exist both for actions (checked and executed when that action happens) or general, which are executed on action/status turn.-->
+    <!--Status Types: IN_WAR, IN_WAR_WITH_ENEMY, POWER, PIRATE, ALLIANCE, ALLIANCE_WITH_ENEMY, NON_AGGRESSION, ALLIANCE_WITH_FRIENDS, IN_WAR_WITH_FRIENDS, FACTION_MEMBER_AT_WAR_WITH_US, FACTION_MEMBER_WE_DONT_LIKE, TRUST-->
+    <!--Action Types: ATTACK, ATTACK_ENEMY, MINING, TERRITORY, PEACE_OFFER, DECLARATION_OF_WAR, ALLIANCE_REQUEST, ALLIANCE_CANCEL, TRADING_WITH_US, TRADING_WITH_ENEMY, ALLIANCE_WITH_ENEMY, TREATY_PROPOSED, TREATY_SIGNED, TREATY_REFUSED, TREATY_BROKEN, TREATY_EXPIRED-->
+    <!--Reaction Types: PROPOSE_TREATY, WITHDRAW_PROPOSAL, BREAK_TREATY, SEND_POPUP_MESSAGE, SEND_FACTION_MAIL-->
+    <!--Condition Types: EXISTS_ACTION, EXISTS_STATUS, STATUS_POINTS, STATUS_PERSISTED, ACTION_PERSISTED, ACTION_COUNTER, TOTAL_POINTS, RAW_POINTS, HAS_TREATY, TREATY_COUNT, RELATIVE_STRENGTH, AT_WAR_COUNT, SHARES_ENEMY, SHARES_FRIEND, IS_FACTION_TYPE-->
+    <Version>
+        4<!--To ensure compatibility on updates, the Diplomacy config will reset to a new default, should the version differ with what the game considers to be the latest diplomacy config format version--></Version>
+    <ActionTimeouts>
+        <!--How long actions are valid in milliseconds.-->
+        <Attack>60000</Attack>
+        <Attack_enemy>60000</Attack_enemy>
+        <Mining>60000</Mining>
+        <Territory>60000</Territory>
+        <Peace_offer>60000</Peace_offer>
+        <Declaration_of_war>60000</Declaration_of_war>
+        <Alliance_request>60000</Alliance_request>
+        <Alliance_cancel>60000</Alliance_cancel>
+        <Trading_with_us>60000</Trading_with_us>
+        <Trading_with_enemy>60000</Trading_with_enemy>
+        <Alliance_with_enemy>60000</Alliance_with_enemy>
+    </ActionTimeouts>
+    <DiplomacyElement>
+        <DiplAction>
+            <Name>ATTACK</Name>
+            <UpperLimit>-500<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ExistingModifier>10<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>10<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>1.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>-50<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplAction>
+            <Name>ATTACK_ENEMY</Name>
+            <UpperLimit>500<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ExistingModifier>5<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>5<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>1.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>100<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplAction>
+            <Name>MINING</Name>
+            <UpperLimit>-30<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ExistingModifier>2<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>1<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>1.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>-10<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplAction>
+            <Name>TERRITORY</Name>
+            <UpperLimit>-50<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ExistingModifier>1<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>1<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>10.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>-50<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplAction>
+            <Name>DECLARATION_OF_WAR</Name>
+            <UpperLimit>-1000<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ExistingModifier>1000<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>1000<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>1.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>-1000<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplAction>
+            <Name>ALLIANCE_CANCEL</Name>
+            <UpperLimit>-50<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ExistingModifier>5<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>5<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>1.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>-50<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplAction>
+            <Name>TRADING_WITH_US</Name>
+            <UpperLimit>100<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>10</LowerLimit>
+            <ExistingModifier>2<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>1<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>1.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>10<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplAction>
+            <Name>TRADING_WITH_ENEMY</Name>
+            <UpperLimit>-200<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ExistingModifier>5<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>5<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>1.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>-5<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplAction>
+            <Name>ALLIANCE_WITH_ENEMY</Name>
+            <UpperLimit>-25<!--If lower than lower limit, it's a minus effect on diplomacy--></UpperLimit>
+            <LowerLimit>0</LowerLimit>
+            <ExistingModifier>1<!--How much the modifier changes towards upper limit each diplomacy round--></ExistingModifier>
+            <NonExistingModifier>1<!--How much the modifier changes towards lower limit each diplomacy round--></NonExistingModifier>
+            <ActionTimeoutDuration>1.0<!--Time for Action to timeout (in faction turns)--></ActionTimeoutDuration>
+            <Value>-25<!--In diplomacy points (no float)--></Value>
+        </DiplAction>
+        <DiplStatus>
+            <Name>IN_WAR</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>-10000<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>IN_WAR_WITH_ENEMY</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>1000<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>POWER</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>1<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>ALLIANCE</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>1500<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>ALLIANCE_WITH_ENEMY</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>-750<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>NON_AGGRESSION</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>100<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>ALLIANCE_WITH_FRIENDS</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>250<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>IN_WAR_WITH_FRIENDS</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>-250<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>FACTION_MEMBER_AT_WAR_WITH_US</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>-500<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>FACTION_MEMBER_WE_DONT_LIKE</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>-50<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+        <DiplStatus>
+            <Name>TRUST</Name>
+            <Timeout>1.0<!--In Faction Turns--></Timeout>
+            <Value>1<!--In diplomacy points (no float)--></Value>
+        </DiplStatus>
+    </DiplomacyElement>
+    <Reactions>
+        <Reaction>
+            <Name>Declare War on bad score</Name>
+            <Message>The Guild has resolved that your continued operation is incompatible with commerce. The
+                resolution is not open to appeal.
+            </Message>
+            <Action>PROPOSE_TREATY</Action>
+            <Treaty>starmade:war</Treaty>
+            <NOT>
+                <Condition>
+                    <Type>TOTAL_POINTS</Type>
+                    <Value>-4000.0</Value>
+                </Condition>
+            </NOT>
+        </Reaction>
+        <Reaction>
+            <Name>Declare War on sustained aggression</Name>
+            <Message>Five engagements. The Guild has written off the losses and opened a different sort of
+                account.
+            </Message>
+            <Action>PROPOSE_TREATY</Action>
+            <Treaty>starmade:war</Treaty>
+            <AND>
+                <Condition>
+                    <Type>ACTION_COUNTER</Type>
+                    <Action>ATTACK</Action>
+                    <Value>5.0</Value>
+                </Condition>
+                <NOT>
+                    <Condition>
+                        <Type>EXISTS_STATUS</Type>
+                        <Status>IN_WAR</Status>
+                    </Condition>
+                </NOT>
+            </AND>
+        </Reaction>
+        <Reaction>
+            <Name>Notice of Damages</Name>
+            <Message>Our vessels have been fired upon. The Guild expects restitution, and trades with those who
+                provide it.
+            </Message>
+            <Action>SEND_FACTION_MAIL</Action>
+            <Treaty></Treaty>
+            <AND>
+                <Condition>
+                    <Type>ACTION_COUNTER</Type>
+                    <Action>ATTACK</Action>
+                    <Value>1.0</Value>
+                </Condition>
+                <NOT>
+                    <Condition>
+                        <Type>EXISTS_STATUS</Type>
+                        <Status>IN_WAR</Status>
+                    </Condition>
+                </NOT>
+            </AND>
+        </Reaction>
+        <Reaction>
+            <Name>Offer Trade Agreement</Name>
+            <Message>The Guild extends terms of trade. Our routes are open to you, and we trust yours to us.
+            </Message>
+            <Action>PROPOSE_TREATY</Action>
+            <Treaty>starmade:trade_agreement</Treaty>
+            <AND>
+                <Condition>
+                    <Type>TOTAL_POINTS</Type>
+                    <Value>200.0</Value>
+                </Condition>
+            </AND>
+        </Reaction>
+        <Reaction>
+            <Name>Offer Non-Aggression Pact</Name>
+            <Message>The Guild proposes that neither of us waste hulls on the other. The arithmetic favours both
+                parties.
+            </Message>
+            <Action>PROPOSE_TREATY</Action>
+            <Treaty>starmade:non_aggression</Treaty>
+            <AND>
+                <Condition>
+                    <Type>TOTAL_POINTS</Type>
+                    <Value>500.0</Value>
+                </Condition>
+                <Condition>
+                    <Type>STATUS_PERSISTED</Type>
+                    <Status>NON_AGGRESSION</Status>
+                    <Value>1800000.0</Value>
+                </Condition>
+            </AND>
+        </Reaction>
+        <Reaction>
+            <Name>Offer Intel Sharing</Name>
+            <Message>A chart is worth what it cost to make. The Guild proposes we stop paying twice for the same
+                one.
+            </Message>
+            <Action>PROPOSE_TREATY</Action>
+            <Treaty>starmade:intel_sharing</Treaty>
+            <AND>
+                <Condition>
+                    <Type>TOTAL_POINTS</Type>
+                    <Value>1200.0</Value>
+                </Condition>
+                <Condition>
+                    <Type>STATUS_PERSISTED</Type>
+                    <Status>NON_AGGRESSION</Status>
+                    <Value>3600000.0</Value>
+                </Condition>
+            </AND>
+        </Reaction>
+        <Reaction>
+            <Name>Offer Alliance</Name>
+            <Message>The Guild rarely offers an alliance. Consider what it says about your accounts that we are
+                offering one.
+            </Message>
+            <Action>PROPOSE_TREATY</Action>
+            <Treaty>starmade:alliance</Treaty>
+            <AND>
+                <Condition>
+                    <Type>TOTAL_POINTS</Type>
+                    <Value>2500.0</Value>
+                </Condition>
+                <Condition>
+                    <Type>STATUS_PERSISTED</Type>
+                    <Status>NON_AGGRESSION</Status>
+                    <Value>7200000.0</Value>
+                </Condition>
+            </AND>
+        </Reaction>
+        <Reaction>
+            <Name>Remove Alliance Offer</Name>
+            <Message>The offer of alliance is withdrawn, with regret and an invoice.</Message>
+            <Action>WITHDRAW_PROPOSAL</Action>
+            <Treaty>starmade:alliance</Treaty>
+            <AND>
+                <Condition>
+                    <Type>ACTION_COUNTER</Type>
+                    <Action>ATTACK</Action>
+                    <Value>1.0</Value>
+                </Condition>
+            </AND>
+        </Reaction>
+    </Reactions>
+    <PowerWeights>
+        <!--What this faction counts when sizing another up. Used by the POWER status and the RELATIVE_STRENGTH condition, which compare the two totals as a ratio - so only the weights relative to each other matter, and scaling all four changes nothing. PointSurplus is faction points spare per period, not the balance.-->
+        <PointSurplus>4.0</PointSurplus>
+        <ClaimedSystems>150.0</ClaimedSystems>
+        <Members>12.5</Members>
+        <Military>0.5</Military>
+    </PowerWeights>
+    <Acceptance>
+        <!--Whether this faction agrees when somebody offers it a treaty, one rule per type. A type with no rule here is always refused. An empty Treaty means a plain peace offer.-->
+        <Accept>
+            <Treaty></Treaty>
+            <Refusal>The Guild's ledger is not yet settled with you.</Refusal>
+            <AND>
+                <Condition>
+                    <Type>RAW_POINTS</Type>
+                    <Value>-2000.0</Value>
+                </Condition>
+                <Condition>
+                    <Type>STATUS_PERSISTED</Type>
+                    <Status>NON_AGGRESSION</Status>
+                    <Value>600000.0</Value>
+                </Condition>
+            </AND>
+        </Accept>
+        <Accept>
+            <Treaty>starmade:non_aggression</Treaty>
+            <Refusal>The Guild sees no reason to put that in writing.</Refusal>
+            <AND>
+                <Condition>
+                    <Type>RAW_POINTS</Type>
+                    <Value>-500.0</Value>
+                </Condition>
+            </AND>
+        </Accept>
+        <Accept>
+            <Treaty>starmade:trade_agreement</Treaty>
+            <Refusal>The Guild does not think your custom is worth the paperwork.</Refusal>
+            <AND>
+                <Condition>
+                    <Type>RAW_POINTS</Type>
+                    <Value>-400.0</Value>
+                </Condition>
+                <Condition>
+                    <Type>STATUS_PERSISTED</Type>
+                    <Status>NON_AGGRESSION</Status>
+                    <Value>300000.0</Value>
+                </Condition>
+            </AND>
+        </Accept>
+        <Accept>
+            <Treaty>starmade:intel_sharing</Treaty>
+            <Refusal>The Guild's charts are not for sale to you.</Refusal>
+            <AND>
+                <Condition>
+                    <Type>RAW_POINTS</Type>
+                    <Value>600.0</Value>
+                </Condition>
+            </AND>
+        </Accept>
+        <Accept>
+            <Treaty>starmade:alliance</Treaty>
+            <Refusal>The Guild allies with reliable partners. You are not one.</Refusal>
+            <AND>
+                <Condition>
+                    <Type>RAW_POINTS</Type>
+                    <Value>2000.0</Value>
+                </Condition>
+                <Condition>
+                    <Type>STATUS_PERSISTED</Type>
+                    <Status>NON_AGGRESSION</Status>
+                    <Value>3600000.0</Value>
+                </Condition>
+            </AND>
+        </Accept>
+        <Accept>
+            <Treaty>starmade:defensive_pact</Treaty>
+            <Refusal>The Guild insures cargo, not borders.</Refusal>
+            <AND>
+                <Condition>
+                    <Type>RAW_POINTS</Type>
+                    <Value>3000.0</Value>
+                </Condition>
+                <Condition>
+                    <Type>SHARES_ENEMY</Type>
+                    <Value>1.0</Value>
+                </Condition>
+            </AND>
+        </Accept>
+    </Acceptance>
+</Diplomacy>

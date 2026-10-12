@@ -1,0 +1,32 @@
+{
+  "id": "betterfactions/battle_fleet_attacks_station",
+  "blocks": [ { "at": [0, 0, 0], "block": "GREY_HULL" } ],
+  "entities": [
+    {
+      "id": "depot", "kind": "station", "faction": -2, "sector": [-3, 0, 3],
+      "blocks": [
+        { "from": [0, 0, 0], "to": [2, 0, 1], "block": "REACTOR_POWER" },
+        { "from": [0, 1, 0], "to": [2, 1, 1], "block": "SHIELD_CAPACITOR" },
+        { "from": [0, 2, 0], "to": [4, 2, 4], "block": "GREY_HULL" }
+      ]
+    },
+    {
+      "id": "raider", "faction": -1, "sector": [-3, 0, 4],
+      "blocks": [
+        { "from": [0, 0, 0], "to": [2, 0, 2], "block": "REACTOR_POWER" },
+        { "from": [0, 1, 0], "to": [2, 1, 2], "block": "THRUSTER_MODULE" },
+        { "at": [1, 2, 0], "block": "CANNON_COMPUTER" },
+        { "from": [1, 2, 1], "to": [1, 2, 4], "block": "CANNON_BARREL", "controller": [1, 2, 0] },
+        { "at": [0, 2, 0], "block": "BOBBY_AI_MODULE" },
+        { "from": [0, 3, 0], "to": [2, 3, 2], "block": "SHIELD_CAPACITOR" }
+      ],
+      "battle": [ { "fleetOrder": "FLEET_ATTACK", "fleet": "raiders", "target": "depot", "atTick": 1200 } ]
+    }
+  ],
+  "fleets": [ { "id": "raiders", "ships": ["raider"] } ],
+  "unload": [ { "entity": "depot", "at": 20 }, { "entity": "raider", "at": 20 } ],
+  "expect": [
+    { "battle": "depot", "measure": "soft", "count": 1, "by": 9000 },
+    { "battle": "depot", "measure": "hits", "min": 1, "by": 9000 }
+  ]
+}
