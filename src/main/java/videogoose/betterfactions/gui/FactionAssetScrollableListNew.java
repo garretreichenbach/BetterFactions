@@ -477,8 +477,7 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
                 }
                 if (h.isFleet()) {
                     FactionAssets.Route r = routeOf(h);
-                    return (r != null ? routeLine(r) + "\n" : "") + Lng.str("%s ships under %s, %s, in sector %s of %s. Open to %s. Composition "
-                                    + "and orders are the fleet menu's.",
+                    return (r != null ? routeLine(r) + "\n" : "") + Lng.str("%s ships under %s, %s, in sector %s of %s. Open to %s.",
                             h.fleet.getMembers().size(), h.fleet.getOwner(), h.fleet.missionString,
                             h.fleet.getFlagShip().getSector().toStringPure(), systemName(systemOf(h)),
                             h.fleet.getFactionAccessString());

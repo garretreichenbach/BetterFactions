@@ -259,4 +259,19 @@ public final class DefaultDiplomacySettings implements DiplomacySettings {
     public double getDiplomacyPowerMemberWeight() {
         return diplomacy.powerMemberWeight;
     }
+
+    @Override
+    public double getDiplomacyPowerMilitaryWeight() {
+        return diplomacy.powerMilitaryWeight;
+    }
+
+    @Override
+    public double getSettlementPeaceValue() {
+        return diplomacy.settlementPeaceValue;
+    }
+
+    @Override
+    public double getSettlementTreatyValue() {
+        return diplomacy.settlementTreatyValue;
+    }
 }

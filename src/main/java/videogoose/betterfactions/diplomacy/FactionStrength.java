@@ -15,20 +15,20 @@ import org.schema.game.common.data.player.faction.Faction;
  * was the acceptance rule that needed it. The moment a player can see the number on screen it has to
  * be the same number the rules use, or the panel is quietly describing a different game.</p>
  *
- * <h2>What it does not count</h2>
- * Anything military. Two factions with identical surplus, territory and membership rate as equals
- * whether one fields capital ships or three mining drones - which for a number whose whole job is
- * "can they take us" is the hole in the middle of it. Fixing that needs a per-entity combat rating
- * that survives the entity being unloaded, because strength is asked on the diplomacy tick about
- * factions nowhere near a player.
+ * <p>The fourth term is military: the sum of {@link CombatRatings} over every ship and station the
+ * faction owns, taken while each was last loaded.</p>
  */
 public final class FactionStrength {
 
     /**
-     * Systems this faction holds. The sector list rides the faction blob to clients and has one
-     * entry per claimed system, so this is exact on both sides.
+     * Systems this faction holds. A player faction's sector list rides the faction blob to clients and
+     * has one entry per claimed system; an NPC faction's systems come from the server's NPC simulation,
+     * synced with the combat totals.
      */
     public static int claimedSystems(Faction f) {
+        if (f.isNPC()) {
+            return videogoose.betterfactions.DiplomacyManager.of(f.isOnServer()).getCombatRatings().npcSystemsOf(f.getIdFaction());
+        }
         return f.lastSystemSectors.size();
     }
 
@@ -65,7 +65,26 @@ public final class FactionStrength {
      * it is worse than no breakdown.
      */
     public static double of(Faction f, DiplomacySettings weights) {
-        return incomeTerm(f, weights) + territoryTerm(f, weights) + peopleTerm(f, weights);
+        return incomeTerm(f, weights) + territoryTerm(f, weights) + peopleTerm(f, weights) + militaryTerm(f, weights);
+    }
+
+    /**
+     * What it can field. Works on clients too: the server sends the per-faction totals.
+     *
+     * <p>Square-rooted: ship ratings span from a few hundred to hundreds of thousands, and no linear
+     * weight fits both ends - one that lets a fighter count lets a capital ship drown out territory and
+     * people entirely. Four times the fleet reads as twice the force.</p>
+     */
+    public static double militaryTerm(Faction f, DiplomacySettings weights) {
+        return f == null ? 0 : Math.sqrt(combatRating(f)) * weights.getDiplomacyPowerMilitaryWeight();
+    }
+
+    public static double combatRating(Faction f) {
+        return videogoose.betterfactions.DiplomacyManager.of(f.isOnServer()).getCombatRatings().totalOf(f.getIdFaction());
+    }
+
+    public static double militaryTerm(Faction f) {
+        return militaryTerm(f, DefaultDiplomacySettings.get());
     }
 
     /**

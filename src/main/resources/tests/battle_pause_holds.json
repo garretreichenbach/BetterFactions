@@ -1,0 +1,50 @@
+{
+  "id": "betterfactions/battle_pause_holds",
+  "blocks": [ { "at": [0, 0, 0], "block": "GREY_HULL" } ],
+  "entities": [
+    {
+      "id": "outpost", "kind": "station", "faction": -2, "sector": [0, 0, 3],
+      "blocks": [
+        { "at": [0, 0, 0], "block": "RAIL_TURRET_AXIS", "orient": 12 },
+        { "from": [6, 0, 0], "to": [7, 0, 1], "block": "REACTOR_POWER" }
+      ],
+      "battle": [ { "command": "pause", "afterHits": 1 } ],
+      "docked": [
+        {
+          "rail": [0, 0, 0],
+          "blocks": [
+            { "at": [0, 0, 0], "block": "RAIL_DOCKER", "orient": 8 },
+            { "at": [0, 1, 0], "block": "GREY_HULL" },
+            { "at": [0, 2, 0], "block": "RAIL_TURRET_AXIS", "orient": 16 }
+          ]
+        },
+        {
+          "on": 0,
+          "rail": [0, 2, 0],
+          "blocks": [
+            { "at": [3, 1, 0], "block": "RAIL_DOCKER", "orient": 20 },
+            { "from": [1, 1, 0], "to": [2, 1, 1], "block": "REACTOR_POWER" },
+            { "at": [1, 2, 0], "block": "CANNON_COMPUTER" },
+            { "at": [1, 2, 1], "block": "CANNON_BARREL", "controller": [1, 2, 0] },
+            { "at": [2, 2, 0], "block": "BOBBY_AI_MODULE" }
+          ],
+          "battle": [ { "ai": "Turret", "aimAt": "Any", "debug": true } ]
+        }
+      ]
+    },
+    {
+      "id": "target", "faction": -1, "sector": [0, 0, 3], "offset": [0, 0, 80],
+      "blocks": [
+        { "from": [0, 0, 0], "to": [2, 0, 1], "block": "REACTOR_POWER" },
+        { "from": [0, 1, 0], "to": [2, 1, 1], "block": "SHIELD_CAPACITOR" },
+        { "from": [0, 2, 0], "to": [2, 2, 1], "block": "SHIELD_RECHARGER" },
+        { "from": [0, 3, 0], "to": [2, 3, 1], "block": "GREY_HULL" }
+      ]
+    }
+  ],
+  "expect": [
+    { "battle": "outpost", "measure": "hits", "min": 1, "by": 3600 },
+    { "battle": "outpost", "measure": "paused", "count": 1, "by": 3700 },
+    { "battle": "outpost", "measure": "pausedFor", "min": 310, "by": 25000 }
+  ]
+}

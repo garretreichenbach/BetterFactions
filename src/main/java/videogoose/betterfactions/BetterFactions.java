@@ -2,6 +2,7 @@ package videogoose.betterfactions;
 
 import api.event.network.ClientDisconnectListener;
 import api.event.entity.SegmentControllerChangeFactionListener;
+import api.event.entity.SegmentControllerOverheatListener;
 import api.event.faction.FactionDeleteListener;
 import api.event.faction.FactionDiplomacyActionListener;
 import api.event.gui.FactionPanelCreateListener;
@@ -21,6 +22,11 @@ import org.schema.game.client.view.mainmenu.GuidesRegistry;
 import org.schema.game.common.data.world.Universe;
 import org.schema.game.server.data.GameServerState;
 import videogoose.betterfactions.assets.FactionAssetIndex;
+import videogoose.betterfactions.battle.BattleTracker;
+import videogoose.betterfactions.battle.BattleWorldTests;
+import org.schema.game.server.test.TestRegistry;
+import org.schema.game.server.test.world.WorldTests;
+import videogoose.betterfactions.commands.BattleCommands;
 import videogoose.betterfactions.commands.DiplomacyCommands;
 import videogoose.betterfactions.diplomacy.DefaultDiplomacySettings;
 import videogoose.betterfactions.diplomacy.DiplomacyAction;
@@ -58,7 +64,10 @@ public final class BetterFactions extends StarMod {
 		Perms.define();
 		PacketUtil.registerPacket(this, BFPacket.class);
 		registerEvents();
+		//the battle system's in-world tests: /run_tests betterfactions/*
+		WorldTests.addExtension(new BattleWorldTests());
 		DiplomacyCommands.register(this);
+		BattleCommands.register(this);
 	}
 
 	@Override
@@ -71,12 +80,22 @@ public final class BetterFactions extends StarMod {
 		registrar.registerFromResource("betterfactions", "BetterFactions", "Server Administration", "guides/server-admins.md", this);
 	}
 
+	/**
+	 * {@code /run_tests @videogoose.betterfactions}: the self-checks here, plus the world tests in
+	 * {@code tests/*.json}, which the engine finds in the jar on its own.
+	 */
+	@Override
+	public void onRegisterTests(TestRegistry.ModTestRegistrar registrar) {
+		registrar.register(InGameChecks.class);
+	}
+
 	@Override
 	public void onDisable() {
 		//drops types other mods registered with us, so a re-enable does not stack duplicates
 		TreatyTypeRegistry.unregisterAll();
 		if (GameServerState.instance != null) {
 			BFStore.save(DiplomacyManager.server());
+			BFStore.save(BattleTracker.get());
 		}
 	}
 
@@ -104,9 +123,11 @@ public final class BetterFactions extends StarMod {
 
 		ServerInitializeListener.TYPE.register((controller, serverState, isServer) -> {
 			DiplomacyManager.resetServer();
+			BattleTracker.reset();
 			DefaultDiplomacySettings.clearPresets();
 			assetIndex = new FactionAssetIndex(serverState);
 			BFStore.load(DiplomacyManager.server());
+			BFStore.load(BattleTracker.get());
 		}, this);
 
 		WorldSaveListener.TYPE.register(new WorldSaveListener() {
@@ -114,11 +135,24 @@ public final class BetterFactions extends StarMod {
 			public void onPreWorldSave(boolean terminate, boolean clear, Universe universe, boolean isServer) {
 				if (isServer) {
 					BFStore.save(DiplomacyManager.server());
+					BFStore.save(BattleTracker.get());
 				}
 			}
 		}, this);
 
-		ServerUpdateListener.TYPE.register((serverState, timer) -> DiplomacyManager.server().updateServer(timer.currentTime), this);
+		ServerUpdateListener.TYPE.register((serverState, timer) -> {
+			DiplomacyManager.server().updateServer(timer.currentTime);
+			BattleTracker.get().update(serverState, timer.currentTime);
+			BattleWorldTests.tick();
+		}, this);
+
+		//overheating is how a ship dies; the battle it was in counts it as a loss
+		SegmentControllerOverheatListener.TYPE.register((sc, damager, isServer) -> {
+			if (isServer) {
+				BattleTracker.get().onOverheat(sc);
+			}
+			return EventResult.CONTINUE;
+		}, this);
 
 		PlayerJoinWorldListener.TYPE.register((client, player, isServer) -> {
 			if (isServer) {

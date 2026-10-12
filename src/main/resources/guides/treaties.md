@@ -48,6 +48,8 @@ Expand the treaty row on the Diplomacy tab and press **BREAK**. The other side i
 
 Peace ends every treaty that was setting the relation (war, pacts, alliances) and returns the pair to neutral.
 
+NPC factions haggle over peace terms. One losing a war gives more to end it; one winning wants paying to stop. If your offer falls short, they send back the terms they would sign instead, which you can accept or counter.
+
 ## Names
 
 Every treaty has a name both sides see. If you do not give one, the server makes one up from the factions and their home systems.

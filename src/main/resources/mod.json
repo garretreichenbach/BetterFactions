@@ -11,5 +11,8 @@
 	"main_class": "videogoose.betterfactions.BetterFactions",
 	"smd_resource_id": 8504,
 	"dependencies": [],
-	"optional_dependencies": []
+	"optional_dependencies": [],
+	"mixin_configs": [
+		"betterfactions.mixins.json"
+	]
 }

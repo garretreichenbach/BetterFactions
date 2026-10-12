@@ -151,6 +151,12 @@ public final class DiplomacyAcceptance_test {
                 //happen on a live server rather than here
                 r.check();
                 assertSaneNots(name, r.condition);
+                //a grievance at war is just the war: a mail or a declaration on every shot is noise
+                boolean speaks = r.reaction == DiplomacyReaction.ConditionReaction.SEND_FACTION_MAIL
+                        || r.reaction == DiplomacyReaction.ConditionReaction.SEND_POPUP_MESSAGE
+                        || r.reaction == DiplomacyReaction.ConditionReaction.PROPOSE_TREATY && TreatyTypeRegistry.WAR.equals(r.treatyId);
+                assert !speaks || !countsAttacks(r.condition) || mentionsWarStatus(r.condition)
+                        : name + " reaction '" + r.name + "' fires on attacks without checking we are already at war";
             }
         }
     }
@@ -259,6 +265,20 @@ public final class DiplomacyAcceptance_test {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    private static boolean countsAttacks(DiplomacyConditionGroup g) {
+        if (g instanceof DiplomacyCondition c) {
+            return c.type == DiplomacyCondition.ConditionType.ACTION_COUNTER && c.argumentAction == DiplomacyAction.DiplActionType.ATTACK;
+        }
+        return g != null && g.conditions.stream().anyMatch(DiplomacyAcceptance_test::countsAttacks);
+    }
+
+    private static boolean mentionsWarStatus(DiplomacyConditionGroup g) {
+        if (g instanceof DiplomacyCondition c) {
+            return c.type == DiplomacyCondition.ConditionType.EXISTS_STATUS && c.argumentStatus == DiplomacyEntity.DiplStatusType.IN_WAR;
+        }
+        return g != null && g.conditions.stream().anyMatch(DiplomacyAcceptance_test::mentionsWarStatus);
     }
 
     private static void assertSaneNots(String name, DiplomacyConditionGroup g) {

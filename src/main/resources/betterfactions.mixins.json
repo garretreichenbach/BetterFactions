@@ -1,0 +1,30 @@
+{
+	"required": true,
+	"minVersion": "0.8.7",
+	"package": "videogoose.betterfactions.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"target": "@env(DEFAULT)",
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"mixins": [
+		"CheckAttackMixin",
+		"SoftRailCollisionMixin",
+		"SoftShipCollisionMixin",
+		"SoftAiTickMixin",
+		"BattleLoadMixin",
+		"BattleSectorLoadMixin",
+		"ProfilerBattlesTabMixin",
+		"SoftLootMixin",
+		"BlueprintRatingMixin",
+		"NPCEntityAccessor",
+		"SpectatorPingMixin",
+		"SpectatorCameraMixin",
+		"ServerTickMixin",
+		"TableAccessor",
+		"TimerAccessor",
+		"WatchCcdMixin"
+	],
+	"client": [],
+	"server": []
+}

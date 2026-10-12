@@ -153,18 +153,23 @@ public class DiplomacyEntity implements LogInterface {
             //player factions keep a ledger for display; their options are never decided by it
             return;
         }
-        List<DiplomacyReaction> reactions = getConfig().getDiplomacyReactions();
-        for (DiplomacyReaction r : reactions) {
-            if (r.isSatisfied(this)) {
-                boolean executed = executeReaction(r);
-                if (executed) {
-                    reactionsFired.put(r.index, true);
-                } else {
-                    reactionsFired.remove(r.index);
-                }
-            } else {
-                reactionsFired.remove(r.index);
-            }
+        for (DiplomacyReaction r : getConfig().getDiplomacyReactions()) {
+            step(reactionsFired, r.index, r.isSatisfied(this), () -> executeReaction(r));
+        }
+    }
+
+    /**
+     * One turn of one reaction. It fires once when its condition comes true and not again until the
+     * condition has lapsed. One that fails to fire (a declined offer, a gone faction) is tried again
+     * next turn. Before this, a fired reaction re-ran, its executor refused ("already fired"), that
+     * refusal cleared the mark, and the next turn sent it again: a mail every other turn for as long as
+     * the condition held.
+     */
+    static void step(Int2BooleanOpenHashMap fired, int index, boolean satisfied, java.util.function.BooleanSupplier execute) {
+        if (!satisfied) {
+            fired.remove(index);
+        } else if (!fired.containsKey(index) && execute.getAsBoolean()) {
+            fired.put(index, true);
         }
     }
 

@@ -56,7 +56,7 @@ public final class FactionEmblem {
 	 * Hard cap on what a client may send. Generous for a logo and small enough that a slow connection
 	 * is not held open by one.
 	 */
-	public static final int MAX_UPLOAD_BYTES = 64 * 1024;
+	public static final int MAX_UPLOAD_BYTES = 128 * 1024;
 
 	public static final String SERVER_DIR = "moddata" + File.separator + "BetterFactions" + File.separator + "emblems" + File.separator;
 

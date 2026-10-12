@@ -127,4 +127,15 @@ public interface DiplomacySettings {
      * How much one active member counts toward how strong a faction looks.
      */
     double getDiplomacyPowerMemberWeight();
+
+    /**
+     * How much one point of combat rating counts toward how strong a faction looks.
+     */
+    double getDiplomacyPowerMilitaryWeight();
+
+    /** What peace between equals is worth to this faction, in faction points. */
+    double getSettlementPeaceValue();
+
+    /** What one treaty given or received in a settlement is worth, in faction points. */
+    double getSettlementTreatyValue();
 }

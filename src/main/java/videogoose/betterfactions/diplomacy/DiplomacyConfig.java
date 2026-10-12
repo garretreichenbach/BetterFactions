@@ -39,8 +39,14 @@ public class DiplomacyConfig {
      * global because "strong" is a judgement: a trading power counts systems, a raider counts hulls.
      */
     public double powerSurplusWeight = 2;
-    public double powerSystemWeight = 20;
-    public double powerMemberWeight = 10;
+    public double powerSystemWeight = 100;
+    public double powerMemberWeight = 25;
+    /** Per point of the square root of combat rating; see {@link FactionStrength#militaryTerm}. */
+    public double powerMilitaryWeight = 1;
+    /** What peace between equals is worth, in faction points; see {@link SettlementPricing}. */
+    public double settlementPeaceValue = 500;
+    /** What one treaty given or received in a settlement is worth, in faction points. */
+    public double settlementTreatyValue = 1000;
 
     /**
      * Casus belli: what has to be true of a faction before war may be declared on it with a goal of
@@ -328,7 +334,7 @@ public class DiplomacyConfig {
         power.appendChild(config.createComment(
                 "What this faction counts when sizing another up. Used by the POWER status and the "
                         + "RELATIVE_STRENGTH condition, which compare the two totals as a ratio - so only the "
-                        + "weights relative to each other matter, and scaling all three changes nothing. "
+                        + "weights relative to each other matter, and scaling all four changes nothing. "
                         + "PointSurplus is faction points spare per period, not the balance."));
         Element pw = config.createElement("PointSurplus");
         pw.setTextContent(String.valueOf(powerSurplusWeight));
@@ -336,6 +342,9 @@ public class DiplomacyConfig {
         sw.setTextContent(String.valueOf(powerSystemWeight));
         Element mw = config.createElement("Members");
         mw.setTextContent(String.valueOf(powerMemberWeight));
+        Element milw = config.createElement("Military");
+        milw.setTextContent(String.valueOf(powerMilitaryWeight));
+        power.appendChild(milw);
         power.appendChild(pw);
         power.appendChild(sw);
         power.appendChild(mw);
@@ -443,6 +452,31 @@ public class DiplomacyConfig {
             if (node.getNodeType() == Node.ELEMENT_NODE && "casusbelli".equals(node.getNodeName().toLowerCase(Locale.ENGLISH))) {
                 parseCasusBelli(node);
             }
+            if (node.getNodeType() == Node.ELEMENT_NODE && "settlement".equals(node.getNodeName().toLowerCase(Locale.ENGLISH))) {
+                parseSettlement(node);
+            }
+        }
+    }
+
+    /** {@code <Settlement><PeaceValue>500</PeaceValue><TreatyValue>1000</TreatyValue></Settlement>}. */
+    private void parseSettlement(Node node) {
+        NodeList childs = node.getChildNodes();
+        for (int i = 0; i < childs.getLength(); i++) {
+            Node item = childs.item(i);
+            if (item.getNodeType() != Node.ELEMENT_NODE) {
+                continue;
+            }
+            String n = item.getNodeName().toLowerCase(Locale.ENGLISH);
+            try {
+                double v = Double.parseDouble(item.getTextContent().trim());
+                if ("peacevalue".equals(n)) {
+                    settlementPeaceValue = v;
+                } else if ("treatyvalue".equals(n)) {
+                    settlementTreatyValue = v;
+                }
+            } catch (NumberFormatException e) {
+                System.err.println("[DIPLOMACY][CONFIG] bad settlement value for " + n + ": " + item.getTextContent());
+            }
         }
     }
 
@@ -462,6 +496,8 @@ public class DiplomacyConfig {
                     powerSystemWeight = v;
                 } else if ("members".equals(n)) {
                     powerMemberWeight = v;
+                } else if ("military".equals(n)) {
+                    powerMilitaryWeight = v;
                 }
             } catch (NumberFormatException e) {
                 System.err.println("[DIPLOMACY][CONFIG] bad power weight for " + n + ": " + item.getTextContent());

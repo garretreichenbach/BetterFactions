@@ -8,6 +8,7 @@ import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionManager;
 import org.schema.game.common.data.player.faction.FactionRelation;
 import videogoose.betterfactions.diplomacy.DiplomacyEntity;
+import videogoose.betterfactions.diplomacy.FactionStrength;
 import videogoose.betterfactions.diplomacy.FactionTreaty;
 import videogoose.betterfactions.diplomacy.TreatyType;
 import org.schema.schine.common.language.Lng;
@@ -84,6 +85,10 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
         return e != null ? e.getPoints() : 0;
     }
 
+    private static long power(Faction f) {
+        return Math.round(FactionStrength.of(f));
+    }
+
     /**
      * Treaty type names in force between the viewer's faction and this one.
      */
@@ -111,7 +116,8 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
     public void initColumns() {
         addColumn(Lng.str("Name"), 3.0f, (o1, o2) -> o1.getName().compareToIgnoreCase(o2.getName()));
         addFixedWidthColumn(Lng.str("Relation"), 90, (o1, o2) -> relationTo(o1).sortWeight - relationTo(o2).sortWeight);
-        addColumn(Lng.str("Standing"), 3.0f, (o1, o2) -> Integer.compare(standing(o1), standing(o2)));
+        addColumn(Lng.str("Standing"), 2.0f, (o1, o2) -> Integer.compare(standing(o1), standing(o2)));
+        addColumn(Lng.str("Power"), 2.0f, (o1, o2) -> Long.compare(power(o1), power(o2)));
 
         addTextFilter(new GUIListFilterText<>() {
             @Override
@@ -227,9 +233,18 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
                 }
             });
 
+            GUITextOverlayTable powerText = new GUITextOverlayTable(10, 10, getState());
+            powerText.setTextSimple(new Object() {
+                @Override
+                public String toString() {
+                    return String.valueOf(power(f));
+                }
+            });
+
             nameText.getPos().y = 5;
             relationText.getPos().y = 5;
             treatyText.getPos().y = 5;
+            powerText.getPos().y = 5;
 
             GUIClippedRow nameRow = new GUIClippedRow(getState());
             nameRow.attach(nameText);
@@ -237,8 +252,10 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
             relRow.attach(relationText);
             GUIClippedRow treatyRow = new GUIClippedRow(getState());
             treatyRow.attach(treatyText);
+            GUIClippedRow powerRow = new GUIClippedRow(getState());
+            powerRow.attach(powerText);
 
-            FactionRow r = new FactionRow(getState(), f, nameRow, relRow, treatyRow);
+            FactionRow r = new FactionRow(getState(), f, nameRow, relRow, treatyRow, powerRow);
             r.onInit();
             mainList.addWithoutUpdate(r);
         }

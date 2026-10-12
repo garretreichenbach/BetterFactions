@@ -21,10 +21,12 @@ import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActiveInterface;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIMainWindow;
+import org.schema.schine.graphicsengine.forms.gui.newgui.GUITabbedContent;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUITextOverlayTable;
 import videogoose.betterfactions.DiplomacyManager;
 import videogoose.betterfactions.Perms;
 import videogoose.betterfactions.assets.FactionAssets;
+import videogoose.betterfactions.battle.BattleReports;
 import videogoose.betterfactions.diplomacy.DiplomacyEntity;
 import videogoose.betterfactions.diplomacy.FactionStrength;
 import videogoose.betterfactions.diplomacy.Federation;
@@ -96,6 +98,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
 	private GUIContentPane membersTab;
     private GUIContentPane assetsTab;
     private FactionAssetScrollableListNew aList;
+    private BattleReportList rList;
 	private GUIContentPane diplomacyTab;
     private GUIContentPane settingsTab;
 	private FactionScrollableListNew fList;
@@ -144,6 +147,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
     private static final Vector4f TERRITORY_COLOR = new Vector4f(0.03f, 0.76f, 0.33f, 1.0f);
     private static final Vector4f PEOPLE_COLOR = new Vector4f(0.16f, 0.58f, 0.75f, 1.0f);
     private static final Vector4f INCOME_COLOR = new Vector4f(0.44f, 0.48f, 0.52f, 1.0f);
+    private static final Vector4f MILITARY_COLOR = new Vector4f(0.85f, 0.42f, 0.30f, 1.0f);
     private static final Vector4f DIM = new Vector4f(0.55f, 0.58f, 0.60f, 1.0f);
     /**
      * Gap between the power bar's segments, so a term worth almost nothing still reads as a sliver
@@ -161,7 +165,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
     /**
      * Left column, in px: wide enough for name, relation and the treaty summary together.
      */
-    private static final int DIPLOMACY_LIST_WIDTH = 380;
+    private static final int DIPLOMACY_LIST_WIDTH = 480;
     private static final int DIPLOMACY_HEADER_HEIGHT = 116;
     /**
      * The emblem corner, top right of the header. Square, and big enough to read a logo at a glance
@@ -331,14 +335,14 @@ public class FactionPanelTabs implements GUIActiveInterface {
 
     /**
      * What the power figure is made of. Worth showing beside it: the number is on an arbitrary scale,
-     * so on its own it says nothing a player can act on, and it counts nothing military - which the
-     * breakdown makes obvious rather than leaving as a surprise.
+     * so on its own it says nothing a player can act on.
      */
     private static String powerBreakdown(Faction f) {
-        return Lng.str("(%s systems, %s active, %s/period)",
+        return Lng.str("(%s systems, %s active, %s/period, %s combat)",
                 FactionStrength.claimedSystems(f),
                 StringTools.formatPointZero(FactionStrength.activeMembers(f)),
-                StringTools.formatPointZero(FactionStrength.pointSurplus(f)));
+                StringTools.formatPointZero(FactionStrength.pointSurplus(f)),
+                Math.round(FactionStrength.combatRating(f)));
     }
 
 
@@ -432,27 +436,80 @@ public class FactionPanelTabs implements GUIActiveInterface {
     }
 
     /**
-     * What the faction owns. What a station makes, holds and is short of needs that station loaded, so
-     * it is not here - see {@link FactionAssetScrollableListNew}.
+     * What the faction owns, and the battles it fought, as two sub-tabs. What a station makes, holds and
+     * is short of needs that station loaded, so it is not here - see {@link FactionAssetScrollableListNew}.
      */
     private void createAssetsPane() {
         if (aList != null) {
             aList.cleanUp();
             aList = null;
         }
+        if (rList != null) {
+            rList.cleanUp();
+            rList = null;
+        }
         Faction own = getOwnFaction();
         if (own == null) {
             return;
         }
 
-        assetsTab.setTextBoxHeightLast(BAR_HEIGHT);
-        assetsTab.addNewTextBox(10);
+        GUITabbedContent sub = new GUITabbedContent(getState(), assetsTab.getContent(0));
+        sub.activationInterface = this;
+        sub.onInit();
+        assetsTab.getContent(0).attach(sub);
 
-        fillAssetBar(assetsTab.getContent(0), own);
-
-        aList = new FactionAssetScrollableListNew(getState(), assetsTab.getContent(1), own);
+        GUIContentPane holdings = sub.addTab(Lng.str("HOLDINGS"));
+        holdings.setTextBoxHeightLast(BAR_HEIGHT);
+        holdings.addNewTextBox(10);
+        fillAssetBar(holdings.getContent(0), own);
+        aList = new FactionAssetScrollableListNew(getState(), holdings.getContent(1), own);
         aList.onInit();
-        assetsTab.getContent(1).attach(aList);
+        holdings.getContent(1).attach(aList);
+
+        GUIContentPane reports = sub.addTab(Lng.str("BATTLE REPORTS"));
+        reports.setTextBoxHeightLast(BAR_HEIGHT);
+        reports.addNewTextBox(10);
+        fillReportBar(reports.getContent(0));
+        rList = new BattleReportList(getState(), reports.getContent(1));
+        rList.onInit();
+        reports.getContent(1).attach(rList);
+    }
+
+    /** Wins, losses, who came off better where nobody won, and ships lost over the reports the server sent. */
+    private void fillReportBar(GUIAnchor box) {
+        GUITextOverlay summary = new GUITextOverlay(10, 10, FontLibrary.getBlenderProMedium17(), getState());
+        summary.setTextSimple(new Object() {
+            @Override
+            public String toString() {
+                java.util.List<BattleReports.Report> all = BattleReports.received();
+                if (all == null) {
+                    return Lng.str("Asking the server for our battle reports...");
+                }
+                int own = getOwnPlayer().getFactionId();
+                int won = 0, lost = 0, better = 0, worse = 0, ours = 0, theirs = 0;
+                for (BattleReports.Report r : all) {
+                    if (r.winner() != Integer.MIN_VALUE) {
+                        if (r.winner() == own) {
+                            won++;
+                        } else {
+                            lost++;
+                        }
+                    } else if (r.favoured() != Integer.MIN_VALUE) {
+                        if (r.favoured() == own) {
+                            better++;
+                        } else {
+                            worse++;
+                        }
+                    }
+                    ours += r.lostBy(own);
+                    theirs += r.lostByOthers(own);
+                }
+                return Lng.str("%s battles: %s held, %s came off better, %s came off worse, %s lost, %s even. %s of our ships lost, %s of theirs.",
+                        all.size(), won, better, worse, lost, all.size() - won - lost - better - worse, ours, theirs);
+            }
+        });
+        summary.setPos(4, 8, 0);
+        box.attach(summary);
     }
 
     /**
@@ -591,13 +648,12 @@ public class FactionPanelTabs implements GUIActiveInterface {
                 return Lng.str("%s surplus per period", StringTools.formatPointZero(FactionStrength.pointSurplus(f)));
             }
         });
-        //said rather than left to be inferred: a bar with three segments does not look like a bar
-        //with a fourth one missing, and what is missing is the half of strength that shoots back
-        GUITextOverlay noShips = new GUITextOverlay(10, 10, FontLibrary.getBlenderProMedium14(), getState());
-        noShips.setTextSimple(Lng.str("Ships are not counted yet."));
-        noShips.setColor(DIM);
-        noShips.setPos(4, 134, 0);
-        box.attach(noShips);
+        key(box, 134, MILITARY_COLOR, new Object() {
+            @Override
+            public String toString() {
+                return Lng.str("%s combat rating (ships and stations)", Math.round(FactionStrength.combatRating(f)));
+            }
+        });
         box.attach(points);
         box.attach(surplus);
     }
@@ -619,16 +675,16 @@ public class FactionPanelTabs implements GUIActiveInterface {
 
 
     /**
-     * The three terms of the power number, to scale.
+     * The four terms of the power number, to scale.
      *
      * <p>Worth drawing because the number itself is on an arbitrary scale - 340 means nothing on its
-     * own - while the shares of it are the part a player can do something about. It also makes the
-     * missing military term visible by its absence rather than leaving it as a surprise.</p>
+     * own - while the shares of it are the part a player can do something about.</p>
      */
     private GUIAnchor powerBar(GUIAnchor box, Faction f) {
         GUIColoredRectangle territory = segment(TERRITORY_COLOR);
         GUIColoredRectangle people = segment(PEOPLE_COLOR);
         GUIColoredRectangle income = segment(INCOME_COLOR);
+        GUIColoredRectangle military = segment(MILITARY_COLOR);
 
         GUIAnchor bar = new GUIAnchor(getState(), 10, POWER_BAR_HEIGHT) {
             @Override
@@ -637,11 +693,13 @@ public class FactionPanelTabs implements GUIActiveInterface {
                 double t = FactionStrength.territoryTerm(f);
                 double p = FactionStrength.peopleTerm(f);
                 double i = FactionStrength.incomeTerm(f);
-                double total = t + p + i;
+                double m = FactionStrength.militaryTerm(f);
+                double total = t + p + i + m;
                 //a faction worth nothing at all still gets a bar, so the row does not blink out
                 float x = lay(territory, 0, total > 0 ? (float) (t / total) : 1.0f);
                 x = lay(people, x, total > 0 ? (float) (p / total) : 0.0f);
-                lay(income, x, total > 0 ? (float) (i / total) : 0.0f);
+                x = lay(income, x, total > 0 ? (float) (i / total) : 0.0f);
+                lay(military, x, total > 0 ? (float) (m / total) : 0.0f);
                 super.draw();
             }
 
@@ -656,6 +714,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
         bar.attach(territory);
         bar.attach(people);
         bar.attach(income);
+        bar.attach(military);
         return bar;
     }
 

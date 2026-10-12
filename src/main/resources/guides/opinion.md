@@ -37,8 +37,9 @@ A faction's **power** is shown on the Overview and Diplomacy tabs. It counts:
 - **Territory**: claimed systems.
 - **People**: members, with inactive members counting a quarter.
 - **Income**: faction point surplus per period.
+- **Military**: the combat rating of every ship and station the faction owns, in a fleet or not. A ship's rating comes from its weapons, shields and hull, so an unarmed hull counts for nothing however big it is. Ratings update while a ship is loaded and are remembered while it is not.
 
-Ships are not counted yet. NPC archetypes weigh the three parts differently.
+NPC archetypes weigh the four parts differently.
 
 ## How NPC Factions Answer
 

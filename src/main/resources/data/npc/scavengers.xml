@@ -182,6 +182,12 @@
                     <Action>ATTACK</Action>
                     <Value>3.0</Value>
                 </Condition>
+                <NOT>
+                    <Condition>
+                        <Type>EXISTS_STATUS</Type>
+                        <Status>IN_WAR</Status>
+                    </Condition>
+                </NOT>
             </AND>
         </Reaction>
         <Reaction>
@@ -276,10 +282,11 @@
         </Reaction>
     </Reactions>
     <PowerWeights>
-        <!--What this faction counts when sizing another up. Used by the POWER status and the RELATIVE_STRENGTH condition, which compare the two totals as a ratio - so only the weights relative to each other matter, and scaling all three changes nothing. PointSurplus is faction points spare per period, not the balance.-->
+        <!--What this faction counts when sizing another up. Used by the POWER status and the RELATIVE_STRENGTH condition, which compare the two totals as a ratio - so only the weights relative to each other matter, and scaling all four changes nothing. PointSurplus is faction points spare per period, not the balance.-->
         <PointSurplus>1.5</PointSurplus>
-        <ClaimedSystems>15.0</ClaimedSystems>
-        <Members>10.0</Members>
+        <ClaimedSystems>75.0</ClaimedSystems>
+        <Members>25.0</Members>
+        <Military>1.5</Military>
     </PowerWeights>
     <Acceptance>
         <!--Whether this faction agrees when somebody offers it a treaty, one rule per type. A type with no rule here is always refused. An empty Treaty means a plain peace offer.-->

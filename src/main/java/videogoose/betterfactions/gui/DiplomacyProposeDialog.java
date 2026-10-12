@@ -300,6 +300,11 @@ public class DiplomacyProposeDialog extends PlayerInput {
         return out;
     }
 
+    private boolean declaringWar() {
+        TreatyType t = selectedType();
+        return t != null && t.getImplies() == FactionRelation.RType.ENEMY;
+    }
+
     private String termsText() {
         if (terms.isEmpty()) {
             return Lng.str("No terms.");
@@ -391,7 +396,8 @@ public class DiplomacyProposeDialog extends PlayerInput {
         } else if ("CANCEL".equals(p) || "X".equals(p)) {
             cancel();
         } else if ("ADD_TERM".equals(p)) {
-            if (picked != null && !terms.contains(picked) && terms.size() < DiplomacyProposal.MAX_TERMS) {
+            if (picked != null && !terms.contains(picked) && terms.size() < DiplomacyProposal.MAX_TERMS
+                    && !(declaringWar() && picked.giver == from.getIdFaction())) {
                 terms.add(picked);
                 ask();
             }
@@ -437,6 +443,7 @@ public class DiplomacyProposeDialog extends PlayerInput {
 
         private GUIActivatableTextBar nameField;
         private GUIActivatableTextBar messageField;
+        private GUIDropDownList termPicker;
 
         public ProposePanel(GameClientState state) {
             //the id carries the size: a window remembers what it was last resized to against its
@@ -510,6 +517,11 @@ public class DiplomacyProposeDialog extends PlayerInput {
                         @Override
                         public void onSelectionChanged(GUIListElement element) {
                             typeId = pointerToTypeId(element.getContent().getUserPointer());
+                            if (declaringWar()) {
+                                //war goals are demands only; concessions picked for a treaty don't carry over
+                                terms.removeIf(t -> t.giver == from.getIdFaction());
+                            }
+                            refillTermPicker();
                             ask();
                         }
                     }, typeEntries);
@@ -543,15 +555,10 @@ public class DiplomacyProposeDialog extends PlayerInput {
             });
             termsList.setPos(6, 464, 0);
 
-            List<GUIElement> termEntries2 = new ObjectArrayList<GUIElement>();
-            for (SettlementTerm t : termChoices()) {
-                termEntries2.add(entry(getClientState(), t, t.describe(DiplomacyProposeDialog.this::nameOf,
-                        from.getIdFaction(), to.getIdFaction())));
-            }
-            picked = termEntries2.isEmpty() ? null : (SettlementTerm) termEntries2.get(0).getUserPointer();
-            GUIDropDownList termPicker = new GUIDropDownList(getClientState(), 440, 24, 180,
-                    element -> picked = (SettlementTerm) element.getContent().getUserPointer(), termEntries2);
+            termPicker = new GUIDropDownList(getClientState(), 440, 24, 180,
+                    element -> picked = (SettlementTerm) element.getContent().getUserPointer());
             termPicker.setPos(6, 400, 0);
+            refillTermPicker();
 
             GUITextButton add = new GUITextButton(getClientState(), 64, 24, GUITextButton.ColorPalette.OK,
                     Lng.str("Add"), DiplomacyProposeDialog.this);
@@ -585,6 +592,28 @@ public class DiplomacyProposeDialog extends PlayerInput {
             getContent().attach(typeList);
 
             ask();
+        }
+
+        /** Refills the term picker for the selected action: a war only lists demands on the target. */
+        private void refillTermPicker() {
+            if (termPicker == null) {
+                return; //the type list fires before the picker is built
+            }
+            boolean war = declaringWar();
+            termPicker.clear();
+            picked = null;
+            for (SettlementTerm t : termChoices()) {
+                if (war && t.giver == from.getIdFaction()) {
+                    continue;
+                }
+                GUIElement e = entry(getClientState(), t, t.describe(DiplomacyProposeDialog.this::nameOf,
+                        from.getIdFaction(), to.getIdFaction()));
+                termPicker.add(new GUIListElement(e, e, getClientState()));
+                if (picked == null) {
+                    picked = t;
+                }
+            }
+            termPicker.onListChanged();
         }
 
         /**

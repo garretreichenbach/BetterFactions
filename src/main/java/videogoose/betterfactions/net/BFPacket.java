@@ -24,7 +24,13 @@ public final class BFPacket extends Packet {
 		// client -> server
 		PROPOSAL, FEDERATION_COMMAND, EMBLEM_UPLOAD, EMBLEM_CLEAR, EMBLEM_REQUEST, ASSETS_REQUEST,
 		// server -> client
-		SNAPSHOT, TREATY, OFFER, FEDERATION, OPINION, EMBLEM_HASH, EMBLEM_DATA, ASSETS
+		SNAPSHOT, TREATY, OFFER, FEDERATION, OPINION, EMBLEM_HASH, EMBLEM_DATA, ASSETS, MILITARY,
+		// admin profiler: the request goes to the server, the report comes back
+		BATTLES_REQUEST, BATTLES, BATTLE_COMMAND,
+		// server -> client, to an admin watching a battle: 1 soft-loaded, 2 held for load, 0 stopped watching
+		BATTLE_WATCH,
+		// client -> server, then back: the player's faction's battle reports
+		BATTLE_REPORTS_REQUEST, BATTLE_REPORTS
 	}
 
 	private Kind kind;

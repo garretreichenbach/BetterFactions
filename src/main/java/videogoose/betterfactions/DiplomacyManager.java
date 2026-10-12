@@ -7,6 +7,12 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import org.schema.game.common.controller.SegmentController;
+import org.schema.game.common.controller.Ship;
+import org.schema.game.common.controller.SpaceStation;
+import org.schema.game.common.controller.database.DatabaseEntry;
+import org.schema.game.common.data.world.SimpleTransformableSendableObject;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
@@ -34,6 +40,11 @@ import org.schema.schine.network.server.ServerMessage;
 import org.schema.schine.resource.tag.FinishTag;
 import org.schema.schine.resource.tag.Tag;
 import videogoose.betterfactions.assets.FactionAssets;
+import videogoose.betterfactions.battle.BattleReports;
+import videogoose.betterfactions.battle.BattleTracker;
+import videogoose.betterfactions.gui.BattleAdminList;
+import videogoose.betterfactions.diplomacy.CombatRatings;
+import videogoose.betterfactions.diplomacy.NpcRatingBackfill;
 import videogoose.betterfactions.diplomacy.DiplomacyAction;
 import videogoose.betterfactions.diplomacy.DiplomacyEntity;
 import videogoose.betterfactions.diplomacy.DiplomacyProposal;
@@ -43,6 +54,7 @@ import videogoose.betterfactions.diplomacy.FactionTreaty;
 import videogoose.betterfactions.diplomacy.FactionTreatyChange;
 import videogoose.betterfactions.diplomacy.FactionTreatySet;
 import videogoose.betterfactions.diplomacy.Federation;
+import videogoose.betterfactions.diplomacy.SettlementPricing;
 import videogoose.betterfactions.diplomacy.SettlementTerm;
 import videogoose.betterfactions.diplomacy.FederationCommand;
 import videogoose.betterfactions.diplomacy.TreatyNames;
@@ -105,6 +117,9 @@ public final class DiplomacyManager extends Observable {
 	private int nextFederationId = 1;
 	private long lastIntelSharingSync;
 	private DiplomacyProposal queryResult;
+	private final CombatRatings combatRatings = new CombatRatings();
+	private long lastMilitarySweep;
+	private boolean npcRatingsBackfilled;
 	private FactionAssets factionAssets;
 	private boolean factionAssetsPending;
 
@@ -227,6 +242,10 @@ public final class DiplomacyManager extends Observable {
 		return relationOffersToAdd;
 	}
 
+	public CombatRatings getCombatRatings() {
+		return combatRatings;
+	}
+
 	public FactionDiplomacy diplomacyOf(Faction f) {
 		synchronized (ledgers) {
 			FactionDiplomacy d = ledgers.get(f.getIdFaction());
@@ -319,6 +338,25 @@ public final class DiplomacyManager extends Observable {
 			}
 			case EMBLEM_REQUEST -> sendEmblemData(sender, (String) tag.getValue());
 			case ASSETS_REQUEST -> answerAssets(sender);
+			case BATTLES_REQUEST -> {
+				GameServerState st = (GameServerState) state();
+				if (st.isAdmin(sender.getName())) {
+					BFPacket.toPlayer(sender, Kind.BATTLES, BattleTracker.get().adminTag(st, System.currentTimeMillis()));
+				}
+			}
+			case BATTLE_REPORTS_REQUEST -> {
+				//anyone in a faction reads its battle news, so anyone in it reads the reports
+				if (sender.getFactionId() != 0 && BattleReports.mayAnswer(sender.getName(), System.currentTimeMillis())) {
+					BFPacket.toPlayer(sender, Kind.BATTLE_REPORTS, BattleTracker.get().archive().tagFor(sender.getFactionId()));
+				}
+			}
+			case BATTLE_COMMAND -> {
+				GameServerState st = (GameServerState) state();
+				if (st.isAdmin(sender.getName())) {
+					Tag[] t = tag.getStruct();
+					BattleTracker.get().adminCommand(st, sender, t[0].getByte(), t[1].getInt());
+				}
+			}
 			default -> LogUtil.log().warning("[BetterFactions] client sent a server-to-client packet: " + kind);
 		}
 	}
@@ -378,6 +416,13 @@ public final class DiplomacyManager extends Observable {
 				}
 				changed();
 			}
+			case BATTLES -> BattleAdminList.received(tag);
+			case BATTLE_REPORTS -> BattleReports.received(tag);
+			case BATTLE_WATCH -> BattleAdminList.setWatching(GameClientState.instance, tag.getByte());
+			case MILITARY -> {
+				combatRatings.fromTotalsTag(tag);
+				changed();
+			}
 			case EMBLEM_DATA -> {
 				Tag[] t = tag.getStruct();
 				FactionEmblemCache.received(GameClientState.instance, t[0].getString(), (byte[]) t[1].getValue());
@@ -418,6 +463,7 @@ public final class DiplomacyManager extends Observable {
 		long wall = System.currentTimeMillis();
 		expireTreaties(wall);
 		syncIntelSharing(wall);
+		rateMilitary(wall);
 		checkFederationVotes();
 
 		if (!needsSnapshot.isEmpty()) {
@@ -466,6 +512,7 @@ public final class DiplomacyManager extends Observable {
 		synchronized (relationShipOffers) {
 			relationShipOffers.values().removeIf(o -> o.a == f.getIdFaction() || o.b == f.getIdFaction());
 		}
+		combatRatings.removeFaction(f.getIdFaction());
 		changed();
 	}
 
@@ -543,6 +590,7 @@ public final class DiplomacyManager extends Observable {
 				forClient ? new Tag(Tag.Type.STRUCT, null, new Tag[]{FinishTag.INST}) : toFederationTag(),
 				new Tag(Tag.Type.STRUCT, null, emb),
 				ledgerTag,
+				forClient ? combatRatings.totalsTag() : combatRatings.toTag(),
 				FinishTag.INST});
 	}
 
@@ -562,6 +610,14 @@ public final class DiplomacyManager extends Observable {
 		for (int i = 0; i < emb.length - 1; i++) {
 			Tag[] e = emb[i].getStruct();
 			emblems.put(e[0].getInt(), e[1].getString());
+		}
+		//saves from before ships were rated end after the ledgers
+		if (t.length > 7 && t[6].getType() != Tag.Type.FINISH) {
+			if (withLedgers) {
+				combatRatings.fromTag(t[6]);
+			} else {
+				combatRatings.fromTotalsTag(t[6]);
+			}
 		}
 		if (withLedgers) {
 			Tag[] l = t[5].getStruct();
@@ -797,6 +853,63 @@ public final class DiplomacyManager extends Observable {
                     it.remove();
                 }
             }
+        }
+    }
+
+    private static final long MILITARY_SWEEP_MS = 60000;
+    private static final int[] RATED_TYPES = {
+            SimpleTransformableSendableObject.EntityType.SHIP.dbTypeId,
+            SimpleTransformableSendableObject.EntityType.SPACE_STATION.dbTypeId};
+
+    /**
+     * Server: rates every loaded faction-owned ship and station, then drops rows for what each faction
+     * no longer owns. Loaded entities are rated as they stand, so a refit shows up within a sweep.
+     */
+    private void rateMilitary(long now) {
+        if (now - lastMilitarySweep < MILITARY_SWEEP_MS) {
+            return;
+        }
+        lastMilitarySweep = now;
+        GameServerState s = (GameServerState) state();
+        LongOpenHashSet loaded = new LongOpenHashSet();
+        for (SegmentController sc : s.getSegmentControllersByName().values()) {
+            if (sc.getFactionId() != 0 && sc.getDbId() > 0 && (sc instanceof Ship || sc instanceof SpaceStation) && sc.isFullyLoaded()) {
+                combatRatings.put(sc.getDbId(), sc.getFactionId(), CombatRatings.rate(sc));
+                loaded.add(sc.getDbId());
+            }
+        }
+        //once per world, after the loaded pass so anything loaded keeps its real rating; by the first
+        //sweep, a minute in, the NPC factions have their systems
+        if (!npcRatingsBackfilled) {
+            npcRatingsBackfilled = true;
+            int n = NpcRatingBackfill.run(s.getFactionManager(), combatRatings);
+            if (n > 0) {
+                System.err.println("[BetterFactions] rated " + n + " never-loaded NPC entities from their blueprints");
+            }
+        }
+        //ponytail: one database query per rated faction per sweep; round-robin them if that ever
+        //shows up in a tick profile
+        for (int f : combatRatings.ratedFactions()) {
+            try {
+                //loaded counts as owned: a ship built since the last save has no row yet
+                LongOpenHashSet owned = new LongOpenHashSet(loaded);
+                for (DatabaseEntry e : s.getDatabaseIndex().getTableManager().getEntityTable().getByFaction(f, RATED_TYPES, Integer.MAX_VALUE)) {
+                    owned.add(e.dbId);
+                }
+                combatRatings.retain(f, owned);
+            } catch (java.sql.SQLException e) {
+                System.err.println("[SERVER][FACTION] combat rating query failed for faction " + f + ": " + e);
+            }
+        }
+        boolean changed = combatRatings.recomputeTotals();
+        for (Faction f : s.getFactionManager().getFactionCollection()) {
+            if (f instanceof NPCFaction npc && npc.structure != null) {
+                changed |= combatRatings.setNpcSystems(f.getIdFaction(), npc.structure.getTotalSystems());
+            }
+        }
+        if (changed) {
+            broadcast(Kind.MILITARY, combatRatings.totalsTag());
+            changed();
         }
     }
 
@@ -1946,6 +2059,14 @@ public final class DiplomacyManager extends Observable {
         if (bad != null) {
             return bad;
         }
+        if (type != null && type.getImplies() == FactionRelation.RType.ENEMY) {
+            //war goals are demands; the declarer conceding something is a peace offer, not a war
+            for (SettlementTerm t : p.terms) {
+                if (t.giver == proposer.getIdFaction()) {
+                    return Lng.str("War goals can only be demands on %s.", getFactionName(p.b));
+                }
+            }
+        }
         if (type != null && type.getImplies() == FactionRelation.RType.ENEMY && !p.serverAuthored) {
             List<String> unmet = new ObjectArrayList<String>();
             if (!diplomacyOf(proposer).getEntity(p.b).hasCasusBelli(p.terms, unmet)) {
@@ -2036,18 +2157,41 @@ public final class DiplomacyManager extends Observable {
     }
 
     /**
-     * ponytail: an NPC refuses any settlement in which it gives something, because nothing can price a
-     * term yet. Lift this once terms carry a value, which waits on the military strength term (#6).
-     * Terms it only receives are left to its ordinary rules.
+     * An NPC's verdict on an offer to it, with the terms it would sign instead when it would not.
      */
-    private boolean npcGivesNothing(DiplomacyProposal p, List<String> unmet) {
-        for (SettlementTerm t : p.terms) {
-            if (t.giver == p.b) {
-                unmet.add(Lng.str("They will not give anything up in a settlement."));
-                return false;
-            }
+    private record NpcVerdict(boolean accept, List<SettlementTerm> counter) {
+    }
+
+    /**
+     * Prices the offer's terms against what the agreement is worth to the NPC; see
+     * {@link SettlementPricing}. Fills {@code unmet} with why not.
+     */
+    private NpcVerdict judgeAsNPC(DiplomacyProposal offer, Faction npc, List<String> unmet) {
+        DiplomacyEntity e = diplomacyOf(npc).getEntity(offer.a);
+        List<String> ruleUnmet = new ObjectArrayList<>();
+        boolean rule = e.wouldAccept(offer.typeId, ruleUnmet);
+        boolean peace = offer.typeId == null && getRelation(offer.a, offer.b) == FactionRelation.RType.ENEMY;
+        double treatyValue = e.getConfig().getSettlementTreatyValue();
+        double need = SettlementPricing.need(peace, rule, e.getRelativeStrength(), e.getConfig().getSettlementPeaceValue());
+        double net = SettlementPricing.net(offer.terms, offer.b, offer.a, offer.b, treatyValue);
+        if (net >= need) {
+            return new NpcVerdict(true, null);
         }
-        return true;
+        List<SettlementTerm> counter = SettlementPricing.counter(offer.terms, offer.b, offer.a, offer.b, need, treatyValue);
+        if (Double.isInfinite(need) || net == Double.NEGATIVE_INFINITY) {
+            unmet.addAll(ruleUnmet);
+            if (net == Double.NEGATIVE_INFINITY) {
+                unmet.add(Lng.str("They will not be made subject to anyone."));
+            }
+        } else if (!rule) {
+            unmet.add(Lng.str("They want %s faction points' worth more to make peace.", Math.round(need - net)));
+        } else {
+            unmet.add(Lng.str("They will not give up that much: %s faction points' worth too far.", Math.round(need - net)));
+        }
+        if (counter != null) {
+            unmet.add(Lng.str("They would settle for:\n%s", SettlementTerm.describeAll(counter, this::getFactionName, offer.a, offer.b, Lng.str("Nothing changing hands."))));
+        }
+        return new NpcVerdict(false, counter);
     }
 
     /**
@@ -2524,7 +2668,7 @@ public final class DiplomacyManager extends Observable {
             reasons = joinReasons(unmet);
         } else if (to.isNPC()) {
             List<String> unmet = new ObjectArrayList<String>();
-            accept = diplomacyOf(to).getEntity(q.a).wouldAccept(q.typeId, unmet) & npcGivesNothing(q, unmet);
+            accept = judgeAsNPC(q, to, unmet).accept();
             reasons = joinReasons(unmet);
         } else {
             reasons = Lng.str("They decide for themselves.");
@@ -2537,7 +2681,22 @@ public final class DiplomacyManager extends Observable {
 
     private void answerAsNPC(DiplomacyProposal offer, Faction to) {
         List<String> unmet = new ObjectArrayList<String>();
-        boolean accept = diplomacyOf(to).getEntity(offer.a).wouldAccept(offer.typeId, unmet) & npcGivesNothing(offer, unmet);
+        NpcVerdict verdict = judgeAsNPC(offer, to, unmet);
+        boolean accept = verdict.accept();
+        Faction proposer = getFaction(offer.a);
+        if (!accept && verdict.counter() != null && proposer != null && !proposer.isNPC()) {
+            //haggling: a player gets the terms it would sign, back the other way, to accept or argue
+            //with. Never to another NPC, or two of them would counter each other every tick.
+            DiplomacyProposal counter = DiplomacyProposal.counterTo(offer, to.getName(), offer.typeId, offer.expiresAt,
+                    Lng.str("%s will settle on these terms.", to.getName()), offer.name, verdict.counter());
+            counter.serverAuthored = true;
+            sendServerFactionMail(Lng.str("[FACTION] %s countered", to.getName()),
+                    Lng.str("%s will not sign as offered, but has sent terms back.\n%s", to.getName(), joinReasons(unmet)), proposer);
+            synchronized (toAddProposalResponses) {
+                toAddProposalResponses.add(counter);
+            }
+            return;
+        }
         if (!accept) {
             diplomacyAction(DiplomacyAction.DiplActionType.TREATY_REFUSED, offer.a, offer.b, offer.typeId);
 			System.err.println("[SERVER][FACTION] " + to.getName() + " refuses " + (offer.typeId != null ? offer.typeId : "peace") + " from " + getFactionName(offer.a) + ": " + unmet);
