@@ -11,8 +11,11 @@ import videogoose.betterfactions.diplomacy.DiplomacyEntity;
 import videogoose.betterfactions.diplomacy.FactionStrength;
 import videogoose.betterfactions.diplomacy.FactionTreaty;
 import videogoose.betterfactions.diplomacy.TreatyType;
+import org.schema.schine.common.ClipboardUtils;
 import org.schema.schine.common.language.Lng;
+import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.GUIAnchor;
+import org.schema.schine.graphicsengine.forms.gui.GUICallback;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.GUIElementList;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
@@ -122,8 +125,7 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
         addTextFilter(new GUIListFilterText<>() {
             @Override
             public boolean isOk(String input, Faction f) {
-                return f.getName().toLowerCase(Locale.ENGLISH).contains(input.toLowerCase(Locale.ENGLISH))
-                        || (client().getPlayer().isAdmin() && String.valueOf(f.getIdFaction()).equals(input.trim()));
+                return f.getName().toLowerCase(Locale.ENGLISH).contains(input.toLowerCase(Locale.ENGLISH));
             }
         }, Lng.str("SEARCH"), ControllerElement.FilterRowStyle.LEFT);
 
@@ -217,8 +219,7 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
             nameText.setTextSimple(new Object() {
                 @Override
                 public String toString() {
-                    String s = f.getName() + (f.isNPC() ? " " + Lng.str("(NPC)") : "");
-                    return client().getPlayer().isAdmin() ? s + " [" + f.getIdFaction() + "]" : s;
+                    return f.getName() + (f.isNPC() ? " " + Lng.str("(NPC)") : "");
                 }
             });
             relationText.setTextSimple(new Object() {
@@ -276,6 +277,35 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
         protected void clickedOnRow() {
             panel.onSelectFaction(f);
             super.clickedOnRow();
+        }
+
+        /**
+         * Right click, admins only: the faction id for commands, which the name column has no room for.
+         */
+        @Override
+        protected GUIContextPane createContext() {
+            if (!client().getPlayer().isAdmin()) {
+                return null;
+            }
+            GUIContextPane pane = new GUIContextPane(getState(), 140, 25);
+            GUIHorizontalButtonTablePane buttons = new GUIHorizontalButtonTablePane(getState(), 1, 1, pane);
+            buttons.onInit();
+            buttons.addButton(0, 0, Lng.str("COPY ID (%s)", f.getIdFaction()), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new GUICallback() {
+                @Override
+                public boolean isOccluded() {
+                    return false;
+                }
+
+                @Override
+                public void callback(GUIElement callingGuiElement, MouseEvent event) {
+                    if (event.pressedLeftMouse()) {
+                        ClipboardUtils.set(String.valueOf(f.getIdFaction()));
+                        getState().getController().getInputController().setCurrentContextPane(null);
+                    }
+                }
+            }, null);
+            pane.attach(buttons);
+            return pane;
         }
     }
 }
