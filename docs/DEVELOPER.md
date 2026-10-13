@@ -19,6 +19,7 @@ Package root: `src/main/java/videogoose/betterfactions/`.
 | `BFConfig.java` | Mod config (`custom_emblems_enabled`) |
 | `Perms.java` | The mod's rank rights, mapped onto spare engine bits |
 | `diplomacy/` | Treaties, proposals, opinion ledgers, NPC config, federations, faction strength |
+| `civics/` | Civic types and registry, each faction's picks (`Civics`, saved as `civics-<world>.tag`). Picking is gated on the engine's "Edit ranks" right; swap cost and cooldown are `civic_swap_cost` / `civic_swap_cooldown_days` in the mod config |
 | `emblem/` | Emblem validation, client cache, GUI element |
 | `assets/` | Faction holdings query (stations, shops) |
 | `gui/` | Faction panel tabs and dialogs. Ranks are edited in `FactionRankDialog` (the `FactionRankMatrix` grid), not the engine's dialog |

@@ -27,7 +27,18 @@ public final class TreatyNames_test {
         aTypeWithNoTemplatesUsesItsDisplayName();
         sanitizeRefusesWhatARowCannotShow();
         everyVanillaTypeNamesItself();
+        relationshipWarsFillEveryToken();
         System.out.println("TreatyNames_test: OK");
+    }
+
+    private static void relationshipWarsFillEveryToken() {
+        TreatyType war = TreatyTypeRegistry.get(TreatyTypeRegistry.WAR);
+        for (String[] set : new String[][]{TreatyNames.INDEPENDENCE_WAR, TreatyNames.SUBJUGATION_WAR}) {
+            for (long seed = 0; seed < set.length; seed++) {
+                String name = TreatyNames.defaultName(war, set, seed, tokens());
+                assert !name.contains("{") && name.length() <= TreatyNames.MAX_LENGTH : name;
+            }
+        }
     }
 
     private static void tokensAreFilledIn() {

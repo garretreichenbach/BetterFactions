@@ -299,6 +299,8 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
             SettlementTerm.listFromTag(subs[9], terms);
         }
         against = subs.length > 10 && subs[10].getType() != Tag.Type.FINISH ? (Integer) subs[10].getValue() : 0;
+        //a query's answer travels by tag too, and without this every answer read as a refusal
+        accepted = subs.length > 11 && subs[11].getType() != Tag.Type.FINISH && (Byte) subs[11].getValue() != 0;
 		if (action == null) {
             action = Action.PROPOSE;
         }
@@ -318,6 +320,7 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
                 new Tag(Tag.Type.STRING, null, nullToEmpty(name)),
                 SettlementTerm.listToTag(terms),
                 new Tag(Tag.Type.INT, null, against),
+                new Tag(Tag.Type.BYTE, null, (byte) (accepted ? 1 : 0)),
                 FinishTag.INST});
     }
 

@@ -1,5 +1,6 @@
 package videogoose.betterfactions.gui;
 
+import org.schema.common.util.StringTools;
 import org.schema.game.client.data.GameClientState;
 import org.schema.game.common.data.fleet.Fleet;
 import org.schema.game.common.data.fleet.FleetMember;
@@ -19,7 +20,7 @@ import java.util.*;
 public class FactionDesignsList extends ScrollableTableList<FactionDesignsList.Ship> {
 
 	/** Equality is everything the row shows, so a changed assignment rebuilds it. */
-	public record Ship(String uid, String name, String fleet, String blueprint) {
+	public record Ship(String uid, String name, long fleetDbId, String fleet, String blueprint, double mass) {
 	}
 
 	private final GUIElement parent;
@@ -29,6 +30,17 @@ public class FactionDesignsList extends ScrollableTableList<FactionDesignsList.S
 		super(state, 100, 100, p);
 		this.parent = p;
 		getState().getFleetManager().addObserver(this);
+		setGroupProvider(new RowGroupProvider<>() {
+			@Override
+			public String getGroupName(Ship s) {
+				return s.fleet();
+			}
+
+			@Override
+			public int getGroupSortIndex(Ship s) {
+				return 0;
+			}
+		});
 	}
 
 	@Override
@@ -45,9 +57,9 @@ public class FactionDesignsList extends ScrollableTableList<FactionDesignsList.S
 	@Override
 	public void initColumns() {
 		addColumn(Lng.str("Ship"), 2.2f, (a, b) -> a.name().compareToIgnoreCase(b.name()));
-		addColumn(Lng.str("Fleet"), 1.6f, (a, b) -> a.fleet().compareToIgnoreCase(b.fleet()));
+		addFixedWidthColumn(Lng.str("Mass"), 110, (a, b) -> Double.compare(a.mass(), b.mass()));
 		addColumn(Lng.str("Blueprint"), 2.2f, (a, b) -> label(a).compareToIgnoreCase(label(b)));
-		activeSortColumnIndex = 1;
+		activeSortColumnIndex = 0;
 	}
 
 	private static String label(Ship s) {
@@ -72,7 +84,7 @@ public class FactionDesignsList extends ScrollableTableList<FactionDesignsList.S
 				if (m.getDockedToRootDbId() > 0) {
 					continue;
 				}
-				out.add(new Ship(m.UID, m.name, f.getName(), RepairDialogs.blueprintOf(getState(), m.UID, m.name)));
+				out.add(new Ship(m.UID, m.name, f.dbid, f.getName(), RepairDialogs.blueprintOf(getState(), m.UID, m.name), m.getMass()));
 			}
 		}
 		return out;
@@ -83,7 +95,7 @@ public class FactionDesignsList extends ScrollableTableList<FactionDesignsList.S
 		mainList.deleteObservers();
 		mainList.addObserver(this);
 		for (Ship s : collection) {
-			Row r = new Row(getState(), s, cell(s.name()), cell(s.fleet()), cell(label(s))) {
+			Row r = new Row(getState(), s, cell(s.name()), cell(StringTools.massFormat(s.mass())), cell(label(s))) {
 			};
 			GUIAnchor expanded = expandedFor(s);
 			r.expanded = new GUIElementList(getState());
@@ -117,6 +129,25 @@ public class FactionDesignsList extends ScrollableTableList<FactionDesignsList.S
 		});
 		set.setPos(4, 4, 0);
 		c.attach(set);
+		GUITextButton repair = new GUITextButton(getState(), 130, 24, GUITextButton.ColorPalette.OK, Lng.str("REPAIR SHIP"), new GUICallback() {
+			@Override
+			public boolean isOccluded() {
+				return !isActive();
+			}
+
+			@Override
+			public void callback(GUIElement callingGuiElement, MouseEvent event) {
+				if (event.pressedLeftMouse()) {
+					for (Fleet f : getState().getFleetManager().getAvailableFleetsClient()) {
+						if (f.dbid == s.fleetDbId()) {
+							RepairDialogs.orderRepair(getState(), f, s.uid(), s.name());
+						}
+					}
+				}
+			}
+		});
+		repair.setPos(140, 4, 0);
+		c.attach(repair);
 		return c;
 	}
 

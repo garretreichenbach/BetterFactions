@@ -856,6 +856,23 @@ public class DiplomacyConfig {
             }
             reactions.add(r);
         }
+        {
+            //last, so adding it did not renumber the reactions saved worlds have marked as fired
+            DiplomacyReaction r = new DiplomacyReaction(i);
+            i++;
+            r.reaction = DiplomacyReaction.ConditionReaction.PROPOSE_TREATY;
+            r.name = "Sue for Peace when losing";
+            r.message = "We have lost enough ships to this war. We propose an end to it.";
+            r.condition = new DiplomacyConditionGroup();
+            r.condition.mod = DiplomacyConditionGroup.ConditionMod.AND;
+            {
+                DiplomacyCondition d = new DiplomacyCondition();
+                d.type = DiplomacyCondition.ConditionType.WEARINESS;
+                d.argumentValue = 0.5;
+                r.condition.conditions.add(d);
+            }
+            reactions.add(r);
+        }
         addDefaultAcceptance();
     }
 

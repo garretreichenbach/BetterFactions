@@ -13,6 +13,7 @@ import org.schema.game.common.data.element.FactoryResource;
 import org.schema.game.common.data.player.inventory.Inventory;
 import org.schema.game.common.data.player.inventory.InventoryChangeMap;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -127,30 +128,49 @@ public final class RepairComponents {
 		InventoryChangeMap changes = new InventoryChangeMap();
 		for (short t : ElementKeyMap.typeList()) {
 			int lack = need.get(t) - inv.getOverallQuantity(t);
-			for (short chestType : ElementKeyMap.inventoryTypes) {
-				LongOpenHashSet chests = connected.get(chestType);
-				if (chests == null) {
-					continue;
+			for (Inventory from : chests(yard, connected)) {
+				if (lack <= 0) {
+					break;
 				}
-				for (long l : chests) {
-					if (lack <= 0) {
-						break;
-					}
-					Inventory from = yard.getContainer().getInventory(ElementCollection.getPosIndexFrom4(l));
-					if (from == null) {
-						continue;
-					}
-					int take = Math.min(from.getOverallQuantity(t), lack);
-					if (take > 0 && (take = inv.canPutInHowMuch(t, take, -1)) > 0) {
-						from.decreaseBatch(t, take, changes.getInv(from));
-						changes.getInv(inv).add(inv.putNextFreeSlotWithoutException(t, take, -1));
-						lack -= take;
-					}
+				int take = Math.min(from.getOverallQuantity(t), lack);
+				if (take > 0 && (take = inv.canPutInHowMuch(t, take, -1)) > 0) {
+					from.decreaseBatch(t, take, changes.getInv(from));
+					changes.getInv(inv).add(inv.putNextFreeSlotWithoutException(t, take, -1));
+					lack -= take;
 				}
 			}
 		}
 		if (!changes.isEmpty()) {
 			changes.sendAll();
 		}
+	}
+
+	/** How many of this the yard holds, counting the chests connected to it, which a repair pulls from. */
+	public static int onHand(ShipyardCollectionManager yard, short type) {
+		int n = yard.getServerEntityState().getInventory().getOverallQuantity(type);
+		Short2ObjectOpenHashMap<? extends LongOpenHashSet> connected = yard.getSegmentController().getControlElementMap()
+				.getControllingMap().get(yard.getControllerElement().getAbsoluteIndex());
+		if (connected != null) {
+			for (Inventory c : chests(yard, connected)) {
+				n += c.getOverallQuantity(type);
+			}
+		}
+		return n;
+	}
+
+	private static List<Inventory> chests(ShipyardCollectionManager yard, Short2ObjectOpenHashMap<? extends LongOpenHashSet> connected) {
+		List<Inventory> out = new ArrayList<>();
+		for (short chestType : ElementKeyMap.inventoryTypes) {
+			LongOpenHashSet chests = connected.get(chestType);
+			if (chests != null) {
+				for (long l : chests) {
+					Inventory c = yard.getContainer().getInventory(ElementCollection.getPosIndexFrom4(l));
+					if (c != null) {
+						out.add(c);
+					}
+				}
+			}
+		}
+		return out;
 	}
 }

@@ -249,6 +249,18 @@
                 </Condition>
             </AND>
         </Reaction>
+        <Reaction>
+            <Name>Sue for Peace when losing</Name>
+            <Message>We have bled enough for this. Let it end before there is nothing left of us.</Message>
+            <Action>PROPOSE_TREATY</Action>
+            <Treaty></Treaty>
+            <AND>
+                <Condition>
+                    <Type>WEARINESS</Type>
+                    <Value>0.75</Value>
+                </Condition>
+            </AND>
+        </Reaction>
     </Reactions>
     <PowerWeights>
         <!--What this faction counts when sizing another up. Used by the POWER status and the RELATIVE_STRENGTH condition, which compare the two totals as a ratio - so only the weights relative to each other matter, and scaling all four changes nothing. PointSurplus is faction points spare per period, not the balance.-->

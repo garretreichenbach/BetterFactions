@@ -59,13 +59,29 @@ public final class FactionStrength {
     }
 
     /**
-     * As the given archetype sizes a faction up. The sum of the three terms below, which is the only
-     * place the formula is written down - the panel draws the same three numbers rather than a
+     * As the given archetype sizes a faction up. The sum of the four terms below, scaled by {@link #momentum}, which
+     * is the only place the formula is written down - the panel draws the same four numbers rather than a
      * second version of them, because a breakdown that does not add up to the total on screen beside
      * it is worse than no breakdown.
      */
     public static double of(Faction f, DiplomacySettings weights) {
-        return incomeTerm(f, weights) + territoryTerm(f, weights) + peopleTerm(f, weights) + militaryTerm(f, weights);
+        return (incomeTerm(f, weights) + territoryTerm(f, weights) + peopleTerm(f, weights) + militaryTerm(f, weights))
+                * (1 + momentum(f));
+    }
+
+    /**
+     * Share of its power a faction is up (or down) on its recent battles: a run of wins makes it look
+     * and count as stronger for a while, a run of losses weaker. Scales the whole number rather than
+     * adding a term, so the shares the panel draws still add up.
+     *
+     * <p>{@link #weariness} is the losing half of it on a 0 to 1 scale: how much a beaten faction wants out.</p>
+     */
+    public static double weariness(Faction f) {
+        return -Math.min(0, momentum(f)) / videogoose.betterfactions.battle.BattleReports.MOMENTUM_CAP;
+    }
+
+    public static double momentum(Faction f) {
+        return f == null ? 0 : videogoose.betterfactions.DiplomacyManager.of(f.isOnServer()).getCombatRatings().momentumOf(f.getIdFaction());
     }
 
     /**

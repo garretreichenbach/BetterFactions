@@ -1085,6 +1085,11 @@ public class DiplomacyEntity implements LogInterface {
         return Math.clamp(doublings, -STRENGTH_CLAMP, STRENGTH_CLAMP);
     }
 
+    /** How badly our own recent battles have gone, 0 to 1; see {@link FactionStrength#weariness}. */
+    public double getWeariness() {
+        return FactionStrength.weariness(getFaction());
+    }
+
     /**
      * How many factions we are at war with.
      */

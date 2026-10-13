@@ -31,6 +31,7 @@ public final class FactionAssets_test {
         FactionAssets a = new FactionAssets(7, 1234567890123L);
         a.assets.add(new FactionAssets.Asset("ENTITY_SPACESTATION_Tarsis Yard", "Tarsis Yard",
                 (byte) 2, new Vector3i(8, 3, -2)));
+        a.assets.get(0).mass = 1520.5;
         a.assets.add(new FactionAssets.Asset("ENTITY_SHOP_Ring Depot", "", (byte) 1,
                 new Vector3i(-100, 0, 4000)));
         a.routes.add(new FactionAssets.Route(42L, "40 Iron: Tarsis Yard -> Ring Depot", "Travelling to Ring Depot",
@@ -69,10 +70,12 @@ public final class FactionAssets_test {
         assert "Tarsis Yard".equals(first.name) : first.name;
         assert first.type == 2 : first.type;
         assert first.sector.equals(new Vector3i(8, 3, -2)) : first.sector;
+        assert first.mass == 1520.5 : first.mass;
 
         FactionAssets.Asset second = back.assets.get(1);
         assert "".equals(second.name) : "an unnamed holding came back as something else: " + second.name;
         assert second.sector.equals(new Vector3i(-100, 0, 4000)) : second.sector;
+        assert second.mass == -1 : "an unloaded holding's unknown mass came back as " + second.mass;
     }
 
     private static void anEmptyAnswerSurvivesTheWire() throws IOException {

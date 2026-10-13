@@ -38,7 +38,13 @@ public final class BFPacket extends Packet {
 		// server -> client
 		REPAIR_QUEUE, DESIGNS,
 		// client -> server: post a fleet to intercept from a sector
-		INTERCEPT_ORDER
+		INTERCEPT_ORDER,
+		// client -> server, then back: the battles being fought against one enemy right now, for anyone in the faction
+		LIVE_BATTLES_REQUEST, LIVE_BATTLES,
+		// server -> client: fleets whose flagship is radar jamming, hidden on the map
+		JAMMED_FLEETS,
+		// client -> server: put a civic in a slot; server -> client: civics, the whole store on join or one faction's change
+		CIVICS_PICK, CIVICS
 	}
 
 	private Kind kind;

@@ -110,6 +110,10 @@ public final class DiplomacyCommands {
 		if (!pairExists(ctx, a, b)) {
 			return;
 		}
+		if (TreatyTypeRegistry.FEDERATION.equals(type)) {
+			ctx.reply("[ERROR] federation treaties follow membership; use the federation commands");
+			return;
+		}
 		long expiresAt = hours > 0 ? System.currentTimeMillis() + hours * 3600000L : 0L;
 		if (!DiplomacyManager.server().signTreatyServer(a, b, type, expiresAt, "")) {
 			ctx.reply("[ERROR] unknown treaty type: " + type + ". Known: " + TreatyTypeRegistry.list());
@@ -123,6 +127,10 @@ public final class DiplomacyCommands {
 		int b = ctx.getInt(1);
 		String type = ctx.getString(2).trim();
 		if (!pairExists(ctx, a, b)) {
+			return;
+		}
+		if (TreatyTypeRegistry.FEDERATION.equals(type)) {
+			ctx.reply("[ERROR] federation treaties follow membership; use the federation commands");
 			return;
 		}
 		if (!DiplomacyManager.server().breakTreatyServer(a, b, type)) {

@@ -85,6 +85,11 @@ public final class DiplomacyProposal_test {
 
         DiplomacyProposal acceptedBack = wire(DiplomacyProposal.queryResult(q, true, null), 9);
         assert acceptedBack.accepted : "the verdict did not survive the wire";
+
+        //the server actually ships answers as tags, which is where the verdict used to get lost
+        DiplomacyProposal tagged = new DiplomacyProposal();
+        tagged.fromTagStructure(DiplomacyProposal.queryResult(q, true, null).toTagStructure());
+        assert tagged.accepted : "the verdict did not survive the tag";
     }
 
     /**

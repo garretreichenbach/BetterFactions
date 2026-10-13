@@ -44,7 +44,10 @@ import videogoose.betterfactions.battle.BattleReports;
 import videogoose.betterfactions.battle.BattleTracker;
 import videogoose.betterfactions.gui.BattleAdminList;
 import videogoose.betterfactions.gui.RepairDialogs;
+import videogoose.betterfactions.gui.WarBattlesDialog;
 import videogoose.betterfactions.repair.FactionDesigns;
+import videogoose.betterfactions.civics.Civics;
+import videogoose.betterfactions.gui.CivicChooser;
 import videogoose.betterfactions.fleet.FleetIntercepts;
 import videogoose.betterfactions.repair.ShipyardRepairs;
 import videogoose.betterfactions.diplomacy.CombatRatings;
@@ -356,6 +359,12 @@ public final class DiplomacyManager extends Observable {
 					BFPacket.toPlayer(sender, Kind.BATTLE_REPORTS, BattleTracker.get().archive().tagFor(sender.getFactionId()));
 				}
 			}
+			case LIVE_BATTLES_REQUEST -> {
+				if (sender.getFactionId() != 0 && BattleReports.mayAnswer("live:" + sender.getName(), System.currentTimeMillis())) {
+					BFPacket.toPlayer(sender, Kind.LIVE_BATTLES, BattleTracker.get().liveTag((GameServerState) state(),
+							sender.getFactionId(), tag.getInt(), System.currentTimeMillis()));
+				}
+			}
 			case BATTLE_DETAIL_REQUEST -> {
 				if (sender.getFactionId() != 0 && BattleReports.mayAnswer("detail:" + sender.getName(), System.currentTimeMillis())) {
 					Tag detail = BattleTracker.get().archive().detailFor(sender.getFactionId(), tag);
@@ -370,9 +379,11 @@ public final class DiplomacyManager extends Observable {
 				//the station must be one the server itself lists as the sender's faction's
 				FactionAssets.Asset station = a == null ? null : a.find(t[1].getString());
 				if (station != null) {
-					ShipyardRepairs.get().order((GameServerState) state(), sender, t[0].getLong(), station.uid, station.name, station.sector);
+					ShipyardRepairs.get().order((GameServerState) state(), sender, t[0].getLong(), station.uid, station.name, station.sector,
+							t.length > 3 && !t[2].getString().isEmpty() ? t[2].getString() : null);
 				}
 			}
+			case CIVICS_PICK -> Civics.server().pick(sender, tag);
 			case REPAIR_CANCEL -> ShipyardRepairs.get().cancel(sender, tag.getString());
 			case INTERCEPT_ORDER -> {
 				Tag[] t = tag.getStruct();
@@ -468,9 +479,16 @@ public final class DiplomacyManager extends Observable {
 			case BATTLES -> BattleAdminList.received(tag);
 			case BATTLE_REPORTS -> BattleReports.received(tag);
 			case BATTLE_DETAIL -> BattleReports.detailReceived(tag);
+			case LIVE_BATTLES -> WarBattlesDialog.received(tag);
 			case BATTLE_WATCH -> BattleAdminList.setWatching(GameClientState.instance, tag.getByte());
 			case REPAIR_QUEUE -> RepairDialogs.queueReceived(tag);
+			case JAMMED_FLEETS -> FleetIntercepts.jammedReceived(tag);
 			case DESIGNS -> FactionDesigns.received(tag);
+			case CIVICS -> {
+				Civics.client().fromTag(tag);
+				changed();
+				CivicChooser.civicsReceived(GameClientState.instance);
+			}
 			case MILITARY -> {
 				combatRatings.fromTotalsTag(tag);
 				changed();
@@ -532,6 +550,7 @@ public final class DiplomacyManager extends Observable {
 				}
 				needsSnapshot.remove(p);
 				BFPacket.toPlayer(p, Kind.SNAPSHOT, snapshot);
+				BFPacket.toPlayer(p, Kind.CIVICS, Civics.server().toTag());
 				sendAllFederationsTo(p);
 				for (Faction f : fm().getFactionCollection()) {
 					diplomacyOf(f).onPlayerJoined(p);
@@ -556,6 +575,7 @@ public final class DiplomacyManager extends Observable {
 
 	public void onFactionDeleted(Faction f) {
 		FactionDesigns.server().onFactionDeleted(f.getIdFaction());
+		(onServer ? Civics.server() : Civics.client()).onFactionDeleted(f.getIdFaction());
 		removeTreatiesOf(f.getIdFaction());
 		removeFederationsOf(f.getIdFaction());
 		emblems.remove(f.getIdFaction());
@@ -968,6 +988,8 @@ public final class DiplomacyManager extends Observable {
                 changed |= combatRatings.setNpcSystems(f.getIdFaction(), npc.structure.getTotalSystems());
             }
         }
+        //recomputed each sweep rather than on each report, so it fades as the battles age
+        changed |= combatRatings.setMomentum(BattleTracker.get().archive().momentum(now));
         publishMilitary(changed);
     }
 
@@ -1016,6 +1038,12 @@ public final class DiplomacyManager extends Observable {
                 sendTreatyChange(t, true);
                 diplomacyAction(DiplomacyAction.DiplActionType.TREATY_EXPIRED, t.from, t.to, t.typeId);
                 diplomacyAction(DiplomacyAction.DiplActionType.TREATY_EXPIRED, t.to, t.from, t.typeId);
+                TreatyType type = t.getType();
+                if (type != null && type.getImplies() != null) {
+                    //the relation table was written at signing; left alone it would outlive the treaty
+                    FactionRelation.RType still = getTreaties(t.from, t.to).getDerivedRelation();
+                    queueRelation(t.from, t.to, (still != null ? still : FactionRelation.RType.NEUTRAL).code);
+                }
             }
         }
     }
@@ -1281,6 +1309,10 @@ public final class DiplomacyManager extends Observable {
                     refuseFederation(sender, Lng.astr("That vote is already decided."));
                     return;
                 }
+                if (v.kind == Federation.FederationVote.Kind.WAR && !mayNegotiate(own, sender.getName(), TreatyTypeRegistry.WAR)) {
+                    refuseFederation(sender, Lng.astr("Your rank cannot take your\nfaction to war."));
+                    return;
+                }
                 v.ballots.put(me, c.value != 0 ? (byte) 1 : (byte) 0);
                 resolveVotes(mine, System.currentTimeMillis());
                 sendFederation(mine);
@@ -1372,6 +1404,10 @@ public final class DiplomacyManager extends Observable {
                 break;
             }
             case DECLARE_WAR: {
+                if (!mayNegotiate(own, sender.getName(), TreatyTypeRegistry.WAR)) {
+                    refuseFederation(sender, Lng.astr("Your rank cannot take your\nfaction to war."));
+                    return;
+                }
                 if (getFaction(c.target) == null || mine.isMember(c.target)) {
                     refuseFederation(sender, Lng.astr("The federation cannot declare\nwar on that faction."));
                     return;
@@ -1515,7 +1551,15 @@ public final class DiplomacyManager extends Observable {
         for (int i = 0; i < f.members.size(); i++) {
             int m = f.members.getInt(i);
             if ((v == null || f.binds(v, m)) && !hasTreaty(m, target, TreatyTypeRegistry.WAR)) {
-                signTreatyServer(m, target, TreatyTypeRegistry.WAR, 0, Lng.str("Declared by %s", f.name));
+                //declared like any other war, so the target's pacts are called and the rules that
+                //keep a member from fighting its own overlord or ally still hold
+                DiplomacyProposal war = new DiplomacyProposal();
+                war.set(getFactionName(m), m, target, TreatyTypeRegistry.WAR, FactionRelation.RType.ENEMY.code,
+                        Lng.str("Declared by %s", f.name), DiplomacyProposal.Action.PROPOSE);
+                war.serverAuthored = true;
+                synchronized (relationOffersToAdd) {
+                    relationOffersToAdd.add(war);
+                }
             }
         }
         federationNews(f, Lng.str("The federation declared war on %s.", t.getName()));
@@ -1962,6 +2006,29 @@ public final class DiplomacyManager extends Observable {
 	}
 
 	/**
+	 * Whether {@code breaker} is the bound side of a one-sided agreement with {@code other} - the
+	 * vassal or the tributary - which may not walk out of it; only the side holding it may let go.
+	 */
+	private boolean isBoundBy(int breaker, int other, TreatyType type) {
+		FactionTreaty held = getTreaties(breaker, other).get(type.getId());
+		return held != null && type.getKind() == TreatyType.Kind.DEMAND && held.to == breaker;
+	}
+
+	/**
+	 * Whether a war {@code rebel} declares on {@code lord} is a war of independence: {@code rebel} is
+	 * its vassal or tributary. Works on clients too, so the propose dialog can say so.
+	 */
+	public boolean isIndependenceWar(int rebel, int lord) {
+		for (FactionTreaty t : getTreaties(rebel, lord).getTreaties()) {
+			TreatyType type = t.getType();
+			if (type != null && isBoundBy(rebel, lord, type)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * Signs a treaty on the server's own authority, as an admin command does, with no offer and no
 	 * acceptance.
 	 *
@@ -2009,7 +2076,8 @@ public final class DiplomacyManager extends Observable {
         List<String> forcing = null;
         for (FactionTreaty t : getTreaties(a, b).getTreaties()) {
             TreatyType type = t.getType();
-            if (type != null && type.getImplies() != null) {
+            //federation follows membership, which a peace between two members does not change
+            if (type != null && type.getImplies() != null && !TreatyTypeRegistry.FEDERATION.equals(t.typeId)) {
                 if (forcing == null) {
 					forcing = new ObjectArrayList<String>();
 				}
@@ -2047,7 +2115,7 @@ public final class DiplomacyManager extends Observable {
                 Faction target = getFaction(offer.b);
                 //a counter is also a proposal, so it is checked against the terms it asks for as well
                 //as the ones it turns down
-				if (!response.serverAuthored && (!mayNegotiate(target, response.getInitiator(), offer.typeId) || (response.action == DiplomacyProposal.Action.COUNTER && (!mayNegotiate(target, response.getInitiator(), response.typeId) || termsProblem(target, response) != null)))) {
+				if (!response.serverAuthored && (!mayNegotiate(target, response.getInitiator(), offer.typeId) || (response.action == DiplomacyProposal.Action.COUNTER && (!mayNegotiate(target, response.getInitiator(), response.typeId) || termsProblem(target, response.asCounterProposal()) != null)))) {
                     //the offer itself stands: a refused answer must not consume it
                     denyDiplomacy(response.getInitiator(), Lng.astr("Cannot answer this offer:\nFaction permission denied!"));
                     continue;
@@ -2149,7 +2217,7 @@ public final class DiplomacyManager extends Observable {
         for (FactionTreaty t : owed) {
             Faction lord = getFaction(t.from);
             Faction payer = getFaction(t.to);
-            if (lord == null || payer == null) {
+            if (lord == null || payer == null || getRelation(t.from, t.to) == FactionRelation.RType.ENEMY) {
                 continue;
             }
             float amount = tributeOwed(payer.lastPointsFromOnline + payer.lastPointsFromOffline, payer.factionPoints, percent);
@@ -2171,18 +2239,83 @@ public final class DiplomacyManager extends Observable {
     }
 
     /**
+     * What the standing between the pair rules out about this proposal, or null. Checked when it is
+     * offered and again when it is accepted: a war can break out, or an overlord change, in between.
+     * {@code p.a} is whoever is asking, so a counter has to be turned around before it is checked.
+     */
+    private String pairProblem(DiplomacyProposal p) {
+        TreatyType type = p.typeId != null ? TreatyTypeRegistry.get(p.typeId) : null;
+        boolean atWar = getRelation(p.a, p.b) == FactionRelation.RType.ENEMY;
+        if (type == null) {
+            //peace is how a war ends; offered between friends it would only clear what binds them
+            return atWar ? null : Lng.str("You are not at war with %s.", getFactionName(p.b));
+        }
+        if (type.getImplies() == FactionRelation.RType.ENEMY) {
+            if (p.against != 0) {
+                //a call to arms is answered, not declared
+                return null;
+            }
+            if (hasTreaty(p.a, p.b, TreatyTypeRegistry.WAR)) {
+                return Lng.str("You are already at war with %s.", getFactionName(p.b));
+            }
+            return warBlocker(p.a, p.b);
+        }
+        if (atWar && type.needsAcceptance()) {
+            //at war the only thing on the table is how it ends; anything else rides the peace as a term
+            return Lng.str("You are at war. Offer peace, with %s as one of its terms.", type.getDisplayName());
+        }
+        FactionTreaty held = getTreaties(p.a, p.b).get(type.getId());
+        if (held != null && !type.isSymmetric() && held.from != p.a) {
+            //re-offering it is how it is renamed or renewed, and from this side that would turn it around
+            return Lng.str("Only %s can renew the %s.", getFactionName(held.from), type.getDisplayName());
+        }
+        if (TreatyTypeRegistry.VASSALAGE.equals(type.getId())) {
+            int lord = overlordOf(p.b);
+            if (lord != 0 && lord != p.a) {
+                return Lng.str("%s is already a vassal of %s.", getFactionName(p.b), getFactionName(lord));
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Why {@code a} cannot go to war with {@code b} as things stand, or null. Anything still binding
+     * the pair has to be broken first, so a war never sits on top of an alliance or a vassalage.
+     */
+    private String warBlocker(int a, int b) {
+        Federation fa = getFederationOf(a);
+        if (fa != null && fa.isMember(b)) {
+            return Lng.str("You share a federation with %s.", getFactionName(b));
+        }
+        for (FactionTreaty t : getTreaties(a, b).getTreaties()) {
+            TreatyType type = t.getType();
+            //the bond a vassal or tributary declares war on is the very thing it is fighting to end
+            if (type != null && type.getImplies() != null && type.getImplies() != FactionRelation.RType.ENEMY
+                    && !isBoundBy(a, b, type)) {
+                return Lng.str("Your %s with %s still stands.", type.getDisplayName(), getFactionName(b));
+            }
+        }
+        return null;
+    }
+
+    /**
      * What is wrong with a proposal's terms as offered, or null. Run on the server for every offer and
      * counter before it is staged, so a term nobody may offer never reaches the other side's inbox.
      */
     private String termsProblem(Faction proposer, DiplomacyProposal p) {
         TreatyType offered = p.typeId != null ? TreatyTypeRegistry.get(p.typeId) : null;
-        if (offered != null && offered.needsAcceptance() && getRelation(p.a, p.b) == FactionRelation.RType.ENEMY) {
-            //at war the only thing on the table is how it ends; anything else rides the peace as a term
-            return Lng.str("You are at war. Offer peace, with %s as one of its terms.", offered.getDisplayName());
+        if (offered != null && TreatyTypeRegistry.FEDERATION.equals(offered.getId()) && !p.serverAuthored) {
+            //unilateral and unbreakable: offered like a treaty, it would be forced on the other side
+            return Lng.str("A federation is joined by invitation, from the federation panel.");
+        }
+        String pair = pairProblem(p);
+        if (pair != null) {
+            return pair;
         }
         if (offered != null && offered.getImplies() == FactionRelation.RType.ENEMY && !p.serverAuthored) {
             int lord = overlordOf(proposer.getIdFaction());
-            if (lord != 0) {
+            //except on the overlord itself: that is a war of independence
+            if (lord != 0 && lord != p.b) {
                 return Lng.str("A vassal of %s cannot declare war on its own.", getFactionName(lord));
             }
         }
@@ -2231,6 +2364,9 @@ public final class DiplomacyManager extends Observable {
      */
     private String settlementBlocker(DiplomacyProposal offer) {
         String bad = SettlementTerm.problem(offer.terms, offer.a, offer.b);
+        if (bad == null) {
+            bad = pairProblem(offer);
+        }
         if (bad != null) {
             return bad;
         }
@@ -2238,6 +2374,11 @@ public final class DiplomacyManager extends Observable {
         for (SettlementTerm t : offer.terms) {
             if (t.kind == SettlementTerm.Kind.TRANSFER_FACTION_POINTS) {
                 owed.merge(t.giver, t.amount, Float::sum);
+            } else if (t.kind == SettlementTerm.Kind.SIGN_TREATY && TreatyTypeRegistry.VASSALAGE.equals(t.typeId)) {
+                int lord = overlordOf(t.giver);
+                if (lord != 0 && lord != t.receiver(offer.a, offer.b)) {
+                    return Lng.str("%s is already a vassal of %s.", getFactionName(t.giver), getFactionName(lord));
+                }
             } else if (t.kind == SettlementTerm.Kind.BREAK_TREATY) {
                 int with = t.breakWith(offer.a, offer.b);
                 TreatyType type = TreatyTypeRegistry.get(t.typeId);
@@ -2245,7 +2386,7 @@ public final class DiplomacyManager extends Observable {
                     return Lng.str("%s no longer holds that treaty with %s.", getFactionName(t.giver), getFactionName(with));
                 }
                 //breaking it with the other signatory is agreed; with a third party it is not
-                if (with != t.receiver(offer.a, offer.b) && !type.isBreakable()) {
+                if (with != t.receiver(offer.a, offer.b) && (!type.isBreakable() || isBoundBy(t.giver, with, type))) {
                     return Lng.str("%s cannot be broken unilaterally.", type.getDisplayName());
                 }
             }
@@ -2359,7 +2500,7 @@ public final class DiplomacyManager extends Observable {
         boolean rule = e.wouldAccept(offer.typeId, ruleUnmet);
         boolean peace = offer.typeId == null && getRelation(offer.a, offer.b) == FactionRelation.RType.ENEMY;
         double treatyValue = e.getConfig().getSettlementTreatyValue();
-        double need = SettlementPricing.need(peace, rule, e.getRelativeStrength(), e.getConfig().getSettlementPeaceValue());
+        double need = SettlementPricing.need(peace, rule, e.getRelativeStrength(), e.getConfig().getSettlementPeaceValue(), FactionStrength.weariness(npc));
         double net = SettlementPricing.net(offer.terms, offer.b, offer.a, offer.b, treatyValue);
         if (net >= need) {
             return new NpcVerdict(true, null);
@@ -2542,12 +2683,26 @@ public final class DiplomacyManager extends Observable {
         if (type != null) {
             FactionTreaty treaty = new FactionTreaty(offer.a, offer.b, type.getId(), System.currentTimeMillis());
             treaty.clause = offer.getMessage();
-            treaty.expiresAt = offer.treatyExpiry();
+            //a war ends in peace, never on a timer
+            treaty.expiresAt = type.getImplies() == FactionRelation.RType.ENEMY ? FactionTreaty.NO_EXPIRY : offer.treatyExpiry();
 			treaty.name = nameFor(offer, type, treaty.signedAt);
             if (type.getImplies() == FactionRelation.RType.ENEMY) {
                 //a war is declared, never agreed, so its terms are what it is for rather than anything
                 //that applies now; they come back as the starting point of every peace offer
                 treaty.goals.addAll(offer.terms);
+                //a war of independence repudiates the bond; tribute does not keep flowing to the enemy
+                List<String> bonds = new ObjectArrayList<String>();
+                for (FactionTreaty held : getTreaties(offer.a, offer.b).getTreaties()) {
+                    TreatyType heldType = held.getType();
+                    if (heldType != null && isBoundBy(offer.a, offer.b, heldType)) {
+                        bonds.add(held.typeId);
+                    }
+                }
+                for (String typeId : bonds) {
+                    removeTreaty(offer.a, offer.b, typeId);
+                    //the lord records it as broken faith, same as any treaty walked out of
+                    diplomacyAction(DiplomacyAction.DiplActionType.TREATY_BROKEN, offer.b, offer.a, typeId);
+                }
             }
             //re-signing a type already held replaces it, which is what renegotiating an existing
             //treaty amounts to: same parties, new term
@@ -2601,7 +2756,16 @@ public final class DiplomacyManager extends Observable {
 		if (asked != null) {
 			return asked;
 		}
-		return TreatyNames.defaultName(type, signedAt, new TreatyNames.Tokens()
+		//a war is named for what the two are to each other when that says something, else at random
+		String[] templates = type.getNameTemplates();
+		if (type.getImplies() == FactionRelation.RType.ENEMY) {
+			if (isIndependenceWar(offer.a, offer.b)) {
+				templates = TreatyNames.INDEPENDENCE_WAR;
+			} else if (offer.terms.contains(SettlementTerm.signTreaty(offer.b, TreatyTypeRegistry.VASSALAGE))) {
+				templates = TreatyNames.SUBJUGATION_WAR;
+			}
+		}
+		return TreatyNames.defaultName(type, templates, signedAt, new TreatyNames.Tokens()
 				.from(getFactionName(offer.a))
 				.to(getFactionName(offer.b))
 				.homes(homeSystemName(offer.a), homeSystemName(offer.b)));
@@ -2709,6 +2873,10 @@ public final class DiplomacyManager extends Observable {
                 if (from == null || to == null) {
                     continue;
                 }
+                if (fk.typeId != null && TreatyTypeRegistry.get(fk.typeId) == null) {
+                    System.err.println("[FACTIONMANAGER] dropped diplomacy proposal of unknown type: " + fk);
+                    continue;
+                }
                 //The gate this pipeline never had. Everything below acts on behalf of `from`, and
                 //the only checks on that used to live in the client's GUI - so a crafted packet
                 //could declare war, or break an alliance, for any faction in the game.
@@ -2746,12 +2914,21 @@ public final class DiplomacyManager extends Observable {
     private void revokeProposal(DiplomacyProposal fk, Faction from, Faction to, TreatyType type) {
         boolean inForce = type != null && hasTreaty(from.getIdFaction(), to.getIdFaction(), type.getId());
         if (inForce && !type.isBreakable()) {
+            if (type.getImplies() == FactionRelation.RType.ENEMY) {
+                denyDiplomacy(fk.getInitiator(), Lng.astr("A war ends in peace, not by walking away. Offer peace instead."));
+                return;
+            }
             denyDiplomacy(fk.getInitiator(), Lng.astr("%s cannot be broken unilaterally!", type.getDisplayName()));
+            return;
+        }
+        if (inForce && isBoundBy(from.getIdFaction(), to.getIdFaction(), type)) {
+            denyDiplomacy(fk.getInitiator(), Lng.astr("Only %s can release you from the %s.\nNegotiate it as a term instead.", to.getName(), type.getDisplayName()));
             return;
         }
 		if (inForce) {
 			breakTreatyInForce(from.getIdFaction(), to.getIdFaction(), type);
-		} else if (fk.rel == FactionRelation.RType.FRIEND.code && getRelation(from.getIdFaction(), to.getIdFaction()) == FactionRelation.RType.FRIEND) {
+		} else if (fk.rel == FactionRelation.RType.FRIEND.code && getRelation(from.getIdFaction(), to.getIdFaction()) == FactionRelation.RType.FRIEND
+				&& getTreaties(from.getIdFaction(), to.getIdFaction()).getDerivedRelation() == null) {
             //an alliance held in the relation table rather than as a treaty
             System.err.println("[FACTIONMANAGER] revoked alliance " + fk + " on " + state());
             queueRelation(from.getIdFaction(), to.getIdFaction(), FactionRelation.RType.NEUTRAL.code);

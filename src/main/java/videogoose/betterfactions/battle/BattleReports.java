@@ -1,5 +1,7 @@
 package videogoose.betterfactions.battle;
 
+import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
+import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.schema.common.util.linAlg.Vector3i;
 import org.schema.schine.resource.tag.FinishTag;
@@ -74,7 +76,7 @@ public final class BattleReports {
 			return out.toString();
 		}
 
-		boolean involves(int faction) {
+		public boolean involves(int faction) {
 			for (Line l : sides) {
 				if (l.faction == faction) {
 					return true;
@@ -116,6 +118,40 @@ public final class BattleReports {
 			if (r.involves(faction)) {
 				out.add(r);
 			}
+		}
+		return out;
+	}
+
+	/** How long a battle's result keeps moving a faction's power; it fades linearly to nothing over this. */
+	static final long MOMENTUM_MS = 24 * 60 * 60 * 1000L;
+	/** Power gained per fresh outright win (lost per loss); half for coming off better or worse. */
+	static final double MOMENTUM_PER_WIN = 0.05;
+	/** Momentum never moves power by more than this share either way. */
+	public static final double MOMENTUM_CAP = 0.25;
+
+	/**
+	 * Server: every faction with recent results, to its momentum: a share of its power to add (or take
+	 * away), from the battles of the last {@link #MOMENTUM_MS}. Winning is holding the field, or failing
+	 * that coming off clearly better; every other side lost it. Inconclusive battles count for nobody.
+	 */
+	public synchronized Int2DoubleOpenHashMap momentum(long now) {
+		Int2DoubleOpenHashMap out = new Int2DoubleOpenHashMap();
+		for (Report r : all) {
+			long age = now - r.time;
+			if (age >= MOMENTUM_MS) {
+				break; //newest first
+			}
+			int victor = r.winner != Integer.MIN_VALUE ? r.winner : r.favoured;
+			if (victor == Integer.MIN_VALUE || age < 0) {
+				continue;
+			}
+			double swing = MOMENTUM_PER_WIN * (r.winner != Integer.MIN_VALUE ? 1 : 0.5) * (1 - (double) age / MOMENTUM_MS);
+			for (Line l : r.sides) {
+				out.put(l.faction, out.get(l.faction) + (l.faction == victor ? swing : -swing));
+			}
+		}
+		for (Int2DoubleMap.Entry e : out.int2DoubleEntrySet()) {
+			e.setValue(Math.max(-MOMENTUM_CAP, Math.min(MOMENTUM_CAP, e.getDoubleValue())));
 		}
 		return out;
 	}

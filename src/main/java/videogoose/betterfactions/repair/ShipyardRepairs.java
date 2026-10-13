@@ -3,7 +3,9 @@ package videogoose.betterfactions.repair;
 import com.bulletphysics.dynamics.RigidBody;
 import com.bulletphysics.linearmath.Transform;
 import org.schema.common.util.linAlg.Vector3i;
+import org.schema.game.common.controller.ElementCountMap;
 import org.schema.game.common.data.ManagedSegmentController;
+import org.schema.game.server.data.blueprintnw.BlueprintEntry;
 import org.schema.game.common.controller.SegmentController;
 import org.schema.game.common.controller.Ship;
 import org.schema.game.common.controller.rails.RailRelation;
@@ -38,12 +40,7 @@ import videogoose.betterfactions.fleet.FleetLabels;
 
 import javax.vecmath.Quat4f;
 import javax.vecmath.Vector3f;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Server: fleets ordered to repair at one of their faction's shipyards. The fleet flies to the yard's sector,
@@ -412,9 +409,10 @@ public final class ShipyardRepairs {
 
 	/**
 	 * A player orders a fleet to repair at a station. Whose fleet and whose station are checked here: the
-	 * request names both, so neither is believed.
+	 * request names both, so neither is believed. With {@code onlyUid} just that one ship is queued; the fleet still
+	 * flies there with it, and the rest wait parked beside the yard.
 	 */
-	public void order(GameServerState state, PlayerState p, long fleetDbId, String stationUid, String stationName, Vector3i sector) {
+	public void order(GameServerState state, PlayerState p, long fleetDbId, String stationUid, String stationName, Vector3i sector, String onlyUid) {
 		Faction f = state.getFactionManager().getFaction(p.getFactionId());
 		Fleet fleet = state.getFleetManager().getByFleetDbId(fleetDbId);
 		if (f == null || fleet == null || fleet.isEmpty() || !fleet.canAccess(p.getName()) || fleet.getFlagShip().getFactionId() != f.getIdFaction()) {
@@ -422,9 +420,19 @@ public final class ShipyardRepairs {
 			return;
 		}
 		for (Yard y : yards.values()) {
-			if (y.fleets.contains(fleetDbId)) {
+			if (!y.fleets.contains(fleetDbId)) {
+				continue;
+			}
+			//one more of its ships at the yard it is already headed to is fine; anything else is a second order
+			if (onlyUid == null || !y.stationUid.equals(stationUid)) {
 				tell(p, Lng.str("%s is already ordered to repair at %s.", fleet.getName(), y.stationName));
 				return;
+			}
+			for (Entry e : y.queue) {
+				if (e.uid.equals(onlyUid)) {
+					tell(p, Lng.str("%s is already in the repair queue at %s.", e.name, y.stationName));
+					return;
+				}
 			}
 		}
 		Yard yard = yards.computeIfAbsent(stationUid, k -> new Yard(stationUid, stationName, f.getIdFaction(), sector));
@@ -436,7 +444,7 @@ public final class ShipyardRepairs {
 		List<FleetMember> members = fleet.getMembers();
 		for (int i = 0; i < members.size(); i++) {
 			FleetMember m = members.get(i);
-			if (m.getDockedToRootDbId() > 0) {
+			if (m.getDockedToRootDbId() > 0 || onlyUid != null && !onlyUid.equals(m.UID)) {
 				continue; //turrets and docked craft come back with their mothership's blueprint
 			}
 			String bp = FactionDesigns.server().blueprintFor(f, m.UID, m.name, p.getCatalog().getAvailableCatalog());
@@ -453,8 +461,9 @@ public final class ShipyardRepairs {
 			}
 			return;
 		}
-		fleet.getFleetManager().executeCommand(new FleetCommand(FleetCommandTypes.MOVE_FLEET, fleet, new Vector3i(sector)));
-		yard.fleets.add(fleet.dbid);
+		if (yard.fleets.add(fleet.dbid)) {
+			fleet.getFleetManager().executeCommand(new FleetCommand(FleetCommandTypes.MOVE_FLEET, fleet, new Vector3i(sector)));
+		}
 		tell(p, Lng.str("%s ships of %s heading to %s for repairs.", queued, fleet.getName(), stationName));
 	}
 
@@ -531,7 +540,7 @@ public final class ShipyardRepairs {
 				}
 			}
 		}
-		return furthest == null ? null : Lng.str("Shipyard Repair: %s", furthest.label);
+		return furthest == null ? null : Lng.str("SHIPYARD REPAIR: %s", furthest.label.toUpperCase(Locale.ENGLISH));
 	}
 
 	/** Entity ids of the flagships parked this tick. */
@@ -788,7 +797,14 @@ public final class ShipyardRepairs {
 				}
 			}
 			case LEAVING -> {
-				if (now - e.stepSince > LEAVE_TIMEOUT_MS || e.approach != null && e.approach.arrived) {
+				if (e.approach != null && e.approach.arrived) {
+					drop(state, y, e, null);
+				} else if (now - e.stepSince > LEAVE_TIMEOUT_MS) {
+					//never flew out: put it out past the far end, or it sits on the anchor and blocks the yard for good
+					if (ship != null && !ship.railController.isDockedOrDirty()) {
+						Vector3f out = new Approach(station, scm, anchorOf(scm), axis, y.end, Phase.EXIT).gate(ship, false);
+						ship.warpTransformable(out.x, out.y, out.z, true, null);
+					}
 					drop(state, y, e, null);
 				} else if (ship != null && !ship.railController.isDockedOrDirty()
 						&& ship.getPhysicsDataContainer().getObject() instanceof RigidBody body) {
@@ -796,8 +812,9 @@ public final class ShipyardRepairs {
 						e.approach = new Approach(station, scm, anchorOf(scm), axis, y.end, Phase.EXIT);
 					}
 					//led out from its docking state (ShipyardDockingMixin), where its fleet AI does not brake it to a stop
-					//every update as an idle fleet member's does; until its AI can take that, the yard flies it from here
-					if (!inDocking(ship) && !request(ship, e.approach)) {
+					//every update as an idle fleet member's does; until its AI can take that, the yard flies it from here.
+					//A freshly built ship's AI is often not active yet, and an inactive AI's docking state never updates
+					if (!ship.getAiConfiguration().isActiveAI() || !inDocking(ship) && !request(ship, e.approach)) {
 						e.approach.measured(e.approach.lead(ship, body));
 					}
 				}
@@ -879,6 +896,39 @@ public final class ShipyardRepairs {
 		}
 		rows.add(FinishTag.INST);
 		return new Tag(Tag.Type.STRUCT, null, rows.toArray(new Tag[0]));
+	}
+
+	/**
+	 * Server: the shipyard's "Inputs Needed" while it has no build of its own on: the components the ships still queued
+	 * at its station need, each its blueprint's less what its old ship gives back, and how many of them the yard and its
+	 * connected chests hold. Null if nothing is queued there.
+	 * ponytail: one ship's refund is not counted towards the next's cost, so the total can read a little high.
+	 */
+	public ElementCountMap[] queuedGoal(ShipyardCollectionManager scm) {
+		Yard y = yards.get(scm.getSegmentController().getUniqueIdentifier());
+		if (y == null || y.queue.isEmpty()) {
+			return null;
+		}
+		GameServerState state = GameServerState.instance;
+		ElementCountMap need = new ElementCountMap();
+		for (Entry e : y.queue) {
+			BlueprintEntry bp = e.step == Step.LEAVING ? null : UnloadedRepairs.blueprint(e.blueprint);
+			if (bp == null) {
+				continue;
+			}
+			//one in the yard is already giving its blocks back into the yard's inventory
+			Ship ship = e.step == Step.REPAIRING ? null : ship(state, e.uid);
+			ElementCountMap had = ship != null ? ship.getElementClassCountMap() : e.step == Step.REPAIRING ? null : counts.get(e.uid);
+			UnloadedRepairs.cost(RepairComponents.components(bp.getElementCountMapWithChildren()),
+					had == null ? null : RepairComponents.components(had), need, new ElementCountMap());
+		}
+		ElementCountMap have = new ElementCountMap();
+		for (short t : ElementKeyMap.typeList()) {
+			if (need.get(t) > 0) {
+				have.inc(t, Math.min(need.get(t), RepairComponents.onHand(scm, t)));
+			}
+		}
+		return new ElementCountMap[]{need, have};
 	}
 
 	// ------------------------------------------------------------------

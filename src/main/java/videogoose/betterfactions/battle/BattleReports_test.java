@@ -69,6 +69,26 @@ public final class BattleReports_test {
 		news = BattleTracker.newsBody(b, BattleTracker.summarize(b, id -> "F" + id, 60_000), id -> "F" + id);
 		assert news.startsWith("Inconclusive; F20 came off better (lost 1 ship to F10's 3).\nShips lost: ") && news.split("\n").length == 2
 				: "the edge fits the news post's one verdict line: " + news;
+		//momentum: a fresh win is worth a full step, a loss as much the other way, coming off better half
+		BattleReports m = new BattleReports();
+		long day = BattleReports.MOMENTUM_MS;
+		m.add(new BattleReports.Report(0, new Vector3i(), "v", "b", 1, false, 10, Integer.MIN_VALUE,
+				List.of(new BattleReports.Line(10, "Us", 0, false), new BattleReports.Line(20, "Them", 2, false)), List.of(), "Old"));
+		m.add(new BattleReports.Report(day, new Vector3i(), "v", "b", 1, false, Integer.MIN_VALUE, 30,
+				List.of(new BattleReports.Line(30, "Edge", 1, false), new BattleReports.Line(20, "Them", 3, false)), List.of(), "Edge"));
+		var mo = m.momentum(day);
+		assert mo.get(10) == 0 : "a battle a full window old counts for nothing";
+		assert Math.abs(mo.get(30) - BattleReports.MOMENTUM_PER_WIN / 2) < 1e-9 && Math.abs(mo.get(20) + BattleReports.MOMENTUM_PER_WIN / 2) < 1e-9 : mo;
+		assert Math.abs(m.momentum(day + day / 2).get(30) - BattleReports.MOMENTUM_PER_WIN / 4) < 1e-9 : "fades linearly";
+		for (int i = 0; i < 20; i++) {
+			m.add(new BattleReports.Report(day, new Vector3i(), "v", "b", 1, false, 30, Integer.MIN_VALUE,
+					List.of(new BattleReports.Line(30, "Edge", 0, false), new BattleReports.Line(20, "Them", 1, false)), List.of(), "Win"));
+		}
+		mo = m.momentum(day);
+		assert mo.get(30) == BattleReports.MOMENTUM_CAP && mo.get(20) == -BattleReports.MOMENTUM_CAP : "capped both ways: " + mo;
+		m.add(new BattleReports.Report(day, new Vector3i(), "v", "b", 1, false, Integer.MIN_VALUE, Integer.MIN_VALUE,
+				List.of(new BattleReports.Line(40, "A", 0, false), new BattleReports.Line(50, "B", 0, false)), List.of(), "Draw"));
+		assert !m.momentum(day).containsKey(40) : "an inconclusive battle moves nobody";
 		System.out.println("BattleReports_test: OK");
 	}
 }

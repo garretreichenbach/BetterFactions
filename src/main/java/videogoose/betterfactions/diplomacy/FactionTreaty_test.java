@@ -45,6 +45,7 @@ public final class FactionTreaty_test {
         assert TreatyTypeRegistry.exists(TreatyTypeRegistry.ALLIANCE);
         assert TreatyTypeRegistry.exists(TreatyTypeRegistry.NON_AGGRESSION);
         assert TreatyTypeRegistry.get(TreatyTypeRegistry.WAR).getImplies() == FactionRelation.RType.ENEMY;
+        assert !TreatyTypeRegistry.get(TreatyTypeRegistry.WAR).isBreakable();
         assert TreatyTypeRegistry.get(TreatyTypeRegistry.ALLIANCE).getImplies() == FactionRelation.RType.FRIEND;
         // war is declared, not negotiated
         assert !TreatyTypeRegistry.get(TreatyTypeRegistry.WAR).needsAcceptance();

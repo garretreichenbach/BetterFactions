@@ -165,7 +165,8 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
             return asset.type == h.asset.type
                     && Objects.equals(asset.uid, h.asset.uid)
                     && Objects.equals(asset.name, h.asset.name)
-                    && Objects.equals(asset.sector, h.asset.sector);
+                    && Objects.equals(asset.sector, h.asset.sector)
+                    && asset.mass == h.asset.mass;
         }
 
         @Override
@@ -227,12 +228,14 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
         return n;
     }
 
-    private static double mass(Fleet f) {
-        double m = 0;
-        for (FleetMember fm : f.getMembers()) {
-            m += fm.getDockedToRootDbId() > 0 ? 0 : fm.getMass();
-        }
-        return m;
+    /** Total for a fleet; a station's as of the last answer, or -1 when the server did not have it loaded. */
+    private static double massOf(Holding h) {
+        return h.isFleet() ? FleetMassColumns.mass(h.fleet) : h.asset != null ? h.asset.mass : -1;
+    }
+
+    private static String massText(Holding h) {
+        double m = massOf(h);
+        return m < 0 ? (h.isBareClaim() ? "" : Lng.str("unloaded")) : StringTools.massFormat(m);
     }
 
     private static SimpleTransformableSendableObject.EntityType typeOf(FactionAssets.Asset a) {
@@ -321,6 +324,7 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
     public void initColumns() {
         addColumn(Lng.str("Holding"), 3.0f, (o1, o2) -> name(o1).compareToIgnoreCase(name(o2)));
         addFixedWidthColumn(Lng.str("Kind"), 110, (o1, o2) -> kind(o1).compareToIgnoreCase(kind(o2)));
+        addFixedWidthColumn(Lng.str("Mass"), 110, (o1, o2) -> Double.compare(massOf(o1), massOf(o2)));
         addColumn(Lng.str("System"), 2.0f, (o1, o2) -> {
             //ours first, then by position, so the ones standing outside our own space group together
             if (o1.claimed != o2.claimed) {
@@ -364,7 +368,7 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
                   }, GUIHorizontalArea.HButtonType.BUTTON_GREY_MEDIUM, ControllerElement.FilterRowStyle.FULL,
                 ControllerElement.FilterPos.BOTTOM);
 
-        activeSortColumnIndex = 2;
+        activeSortColumnIndex = 3;
     }
 
     /** What a row is, for the left-hand filter. The homebase counts as a station. */
@@ -519,6 +523,7 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
         for (Holding h : collection) {
             GUITextOverlayTable nameText = new GUITextOverlayTable(10, 10, getState());
             GUITextOverlayTable kindText = new GUITextOverlayTable(10, 10, getState());
+            GUITextOverlayTable massText = new GUITextOverlayTable(10, 10, getState());
             GUITextOverlayTable systemText = new GUITextOverlayTable(10, 10, getState());
 
             nameText.setTextSimple(name(h));
@@ -526,6 +531,12 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
                 @Override
                 public String toString() {
                     return kind(h);
+                }
+            });
+            massText.setTextSimple(new Object() {
+                @Override
+                public String toString() {
+                    return massText(h);
                 }
             });
             systemText.setTextSimple(new Object() {
@@ -537,16 +548,19 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
 
             nameText.getPos().y = 5;
             kindText.getPos().y = 5;
+            massText.getPos().y = 5;
             systemText.getPos().y = 5;
 
             GUIClippedRow nameRow = new GUIClippedRow(getState());
             nameRow.attach(nameText);
             GUIClippedRow kindRow = new GUIClippedRow(getState());
             kindRow.attach(kindText);
+            GUIClippedRow massRow = new GUIClippedRow(getState());
+            massRow.attach(massText);
             GUIClippedRow systemRow = new GUIClippedRow(getState());
             systemRow.attach(systemText);
 
-            HoldingRow r = new HoldingRow(getState(), h, nameRow, kindRow, systemRow);
+            HoldingRow r = new HoldingRow(getState(), h, nameRow, kindRow, massRow, systemRow);
             GUIAnchor expanded = expandedFor(h);
             r.expanded = new GUIElementList(getState());
             r.expanded.add(new GUIListElement(expanded, expanded, getState()));
@@ -582,7 +596,7 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
                 if (h.isFleet()) {
                     FactionAssets.Route r = routeOf(h);
                     return (r != null ? routeLine(r) + "\n" : "") + Lng.str("%s ships (%s mass) under %s, %s, in sector %s of %s. Open to %s.",
-                            ships(h.fleet), StringTools.massFormat(mass(h.fleet)), h.fleet.getOwner(), h.fleet.missionString,
+                            ships(h.fleet), StringTools.massFormat(FleetMassColumns.mass(h.fleet)), h.fleet.getOwner(), h.fleet.missionString,
                             h.fleet.getFlagShip().getSector().toStringPure(), systemName(systemOf(h)),
                             h.fleet.getFactionAccessString());
                 }

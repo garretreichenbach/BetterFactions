@@ -1,5 +1,6 @@
 package videogoose.betterfactions.assets;
 
+import org.schema.game.common.controller.SegmentController;
 import org.schema.game.common.controller.database.DatabaseEntry;
 import videogoose.betterfactions.assets.FactionAssets;
 import org.schema.game.common.data.world.SimpleTransformableSendableObject;
@@ -100,6 +101,21 @@ public class FactionAssetIndex {
         return false;
     }
 
+    /**
+     * Mass of the entity if it is loaded, else -1. The entity table has no mass column, and reading an
+     * unloaded station's file to find out is far more than a list row is worth.
+     */
+    private double loadedMass(DatabaseEntry e) {
+        SegmentController sc = state.getSegmentControllersByName().get(e.uid);
+        if (sc == null) {
+            try {
+                sc = state.getSegmentControllersByName().get(e.getFullUid());
+            } catch (DatabaseEntry.EntityTypeNotFoundException ignored) {
+            }
+        }
+        return sc == null ? -1 : sc.getMassWithoutDockIncludingStation();
+    }
+
     private FactionAssets query(int factionId, long now) {
         try {
             List<DatabaseEntry> rows = state.getDatabaseIndex().getTableManager().getEntityTable()
@@ -113,7 +129,9 @@ public class FactionAssetIndex {
                     a.truncated = true;
                     break;
                 }
-                a.assets.add(new FactionAssets.Asset(e.uid, e.realName, (byte) e.type, e.sectorPos));
+                FactionAssets.Asset asset = new FactionAssets.Asset(e.uid, e.realName, (byte) e.type, e.sectorPos);
+                asset.mass = loadedMass(e);
+                a.assets.add(asset);
             }
             return a;
         } catch (SQLException e) {

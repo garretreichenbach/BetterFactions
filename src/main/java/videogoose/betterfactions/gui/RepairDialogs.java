@@ -38,13 +38,18 @@ public final class RepairDialogs {
 
 	/** Which of our stations should this fleet repair at. Stations come from the holdings list the server sent. */
 	public static void orderRepair(GameClientState state, Fleet fleet) {
+		orderRepair(state, fleet, null, fleet.getName());
+	}
+
+	/** As above, but only the ship {@code shipUid} is repaired (null: the whole fleet). */
+	public static void orderRepair(GameClientState state, Fleet fleet, String shipUid, String what) {
 		FactionAssets assets = DiplomacyManager.client().getFactionAssets();
 		if (assets == null) {
 			DiplomacyManager.client().requestFactionAssets(true);
 			state.getController().popupAlertTextMessage(Lng.str("Still asking the server for our stations - try again in a moment."));
 			return;
 		}
-		PlayerButtonTilesInput a = tiles(state, Lng.str("Repair %s at which shipyard?", fleet.getName()));
+		PlayerButtonTilesInput a = tiles(state, Lng.str("Repair %s at which shipyard?", what));
 		int n = 0;
 		for (FactionAssets.Asset s : assets.assets) {
 			if (s.type != SimpleTransformableSendableObject.EntityType.SPACE_STATION.dbTypeId) {
@@ -53,7 +58,8 @@ public final class RepairDialogs {
 			n++;
 			a.addTile(s.name, Lng.str("Sector %s. Each ship lines up, docks, and is rebuilt from its blueprint (Assets > Designs). Ships too large for the yard are skipped.", s.sector.toStringPure()),
 					GUIHorizontalArea.HButtonColor.BLUE, click(a, () -> BFPacket.toServer(BFPacket.Kind.REPAIR_ORDER, new Tag(Tag.Type.STRUCT, null, new Tag[]{
-							new Tag(Tag.Type.LONG, null, fleet.dbid), new Tag(Tag.Type.STRING, null, s.uid), FinishTag.INST}))), ALWAYS);
+							new Tag(Tag.Type.LONG, null, fleet.dbid), new Tag(Tag.Type.STRING, null, s.uid),
+							new Tag(Tag.Type.STRING, null, shipUid == null ? "" : shipUid), FinishTag.INST}))), ALWAYS);
 		}
 		if (n == 0) {
 			state.getController().popupAlertTextMessage(Lng.str("We have no stations to repair at."));
@@ -86,12 +92,7 @@ public final class RepairDialogs {
 		new PlayerGameOkCancelInput("BF_REPAIR_QUEUE", state, 560, 360, Lng.str("Repair queue: %s", stationName), new Object() {
 			@Override
 			public String toString() {
-				long now = System.currentTimeMillis();
-				if (now - queueAskedAt > 1500) {
-					queueAskedAt = now;
-					BFPacket.toServer(BFPacket.Kind.REPAIR_QUEUE_REQUEST, new Tag(Tag.Type.STRING, null, stationUid));
-				}
-				String[] q = queue;
+				String[] q = pollQueue(stationUid);
 				if (q.length < 2 || !q[0].equals(stationUid)) {
 					return Lng.str("Asking...");
 				}
@@ -114,6 +115,27 @@ public final class RepairDialogs {
 				deactivate();
 			}
 		}.activate();
+	}
+
+	/** Whether the server last said ships are queued for repair at this station; asks again every few seconds while called. */
+	public static boolean queued(String stationUid) {
+		long now = System.currentTimeMillis();
+		if (now - queueAskedAt > 3000) {
+			queueAskedAt = now;
+			BFPacket.toServer(BFPacket.Kind.REPAIR_QUEUE_REQUEST, new Tag(Tag.Type.STRING, null, stationUid));
+		}
+		String[] q = queue;
+		return q.length > 2 && q[0].equals(stationUid);
+	}
+
+	/** Asks the server for a yard's queue at most every 1.5s; returns the last one received. */
+	private static String[] pollQueue(String stationUid) {
+		long now = System.currentTimeMillis();
+		if (now - queueAskedAt > 1500) {
+			queueAskedAt = now;
+			BFPacket.toServer(BFPacket.Kind.REPAIR_QUEUE_REQUEST, new Tag(Tag.Type.STRING, null, stationUid));
+		}
+		return queue;
 	}
 
 	public static void cancelQueue(GameClientState state, String stationUid, String stationName) {
@@ -180,7 +202,18 @@ public final class RepairDialogs {
 		ac.addButton(2, 0, Lng.str("Repair Queue"), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, button(panel, () ->
 				viewQueue(GameClientState.instance, station.getUniqueIdentifier(), station.getRealName())), null);
 		ac.addButton(2, 1, Lng.str("Cancel Repairs"), GUIHorizontalArea.HButtonType.BUTTON_RED_MEDIUM, button(panel, () ->
-				cancelQueue(GameClientState.instance, station.getUniqueIdentifier(), station.getRealName())), null);
+				cancelQueue(GameClientState.instance, station.getUniqueIdentifier(), station.getRealName())), new GUIActivationCallback() {
+			@Override
+			public boolean isVisible(InputState state) {
+				return true;
+			}
+
+			@Override
+			public boolean isActive(InputState state) {
+				String[] q = pollQueue(station.getUniqueIdentifier());
+				return q.length > 2 && q[0].equals(station.getUniqueIdentifier());
+			}
+		});
 	}
 
 	private static GUICallback button(SecondaryInventoryPanelNew panel, Runnable r) {

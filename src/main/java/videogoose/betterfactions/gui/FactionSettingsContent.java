@@ -2,6 +2,10 @@ package videogoose.betterfactions.gui;
 
 import videogoose.betterfactions.BFConfig;
 import videogoose.betterfactions.DiplomacyManager;
+import videogoose.betterfactions.civics.CivicRegistry;
+import videogoose.betterfactions.civics.CivicType;
+import videogoose.betterfactions.civics.Civics;
+import videogoose.betterfactions.civics.FactionCivics;
 import org.schema.game.client.controller.PlayerGameOkCancelInput;
 import org.schema.game.client.controller.PlayerTextAreaInput;
 import org.schema.game.client.controller.manager.ingame.faction.FactionDialogNew;
@@ -147,6 +151,35 @@ public class FactionSettingsContent extends GUIAnchor {
                 button(Lng.str("EDIT RANKS"), GUITextButton.ColorPalette.OK,
                         () -> getOwnPlayer().getFactionController().hasPermissionEditPermission(),
                         () -> new FactionRankDialog(getState(), getOwnFaction()).activate())));
+
+        add(list, section(Lng.str("Civics"), HEADING));
+        int own = getOwnFaction().getIdFaction();
+        for (int i = 0; i < Civics.client().of(own).slotsEarned; i++) {
+            int slot = i;
+            add(list, row(new Object() {
+                        @Override
+                        public String toString() {
+                            FactionCivics c = Civics.client().of(own);
+                            return slot < c.civics.size() ? CivicRegistry.nameOf(c.civics.get(slot)) : Lng.str("Slot %s: empty", slot + 1);
+                        }
+                    },
+                    new Object() {
+                        @Override
+                        public String toString() {
+                            FactionCivics c = Civics.client().of(own);
+                            if (slot >= c.civics.size()) {
+                                return Lng.str("A defining trait of the faction, chosen by those who may edit ranks.");
+                            }
+                            CivicType t = CivicRegistry.get(c.civics.get(slot));
+                            return t != null ? t.getDescription() : Lng.str("The mod that added this civic is gone.");
+                        }
+                    },
+                    button(Lng.str("CHOOSE"), GUITextButton.ColorPalette.OK,
+                            //slots fill in order, so only the next empty one is offered
+                            () -> getOwnPlayer().getFactionController().hasPermissionEditPermission()
+                                    && slot <= Civics.client().of(own).civics.size(),
+                            () -> CivicChooser.open(getState(), slot, false))));
+        }
 
         add(list, section(Lng.str("Standing orders"), HEADING));
         add(list, row(Lng.str("Return fire automatically"),

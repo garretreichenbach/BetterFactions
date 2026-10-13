@@ -19,6 +19,8 @@ public final class BFConfig {
 	private static SimpleConfigInt battleStartBelowPercent;
 	private static SimpleConfigInt battleHoldAbovePercent;
 	private static SimpleConfigInt encounterTimeoutMinutes;
+	private static SimpleConfigInt civicSwapCost;
+	private static SimpleConfigInt civicSwapCooldownDays;
 
 	private BFConfig() {
 	}
@@ -45,6 +47,10 @@ public final class BFConfig {
 				"Battles with no player near get only what the rest of the server leaves under this percent of the tick budget, and skip ticks to stay under it. 0 never holds them back.");
 		encounterTimeoutMinutes = new SimpleConfigInt(config, "battle_encounter_timeout_minutes", 20,
 				"Fleets bound elsewhere that meet and fight break off after this many minutes of combat (longer while hits are still landing, up to double) and go back to their orders; the battle is reported. Fleets on sentry, defending, or sent to attack the sector fight on. 0 never breaks off.");
+		civicSwapCost = new SimpleConfigInt(config, "civic_swap_cost", 1000,
+				"Faction points it costs to replace a civic a faction holds. Filling an empty slot is free. 0 makes swaps free.");
+		civicSwapCooldownDays = new SimpleConfigInt(config, "civic_swap_cooldown_days", 7,
+				"Days after swapping a civic before the faction may swap one again. 0 means no wait.");
 		config.readWriteFields();
 	}
 
@@ -81,6 +87,16 @@ public final class BFConfig {
 	public static int softEntityTickDivisor() {
 		Integer v = softEntityTickDivisor != null ? softEntityTickDivisor.getValue() : null;
 		return v == null ? 1 : Math.max(1, v);
+	}
+
+	public static int civicSwapCost() {
+		Integer v = civicSwapCost != null ? civicSwapCost.getValue() : null;
+		return v == null ? 0 : Math.max(0, v);
+	}
+
+	public static int civicSwapCooldownDays() {
+		Integer v = civicSwapCooldownDays != null ? civicSwapCooldownDays.getValue() : null;
+		return v == null ? 0 : Math.max(0, v);
 	}
 
 	public static boolean customEmblemsEnabled() {

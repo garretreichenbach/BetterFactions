@@ -92,6 +92,21 @@ public final class CombatRatings {
     }
 
     /**
+     * Server: {@code sc} with everything docked to it, turrets included. A station's guns are mostly on its
+     * turrets, so rated alone it has none; this is what a battle counts a root ship or station as.
+     */
+    public static double rateWithDocks(SegmentController sc) {
+        java.util.Set<SegmentController> all = new java.util.HashSet<>();
+        sc.railController.getDockedRecusive(all);
+        all.add(sc);
+        double total = 0;
+        for (SegmentController d : all) {
+            total += rate(d);
+        }
+        return total;
+    }
+
+    /**
      * Reactor recharge over what every weapon draws while reloading, capped at 1: the share of the guns
      * that can fire continuously. 1 when there is nothing to read (old power, or the collections have
      * not been calculated yet just after a load). Docked turrets have their own reactors and are rated
@@ -136,6 +151,27 @@ public final class CombatRatings {
 
     public synchronized int npcSystemsOf(int faction) {
         return npcSystems.get(faction);
+    }
+
+    /**
+     * Share of its power each faction gains or loses from how its recent battles went; see
+     * {@code BattleReports.momentum}. Only the server can work it out, so it rides with the totals too.
+     */
+    private final Int2DoubleOpenHashMap momentum = new Int2DoubleOpenHashMap();
+
+    public synchronized double momentumOf(int faction) {
+        return momentum.get(faction);
+    }
+
+    /** Server. @return whether any faction's momentum moved by half a percent or more */
+    public synchronized boolean setMomentum(Int2DoubleMap fresh) {
+        boolean changed = !fresh.keySet().equals(momentum.keySet());
+        for (Int2DoubleMap.Entry e : fresh.int2DoubleEntrySet()) {
+            changed |= Math.abs(momentum.get(e.getIntKey()) - e.getDoubleValue()) >= 0.005;
+        }
+        momentum.clear();
+        momentum.putAll(fresh);
+        return changed;
     }
 
     /** Server. @return whether it changed */
@@ -203,6 +239,7 @@ public final class CombatRatings {
         byEntity.values().removeIf(r -> r.faction == faction);
         totals.remove(faction);
         npcSystems.remove(faction);
+        momentum.remove(faction);
     }
 
     /** The factions that have any rated entity. */
@@ -233,12 +270,13 @@ public final class CombatRatings {
     public synchronized Tag totalsTag() {
         IntOpenHashSet factions = new IntOpenHashSet(totals.keySet());
         factions.addAll(npcSystems.keySet());
+        factions.addAll(momentum.keySet());
         Tag[] t = new Tag[factions.size() + 1];
         int i = 0;
         for (int f : factions) {
             t[i++] = new Tag(Tag.Type.STRUCT, null, new Tag[]{
                     new Tag(Tag.Type.INT, null, f), new Tag(Tag.Type.DOUBLE, null, totals.get(f)),
-                    new Tag(Tag.Type.INT, null, npcSystems.get(f)), FinishTag.INST});
+                    new Tag(Tag.Type.INT, null, npcSystems.get(f)), new Tag(Tag.Type.DOUBLE, null, momentum.get(f)), FinishTag.INST});
         }
         t[t.length - 1] = FinishTag.INST;
         return new Tag(Tag.Type.STRUCT, null, t);
@@ -247,12 +285,16 @@ public final class CombatRatings {
     public synchronized void fromTotalsTag(Tag tag) {
         totals.clear();
         npcSystems.clear();
+        momentum.clear();
         Tag[] t = tag.getStruct();
         for (int i = 0; i < t.length - 1; i++) {
             Tag[] e = t[i].getStruct();
             totals.put(e[0].getInt(), (double) (Double) e[1].getValue());
             if (e.length > 3) {
                 npcSystems.put(e[0].getInt(), e[2].getInt());
+            }
+            if (e.length > 4) {
+                momentum.put(e[0].getInt(), (double) (Double) e[3].getValue());
             }
         }
     }
@@ -284,5 +326,6 @@ public final class CombatRatings {
     public synchronized void clear() {
         byEntity.clear();
         totals.clear();
+        momentum.clear();
     }
 }

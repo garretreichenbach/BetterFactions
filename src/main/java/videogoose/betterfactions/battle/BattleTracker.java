@@ -469,7 +469,7 @@ public final class BattleTracker {
 			return;
 		}
 		b.units.put(uid, new BattleReports.Unit(sc.getRealName(), factionOf(b, sc), (byte) sc.getType().dbTypeId,
-				sc.getMassWithDocks(), lost ? 0 : (float) sc.getHpController().getHpPercent(), CombatRatings.rate(sc), lost));
+				sc.getMassWithDocks(), lost ? 0 : (float) sc.getHpController().getHpPercent(), CombatRatings.rateWithDocks(sc), lost));
 	}
 
 	/** Server: {@code victim} accepted a hit from {@code damager}. Called per hit, so it stays cheap. */
@@ -508,7 +508,7 @@ public final class BattleTracker {
 		}
 		Side side = battle.side(factionOf(battle, sc));
 		side.lost++;
-		side.lostRating += CombatRatings.rate(sc);
+		side.lostRating += CombatRatings.rateWithDocks(sc);
 		note(battle, sc, true);
 	}
 
@@ -764,7 +764,7 @@ public final class BattleTracker {
 		for (SimpleTransformableSendableObject<?> o : sector.getEntities()) {
 			if (o instanceof SegmentController sc && root(sc) && !sc.isCoreOverheating()
 					&& b.sides.containsKey(sc.getFactionId())) {
-				rating.put(sc.getFactionId(), rating.get(sc.getFactionId()) + CombatRatings.rate(sc));
+				rating.put(sc.getFactionId(), rating.get(sc.getFactionId()) + CombatRatings.rateWithDocks(sc));
 				ships.put(sc.getFactionId(), ships.get(sc.getFactionId()) + 1);
 				note(b, sc, false);
 			}
@@ -820,7 +820,7 @@ public final class BattleTracker {
 		for (Fleet f : fleetsAt(state, pos)) {
 			FleetCommand c = f.getCurrentCommand();
 			if (c != null) {
-				f.sendFleetCommand(c.getCommandType(), c.getArgs());
+				f.getFleetManager().executeCommand(new FleetCommand(c.getCommandType(), f, c.getArgs()));
 			}
 		}
 	}
@@ -1038,9 +1038,23 @@ public final class BattleTracker {
 			return;
 		}
 		long now = System.currentTimeMillis();
+		List<Battle> all = cluster(b);
 		switch (cmd) {
-			case CMD_PAUSE -> togglePause(b, now);
-			case CMD_END -> endByAdmin(state, b, now);
+			case CMD_PAUSE -> {
+				boolean pause = !b.paused;
+				for (Battle c : all) {
+					if (c.paused != pause) {
+						togglePause(c, now);
+					}
+				}
+			}
+			case CMD_END -> {
+				//the ones that fought last, so the others fold into them and one report covers it all
+				all.sort((x, y) -> Long.compare(x.lastHit, y.lastHit));
+				for (Battle c : all) {
+					endByAdmin(state, c, now);
+				}
+			}
 			case CMD_TELEPORT -> {
 				SimpleTransformableSendableObject<?> what = admin.getFirstControlledTransformableWOExc();
 				if (what instanceof SegmentController sc) {
@@ -1250,7 +1264,7 @@ public final class BattleTracker {
 			to = new Vector3i(from);
 			to.add(RNG.nextBoolean() ? 3 : -3, RNG.nextInt(7) - 3, RNG.nextInt(7) - 3);
 		}
-		f.sendFleetCommand(FleetCommandTypes.MOVE_FLEET, to);
+		f.getFleetManager().executeCommand(new FleetCommand(FleetCommandTypes.MOVE_FLEET, f, to));
 	}
 
 	/** Unaffiliated (0) is at war with no one here: its ships are not a side. */
@@ -1449,7 +1463,6 @@ public final class BattleTracker {
 	}
 
 	private void report(GameServerState state, Sector sector, Battle b, long now) {
-		reports.put(new Vector3i(b.pos), reports.getInt(b.pos) + 1);
 		if (sector != null) {
 			for (SimpleTransformableSendableObject<?> o : sector.getEntities()) {
 				if (o instanceof SegmentController sc && root(sc) && !sc.isCoreOverheating()) {
@@ -1461,6 +1474,14 @@ public final class BattleTracker {
 				}
 			}
 		}
+		//a fight spilling over into the next sector is one battle: the last sector of it to end reports it all
+		for (Battle n : battles.values()) {
+			if (n != b && n.lastHit > 0 && adjacent(n.pos, b.pos)) {
+				merge(b, n);
+				return;
+			}
+		}
+		reports.put(new Vector3i(b.pos), reports.getInt(b.pos) + 1);
 		FactionManager fm = state.getFactionManager();
 		IntFunction<String> name = id -> {
 			Faction f = fm.getFaction(id);
@@ -1499,6 +1520,37 @@ public final class BattleTracker {
 				break;
 			}
 		}
+	}
+
+	/** The same sector or one of the 26 around it. */
+	static boolean adjacent(Vector3i a, Vector3i b) {
+		return Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1 && Math.abs(a.z - b.z) <= 1;
+	}
+
+	/**
+	 * Folds {@code from}'s tallies into {@code into}, the battle next door it was part of.
+	 * ponytail: committed strength is summed, so a ship that crossed between the sectors counts twice.
+	 */
+	static void merge(Battle from, Battle into) {
+		for (Side f : from.sides.values()) {
+			Side s = into.side(f.faction);
+			s.hitsTaken += f.hitsTaken;
+			s.lost += f.lost;
+			s.lostRating += f.lostRating;
+			s.survivors |= f.survivors;
+			s.withdrew |= f.withdrew;
+			s.attacking |= f.attacking;
+			s.committedRating += f.committedRating;
+			s.committedShips += f.committedShips;
+		}
+		for (var e : from.units.entrySet()) {
+			BattleReports.Unit was = into.units.get(e.getKey());
+			if (was == null ? into.units.size() < MAX_UNITS : !was.lost()) {
+				into.units.put(e.getKey(), e.getValue());
+			}
+		}
+		into.start = Math.min(into.start, from.start);
+		into.observed |= from.observed;
 	}
 
 	/** Server: the faction that owns the system {@code pos} is in, or 0. */
@@ -1714,26 +1766,113 @@ public final class BattleTracker {
 	 */
 	public Tag adminTag(GameServerState state, long now) {
 		FactionManager fm = state.getFactionManager();
-		Tag[] t = new Tag[battles.size() + 2];
-		t[0] = new Tag(Tag.Type.STRING, null, adminReport(state, now));
-		int i = 1;
-		for (Battle b : battles.values()) {
-			StringBuilder sides = new StringBuilder();
-			for (Side s : b.sides.values()) {
-				Faction f = fm.getFaction(s.faction);
-				sides.append(!sides.isEmpty() ? "  vs  " : "").append(f != null ? f.getName() : "Faction " + s.faction);
+		List<Tag> t = new ArrayList<>();
+		t.add(new Tag(Tag.Type.STRING, null, adminReport(state, now)));
+		IntOpenHashSet shown = new IntOpenHashSet();
+		for (Battle first : battles.values()) {
+			if (shown.contains(first.sectorId)) {
+				continue;
 			}
-			String status = (b.paused ? "PAUSED " : b.heldAt > 0 ? "HELD " : "") + (softSectors.contains(b.sectorId) ? "SOFT" : "WATCHED");
-			String age = clock(now - b.start) + (b.lastHit > 0 ? ", hit " + clock(now - b.lastHit) + " ago" : ", no hits");
-			t[i++] = new Tag(Tag.Type.STRUCT, null, new Tag[]{
-					new Tag(Tag.Type.INT, null, b.sectorId), new Tag(Tag.Type.STRING, null, b.pos.toString()),
-					new Tag(Tag.Type.STRING, null, status), new Tag(Tag.Type.STRING, null, fmt(b.avgMs)),
-					new Tag(Tag.Type.INT, null, b.entities), new Tag(Tag.Type.STRING, null, age),
+			List<Battle> all = cluster(first);
+			Battle b = all.get(0);
+			IntOpenHashSet factions = new IntOpenHashSet();
+			boolean paused = false, held = false, soft = true;
+			double ms = 0;
+			int entities = 0;
+			long start = Long.MAX_VALUE, lastHit = 0;
+			for (Battle c : all) {
+				shown.add(c.sectorId);
+				factions.addAll(c.sides.keySet());
+				paused |= c.paused;
+				held |= c.heldAt > 0;
+				soft &= softSectors.contains(c.sectorId);
+				ms += c.avgMs;
+				entities += c.entities;
+				start = Math.min(start, c.start);
+				lastHit = Math.max(lastHit, c.lastHit);
+			}
+			StringBuilder sides = new StringBuilder();
+			for (int faction : factions) {
+				Faction f = fm.getFaction(faction);
+				sides.append(!sides.isEmpty() ? "  vs  " : "").append(f != null ? f.getName() : "Faction " + faction);
+			}
+			String status = (paused ? "PAUSED " : held ? "HELD " : "") + (soft ? "SOFT" : "WATCHED");
+			String age = clock(now - start) + (lastHit > 0 ? ", hit " + clock(now - lastHit) + " ago" : ", no hits");
+			String pos = b.pos + (all.size() > 1 ? " +" + (all.size() - 1) : "");
+			t.add(new Tag(Tag.Type.STRUCT, null, new Tag[]{
+					new Tag(Tag.Type.INT, null, b.sectorId), new Tag(Tag.Type.STRING, null, pos),
+					new Tag(Tag.Type.STRING, null, status), new Tag(Tag.Type.STRING, null, fmt(ms)),
+					new Tag(Tag.Type.INT, null, entities), new Tag(Tag.Type.STRING, null, age),
 					new Tag(Tag.Type.STRING, null, sides.toString()), new Tag(Tag.Type.BYTE, null, (byte) (b.paused ? 1 : 0)),
-					FinishTag.INST});
+					FinishTag.INST}));
 		}
-		t[i] = FinishTag.INST;
-		return new Tag(Tag.Type.STRUCT, null, t);
+		t.add(FinishTag.INST);
+		return new Tag(Tag.Type.STRUCT, null, t.toArray(new Tag[0]));
+	}
+
+	/**
+	 * {@code b} and every battle joined to it through adjacent sectors: what the profiler shows as one
+	 * battle. Lowest sector id first, so a row keeps its key while that sector fights.
+	 */
+	List<Battle> cluster(Battle b) {
+		List<Battle> out = new ArrayList<>();
+		out.add(b);
+		for (int i = 0; i < out.size(); i++) {
+			for (Battle n : battles.values()) {
+				if (!out.contains(n) && adjacent(n.pos, out.get(i).pos)) {
+					out.add(n);
+				}
+			}
+		}
+		out.sort((x, y) -> Integer.compare(x.sectorId, y.sectorId));
+		return out;
+	}
+
+	/**
+	 * Server: the battles {@code faction} and {@code enemy} are both fighting right now, for anyone in
+	 * {@code faction}: what the war's BATTLES dialog lists above its reports, adjacent sectors as one
+	 * (see {@link #cluster}). Rows are {sector, sides, age, ships {@code faction} lost, ships everyone else
+	 * lost, other sectors in it}; nothing about server load.
+	 */
+	public Tag liveTag(GameServerState state, int faction, int enemy, long now) {
+		FactionManager fm = state.getFactionManager();
+		List<Tag> rows = new ArrayList<>();
+		IntOpenHashSet shown = new IntOpenHashSet();
+		for (Battle first : battles.values()) {
+			if (shown.contains(first.sectorId)) {
+				continue;
+			}
+			List<Battle> all = cluster(first);
+			Int2ObjectOpenHashMap<int[]> lost = new Int2ObjectOpenHashMap<>();
+			long start = Long.MAX_VALUE;
+			for (Battle c : all) {
+				shown.add(c.sectorId);
+				start = Math.min(start, c.start);
+				for (Side s : c.sides.values()) {
+					lost.computeIfAbsent(s.faction, k -> new int[1])[0] += s.lost;
+				}
+			}
+			if (!lost.containsKey(faction) || !lost.containsKey(enemy)) {
+				continue;
+			}
+			StringBuilder sides = new StringBuilder();
+			int ours = 0, theirs = 0;
+			for (var e : lost.int2ObjectEntrySet()) {
+				Faction f = fm.getFaction(e.getIntKey());
+				sides.append(!sides.isEmpty() ? "  vs  " : "").append(f != null ? f.getName() : "Faction " + e.getIntKey());
+				if (e.getIntKey() == faction) {
+					ours += e.getValue()[0];
+				} else {
+					theirs += e.getValue()[0];
+				}
+			}
+			rows.add(new Tag(Tag.Type.STRUCT, null, new Tag[]{
+					new Tag(Tag.Type.VECTOR3i, null, new Vector3i(all.get(0).pos)), new Tag(Tag.Type.STRING, null, sides.toString()),
+					new Tag(Tag.Type.STRING, null, clock(now - start)), new Tag(Tag.Type.INT, null, ours),
+					new Tag(Tag.Type.INT, null, theirs), new Tag(Tag.Type.INT, null, all.size() - 1), FinishTag.INST}));
+		}
+		rows.add(FinishTag.INST);
+		return new Tag(Tag.Type.STRUCT, null, rows.toArray(new Tag[0]));
 	}
 
 	/** The header above the battle list: totals, the queue and what ended lately. */

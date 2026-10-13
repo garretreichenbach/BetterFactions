@@ -36,6 +36,7 @@ public final class DiplomacyAcceptance_test {
         shippedPresetsLoad();
         shippedPresetsDiffer();
         everyShippedRuleSaysNoInItsOwnWords();
+        everyShippedPresetSuesForPeace();
         refusalsSurviveXml();
         whatIsDemandedRatherThanOffered();
         casusBelliDefaultsAndOverrides();
@@ -206,6 +207,18 @@ public final class DiplomacyAcceptance_test {
                 assert !refusal.contains("starmade:")
                         : name + " refusal for '" + treatyId + "' leaks a type id: " + refusal;
             }
+        }
+    }
+
+    /** A beaten NPC asks for peace on its own; a preset that dropped the reaction fights to the last ship. */
+    private static void everyShippedPresetSuesForPeace() throws Exception {
+        for (String name : presetFiles()) {
+            boolean sues = false;
+            for (DiplomacyReaction r : loadPreset(name).reactions) {
+                sues |= r.reaction == DiplomacyReaction.ConditionReaction.PROPOSE_TREATY && r.treatyId == null
+                        && r.condition.conditions.stream().anyMatch(c -> c instanceof DiplomacyCondition d && d.type == DiplomacyCondition.ConditionType.WEARINESS && d.argumentValue > 0);
+            }
+            assert sues : name + " never sues for peace when losing";
         }
     }
 

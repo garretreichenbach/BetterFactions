@@ -31,8 +31,13 @@
 		"ShipyardRepairComponentsMixin",
 		"ShipyardRepairRefundMixin",
 		"ShipyardRepairGoalMixin",
+		"ShipyardInputsButtonMixin",
 		"MapInterceptMixin",
-		"FleetMissionLabelMixin"
+		"MapJammedFleetMixin",
+		"FleetMissionLabelMixin",
+		"FleetMassColumnMixin",
+		"FleetMemberMassColumnMixin",
+		"FleetMemberMassMixin"
 	],
 	"client": [],
 	"server": []

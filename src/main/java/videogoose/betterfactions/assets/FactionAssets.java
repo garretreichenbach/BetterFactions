@@ -39,6 +39,10 @@ public class FactionAssets {
          */
         public byte type;
         public Vector3i sector = new Vector3i();
+        /**
+         * Mass with docked entities, or -1 when the server did not have it loaded.
+         */
+        public double mass = -1;
 
         public Asset() {
         }
@@ -55,6 +59,7 @@ public class FactionAssets {
             out.writeUTF(name != null ? name : "");
             out.writeByte(type);
             sector.serialize(out);
+            out.writeDouble(mass);
         }
 
         static Asset deserialize(DataInput in) throws IOException {
@@ -63,6 +68,7 @@ public class FactionAssets {
             a.name = in.readUTF();
             a.type = in.readByte();
             a.sector = Vector3i.deserializeStatic(in);
+            a.mass = in.readDouble();
             return a;
         }
     }

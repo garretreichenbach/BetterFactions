@@ -64,11 +64,27 @@ public final class TreatyNames {
      * @return a non-empty name, always
      */
     public static String defaultName(TreatyType type, long seed, Tokens tokens) {
-        if (type == null) {
-            return "Agreement";
-        }
+        return type == null ? "Agreement" : defaultName(type, type.getNameTemplates(), seed, tokens);
+    }
+
+    /**
+     * A war a bound faction declares on the one holding it. {@code {from}} is the rebel.
+     */
+    public static final String[] INDEPENDENCE_WAR = {"The {from} War of Independence",
+            "The {fromHome} Rebellion", "The {from} Uprising"};
+    /**
+     * A war declared to make the target a vassal. {@code {to}} is the one to be subjugated.
+     */
+    public static final String[] SUBJUGATION_WAR = {"The Subjugation of {to}", "The Conquest of {toHome}",
+            "The {to} Subjugation"};
+
+    /**
+     * As {@link #defaultName(TreatyType, long, Tokens)}, but from templates the caller picked because
+     * of who the signatories are to each other, rather than the type's own.
+     */
+    public static String defaultName(TreatyType type, String[] templates, long seed, Tokens tokens) {
         Tokens t = tokens == null ? new Tokens() : tokens;
-        List<String> usable = candidates(type.getNameTemplates(), t);
+        List<String> usable = candidates(templates, t);
         if (usable.isEmpty()) {
             return type.getDisplayName();
         }

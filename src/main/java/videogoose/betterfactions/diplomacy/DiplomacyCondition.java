@@ -156,6 +156,8 @@ public class DiplomacyCondition extends DiplomacyConditionGroup {
                 return Lng.str("you have no friend in common");
             case IS_FACTION_TYPE:
                 return Lng.str("they do not deal with your kind");
+            case WEARINESS:
+                return Lng.str("they have not lost enough to want out");
             default:
                 return Lng.str("they are not satisfied");
         }
@@ -206,6 +208,8 @@ public class DiplomacyCondition extends DiplomacyConditionGroup {
                 return ent.calculateStatus(DiplomacyEntity.DiplStatusType.ALLIANCE_WITH_FRIENDS) >= argumentValue;
             case IS_FACTION_TYPE:
                 return ent.isOfKind(argumentText);
+            case WEARINESS:
+                return ent.getWeariness() >= argumentValue;
             case ACTION_COUNTER:
                 return ent.getActionCount(argumentAction) >= argumentValue;
             case ACTION_PERSISTED:
@@ -281,6 +285,7 @@ public class DiplomacyCondition extends DiplomacyConditionGroup {
         SHARES_ENEMY("How many of our enemies they are also at war with, equal or bigger than X", false, false, true),
         SHARES_FRIEND("How many of our friends they are also allied with, equal or bigger than X", false, false, true),
         IS_FACTION_TYPE("They are of this kind. Argument: PLAYER, NPC or PIRATE", false, false, false, true),
+        WEARINESS("How badly our recent battles have gone, against anyone: 0 is no recent losses, 1 is the worst losing streak there is. Equal or bigger than X", false, false, true),
         ;
 
         public final String desc;

@@ -63,7 +63,7 @@ public final class TreatyTypeRegistry {
      */
     private static void registerVanilla() {
         register(VANILLA, new TreatyType.Builder("war")
-                .displayName("War").asymmetric().implies(FactionRelation.RType.ENEMY).unilateral()
+                .displayName("War").asymmetric().implies(FactionRelation.RType.ENEMY).unilateral().unbreakable()
                 .names("The {from}-{to} War", "The {toHome} Campaign",
                         "The War for {ceded}", "The {ceded} War"));
         register(VANILLA, new TreatyType.Builder("non_aggression")

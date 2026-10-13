@@ -48,34 +48,38 @@ public abstract class ShipyardDockingMixin {
 	/**
 	 * Keeps ships on their way to the yard from flying into each other: the vanilla formation's separation
 	 * (FleetFormationingAbstract), a push away from every nearby entity in the sector with an up/down bias so two
-	 * ships slide past rather than stall nose to nose. The yard itself is not pushed off from.
+	 * ships slide past rather than stall nose to nose. Only runs before the yard captures the ship, so the yard is
+	 * pushed off from too, fading out from {@link #SLOW} of the entrance to nothing at capture so it cannot hold the
+	 * ship back from the entrance.
 	 */
 	@Unique
-	private void betterFactions$separate(Ship ship, SegmentController yard) {
+	private void betterFactions$separate(Ship ship, SegmentController yard, float distToEntrance) {
 		if (ship.getProximityObjects().isEmpty()) {
 			return;
 		}
+		float yardWeight = Math.max(0, Math.min(1, (distToEntrance - ShipyardRepairs.Approach.CAPTURE) / (SLOW - ShipyardRepairs.Approach.CAPTURE)));
 		Vector3f from = ship.getWorldTransform().origin;
 		Vector3f prox = new Vector3f(ship.proximityVector);
-		boolean has = false;
+		float strength = 0; //the strongest push any one entity asks for
 		for (int id : ship.getProximityObjects()) {
 			if (ship.getState().getLocalAndRemoteObjectContainer().getLocalObjects().get(id) instanceof SegmentController c
-					&& c != yard && c.getSectorId() == ship.getSectorId()) {
+					&& c.getSectorId() == ship.getSectorId()) {
+				float weight = c == yard ? yardWeight : 1;
 				Vector3f away = new Vector3f();
 				away.sub(from, c.getWorldTransform().origin);
-				if (away.lengthSquared() > 0) {
+				if (weight > 0 && away.lengthSquared() > 0) {
 					away.normalize();
-					prox.add(away);
-					has = true;
+					prox.scaleAdd(weight, away, prox);
+					strength = Math.max(strength, weight);
 				}
 			}
 		}
-		if (!has) {
+		if (strength == 0) {
 			return;
 		}
 		prox.y += prox.y > 0 ? 0.5f : -0.5f;
 		prox.normalize();
-		prox.scale(10);
+		prox.scale(10 * strength);
 		if (movingDir.lengthSquared() > 0) {
 			movingDir.normalize();
 			movingDir.scale(0.9f);
@@ -106,13 +110,16 @@ public abstract class ShipyardDockingMixin {
 		}
 
 		Vector3f target = a.entrance(ship);
-		ai.setDockingTarget(a.yard); //so its avoidance steering does not push it off the yard
 		movingDir.sub(target, ship.getWorldTransform().origin);
 		dist = movingDir.length();
 		RigidBody body = ship.getPhysicsDataContainer().getObject() instanceof RigidBody b ? b : null;
 		long now = System.currentTimeMillis();
 
-		if (body != null && a.leading(dist)) {
+		boolean leading = body != null && a.leading(dist);
+		//vanilla avoidance steers off everything but the docking target: off the yard while far out, not once close in
+		//(where our own fading push takes over) or once the yard has it
+		ai.setDockingTarget(leading || dist < SLOW ? a.yard : null);
+		if (leading) {
 			movingDir.set(0, 0, 0); //the yard flies it from here, not its thrusters
 			dist = a.lead(ship, body);
 		} else {
@@ -131,7 +138,7 @@ public abstract class ShipyardDockingMixin {
 					movingDir.set(0, 0, 0.01f); //keeps physics awake, as vanilla does
 				}
 			}
-			betterFactions$separate(ship, a.yard);
+			betterFactions$separate(ship, a.yard, dist);
 		}
 		a.measured(dist);
 

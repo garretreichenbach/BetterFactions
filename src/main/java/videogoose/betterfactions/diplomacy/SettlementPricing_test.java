@@ -31,6 +31,10 @@ public class SettlementPricing_test {
         //leverage stops counting at the clamp
         assert SettlementPricing.need(true, true, 99, PEACE) == SettlementPricing.need(true, true, SettlementPricing.LEVERAGE_CLAMP, PEACE);
         //anything but peace is not for sale when the archetype says no, and costs nothing when it says yes
+        //a beaten NPC asks less to stop, down to nothing, and will give more; weariness never buys an alliance
+        assert SettlementPricing.need(true, false, 0, PEACE, 0.5) == 250 && SettlementPricing.need(true, false, 0, PEACE, 1) == 0;
+        assert SettlementPricing.need(true, true, 0, PEACE, 1) == -1000;
+        assert SettlementPricing.need(false, false, 0, PEACE, 1) == Double.POSITIVE_INFINITY;
         assert SettlementPricing.need(false, false, 6, PEACE) == Double.POSITIVE_INFINITY;
         assert SettlementPricing.need(false, true, 6, PEACE) == 0;
     }

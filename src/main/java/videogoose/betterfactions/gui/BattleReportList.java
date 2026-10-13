@@ -27,12 +27,19 @@ public class BattleReportList extends ScrollableTableList<BattleReports.Report> 
 	private static final Vector4f DRAWN = new Vector4f(0.44f, 0.48f, 0.52f, 1.0f);
 
 	private final GUIElement parent;
+	/** Which reports to list; a war's dialog lists only those against its enemy. */
+	private final java.util.function.Predicate<BattleReports.Report> shown;
 	/** The answer version this list was built from; a reply landing after the first draw rebuilds it. */
 	private int builtFrom = -1;
 
 	public BattleReportList(InputState state, GUIElement p) {
+		this(state, p, r -> true);
+	}
+
+	public BattleReportList(InputState state, GUIElement p, java.util.function.Predicate<BattleReports.Report> shown) {
 		super(state, 100, 100, p);
 		this.parent = p;
+		this.shown = shown;
 	}
 
 	@Override
@@ -88,7 +95,7 @@ public class BattleReportList extends ScrollableTableList<BattleReports.Report> 
 	@Override
 	protected Collection<BattleReports.Report> getElementList() {
 		List<BattleReports.Report> r = BattleReports.received();
-		return r == null ? Collections.emptyList() : r;
+		return r == null ? Collections.emptyList() : r.stream().filter(shown).toList();
 	}
 
 	@Override

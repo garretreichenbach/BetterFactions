@@ -37,6 +37,8 @@ import videogoose.betterfactions.diplomacy.TreatyTypeRegistry;
 import videogoose.betterfactions.gui.FactionPanelTabs;
 import videogoose.betterfactions.net.BFPacket;
 import videogoose.betterfactions.repair.FactionDesigns;
+import videogoose.betterfactions.civics.CivicRegistry;
+import videogoose.betterfactions.civics.Civics;
 import videogoose.betterfactions.fleet.FleetIntercepts;
 import videogoose.betterfactions.repair.ShipyardRepairs;
 
@@ -99,10 +101,12 @@ public final class BetterFactions extends StarMod {
 	public void onDisable() {
 		//drops types other mods registered with us, so a re-enable does not stack duplicates
 		TreatyTypeRegistry.unregisterAll();
+		CivicRegistry.unregisterAll();
 		if (GameServerState.instance != null) {
 			BFStore.save(DiplomacyManager.server());
 			BFStore.save(BattleTracker.get());
 			BFStore.save(FactionDesigns.server());
+			BFStore.save(Civics.server());
 			BFStore.save(ShipyardRepairs.get());
 			BFStore.save(FleetIntercepts.get());
 		}
@@ -139,6 +143,8 @@ public final class BetterFactions extends StarMod {
 			BFStore.load(BattleTracker.get());
 			FactionDesigns.server().clear();
 			BFStore.load(FactionDesigns.server());
+			Civics.server().clear();
+			BFStore.load(Civics.server());
 			ShipyardRepairs.reset();
 			BFStore.load(ShipyardRepairs.get());
 			FleetIntercepts.reset();
@@ -152,6 +158,7 @@ public final class BetterFactions extends StarMod {
 					BFStore.save(DiplomacyManager.server());
 					BFStore.save(BattleTracker.get());
 					BFStore.save(FactionDesigns.server());
+					BFStore.save(Civics.server());
 					BFStore.save(ShipyardRepairs.get());
 					BFStore.save(FleetIntercepts.get());
 				}
@@ -217,7 +224,10 @@ public final class BetterFactions extends StarMod {
 			}
 		}, this);
 
-		ClientDisconnectListener.TYPE.register(state -> DiplomacyManager.resetClient(), this);
+		ClientDisconnectListener.TYPE.register(state -> {
+			DiplomacyManager.resetClient();
+			Civics.client().clear();
+		}, this);
 	}
 
 	@Override

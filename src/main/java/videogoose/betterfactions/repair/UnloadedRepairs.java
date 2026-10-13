@@ -246,7 +246,7 @@ final class UnloadedRepairs {
 		}
 	}
 
-	private static BlueprintEntry blueprint(String name) {
+	static BlueprintEntry blueprint(String name) {
 		try {
 			return BluePrintController.active.getBlueprint(name);
 		} catch (Exception ex) {

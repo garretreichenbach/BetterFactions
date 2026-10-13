@@ -29,7 +29,30 @@ public final class BattleTracker_test {
 		edges();
 		retreats();
 		restart();
+		adjacent();
 		System.out.println("BattleTracker_test: OK");
+	}
+
+	private static void adjacent() {
+		assert BattleTracker.adjacent(new Vector3i(0, 0, 0), new Vector3i(1, -1, 1));
+		assert !BattleTracker.adjacent(new Vector3i(0, 0, 0), new Vector3i(2, 0, 0));
+		BattleTracker.Battle a = new BattleTracker.Battle(1, new Vector3i(0, 0, 0), 500);
+		BattleTracker.Battle b = new BattleTracker.Battle(2, new Vector3i(1, 0, 0), 100);
+		a.side(10).lost = 2;
+		b.side(10).lost = 1;
+		b.side(20).lost = 4;
+		b.side(20).survivors = true;
+		BattleTracker.merge(a, b);
+		assert b.sides.get(10).lost == 3 && b.sides.get(20).lost == 4 && b.sides.get(20).survivors;
+		assert b.start == 100;
+
+		BattleTracker t = new BattleTracker();
+		BattleTracker.Battle x = t.open(5, new Vector3i(0, 0, 0), 0);
+		t.open(3, new Vector3i(1, 0, 0), 0);
+		t.open(4, new Vector3i(2, 1, 0), 0); //next to the second, not the first
+		t.open(9, new Vector3i(9, 9, 9), 0);
+		List<BattleTracker.Battle> c = t.cluster(x);
+		assert c.size() == 3 && c.get(0).sectorId == 3 : c.size();
 	}
 
 	private static void reports() {

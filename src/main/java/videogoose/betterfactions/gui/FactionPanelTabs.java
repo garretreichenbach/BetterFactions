@@ -24,6 +24,7 @@ import org.schema.schine.graphicsengine.forms.gui.newgui.GUIMainWindow;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUITabbedContent;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUITextOverlayTable;
 import videogoose.betterfactions.DiplomacyManager;
+import videogoose.betterfactions.civics.Civics;
 import videogoose.betterfactions.Perms;
 import videogoose.betterfactions.assets.FactionAssets;
 import videogoose.betterfactions.battle.BattleReports;
@@ -82,6 +83,21 @@ public class FactionPanelTabs implements GUIActiveInterface {
 		settingsTab = factionPanel.addTab(TAB_SETTINGS);
 		createSettingsPane();
 		factionPanel.activeInterface = this;
+		promptCivics();
+	}
+
+	/** Once a session: a faction with no civics yet (new, or from before civics) is asked to pick them. */
+	private static boolean civicsPrompted;
+
+	private void promptCivics() {
+		Faction own = getOwnFaction();
+		//version 0: the join sync has not arrived, so we cannot tell yet
+		if (civicsPrompted || own == null || Civics.client().version() == 0 || !Civics.client().of(own.getIdFaction()).civics.isEmpty()
+				|| !getOwnPlayer().getFactionController().hasPermissionEditPermission()) {
+			return;
+		}
+		civicsPrompted = true;
+		CivicChooser.open(getState(), 0, true);
 	}
 
 	public GameClientState getState() {
@@ -169,12 +185,12 @@ public class FactionPanelTabs implements GUIActiveInterface {
      * Left column, in px: wide enough for name, relation and the treaty summary together.
      */
     private static final int DIPLOMACY_LIST_WIDTH = 480;
-    private static final int DIPLOMACY_HEADER_HEIGHT = 116;
-    /**
-     * The emblem corner, top right of the header. Square, and big enough to read a logo at a glance
-     * without competing with the name beside it.
-     */
-    private static final int DIPLOMACY_EMBLEM_SIZE = 64;
+    /** Relation and opinion, then the power comparison: two lines. */
+    private static final int DIPLOMACY_HEADER_HEIGHT = 56;
+    /** About eight rows before the list scrolls; the selected faction's identity gets the rest of the column. */
+    private static final int DIPLOMACY_FACTION_LIST_HEIGHT = 240;
+    /** The emblem in the top right of the vitals box, beside the name. */
+    private static final int VITALS_EMBLEM_SIZE = 44;
     /**
      * Name, founding, chair and the charter text.
      */
@@ -201,6 +217,8 @@ public class FactionPanelTabs implements GUIActiveInterface {
     private DiplomacyTreatyList treatyList;
     private DiplomacyOpinionList opinionList;
     private GUIAnchor diplomacyHeader;
+    private GUIAnchor diplomacyVitals;
+    private GUIAnchor diplomacyAbout;
     private GUIContentPane federationTab;
     private FederationList federationList;
     private FederationMemberList federationMemberList;
@@ -235,6 +253,13 @@ public class FactionPanelTabs implements GUIActiveInterface {
 
         diplomacyTab.addDivider(DIPLOMACY_LIST_WIDTH);
 
+        //the list, then the selected faction under it: what they are, then what they say about themselves
+        diplomacyTab.setTextBoxHeightLast(0, DIPLOMACY_FACTION_LIST_HEIGHT);
+        diplomacyTab.addNewTextBox(0, OVERVIEW_VITALS_HEIGHT);
+        diplomacyTab.addNewTextBox(0, 10);
+        diplomacyVitals = diplomacyTab.getContent(0, 1);
+        diplomacyAbout = diplomacyTab.getContent(0, 2);
+
         diplomacyFactionList = new DiplomacyFactionList(getState(), diplomacyTab.getContent(0, 0), this);
         diplomacyFactionList.onInit();
         diplomacyTab.getContent(0, 0).attach(diplomacyFactionList);
@@ -260,6 +285,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
             onSelectFaction(selectedDiplomacyFaction);
         } else {
             fillDiplomacyHeader(null);
+            fillDiplomacyIdentity(null);
         }
     }
 
@@ -341,11 +367,13 @@ public class FactionPanelTabs implements GUIActiveInterface {
      * so on its own it says nothing a player can act on.
      */
     private static String powerBreakdown(Faction f) {
-        return Lng.str("(%s systems, %s active, %s/period, %s combat)",
+        long momentum = Math.round(FactionStrength.momentum(f) * 100);
+        return Lng.str("(%s systems, %s active, %s/period, %s combat%s)",
                 FactionStrength.claimedSystems(f),
                 StringTools.formatPointZero(FactionStrength.activeMembers(f)),
                 StringTools.formatPointZero(FactionStrength.pointSurplus(f)),
-                Math.round(FactionStrength.combatRating(f)));
+                Math.round(FactionStrength.combatRating(f)),
+                momentum == 0 ? "" : Lng.str(", %s from recent battles", (momentum > 0 ? "+" : "") + momentum + "%"));
     }
 
 
@@ -389,6 +417,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
             opinionList.setToFaction(f);
         }
         fillDiplomacyHeader(f);
+        fillDiplomacyIdentity(f);
     }
 
     /**
@@ -566,7 +595,18 @@ public class FactionPanelTabs implements GUIActiveInterface {
         pointsDetail.setPos(OVERVIEW_IDENTITY_WIDTH - 78, 148, 0);
 
         box.attach(name);
-        box.attach(pointsDetail);
+        if (f == getOwnFaction()) {
+            box.attach(pointsDetail);
+        }
+        //top right, clear of the lines on the left; draws nothing when they have no emblem
+        GUIFactionEmblem emblem = new GUIFactionEmblem(getState(), VITALS_EMBLEM_SIZE, () -> f) {
+            @Override
+            public void draw() {
+                setPos(box.getWidth() - VITALS_EMBLEM_SIZE - 8, 6, 0);
+                super.draw();
+            }
+        };
+        box.attach(emblem);
         box.attach(size);
         box.attach(power);
         box.attach(powerBar(box, f));
@@ -666,14 +706,51 @@ public class FactionPanelTabs implements GUIActiveInterface {
      * The one part of the card that is prose, so it takes whatever room is left and scrolls when
      * there is more of it than that.
      */
+    /**
+     * The government in bold, then civics and description as wrapped prose. Two overlays because one
+     * cannot mix fonts; they scroll together.
+     */
     private void fillDescription(GUIAnchor box, Faction f) {
-        wrappedText(box, new Object() {
+        GUITextOverlay government = new GUITextOverlay(10, 10, FontLibrary.getBlenderProHeavy14(), getState());
+        government.setTextSimple(new Object() {
+            @Override
+            public String toString() {
+                String g = Civics.client().of(f.getIdFaction()).government();
+                return g == null ? "" : g;
+            }
+        });
+        government.setPos(2, 2, 0);
+
+        GUITextOverlayTable t = new GUITextOverlayTable(2, 2, getState());
+        t.autoHeight = true;
+        t.autoWrapOn = box;
+        t.setTextSimple(new Object() {
             @Override
             public String toString() {
                 String d = f.getDescription();
-                return d == null || d.trim().isEmpty() ? Lng.str("No description.") : d.trim();
+                d = d == null || d.trim().isEmpty() ? Lng.str("No description.") : d.trim();
+                String civics = Civics.client().of(f.getIdFaction()).names();
+                return civics.isEmpty() ? d : Lng.str("Civics: %s", civics) + BREAK + d;
             }
         });
+        t.onInit();
+
+        GUIAnchor content = new GUIAnchor(getState(), 10, 10) {
+            @Override
+            public void draw() {
+                int top = Civics.client().of(f.getIdFaction()).government() == null ? 0 : 20;
+                t.setPos(0, top, 0);
+                setWidth(box.getWidth());
+                setHeight(top + t.getHeight());
+                super.draw();
+            }
+        };
+        content.attach(government);
+        content.attach(t);
+        GUIScrollablePanel sc = new GUIScrollablePanel(10, 10, box, getState());
+        sc.setContent(content);
+        sc.onInit();
+        box.attach(sc);
     }
 
     /**
@@ -1189,12 +1266,6 @@ public class FactionPanelTabs implements GUIActiveInterface {
             @Override
             public String toString() {
                 StringBuilder b = new StringBuilder();
-                b.append(f.getName());
-                if (f.isNPC()) {
-                    b.append("  ").append(Lng.str("(NPC)"));
-                }
-                b.append(BREAK);
-
                 switch (getOwnRelationTo(f)) {
 					case ENEMY:
                         b.append(Lng.str("At war with you."));
@@ -1207,12 +1278,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
                         break;
                 }
                 b.append("  ").append(opinionLine(f)).append(BREAK);
-                b.append(powerLine(f)).append(BREAK);
-
-                String desc = f.getDescription();
-                if (desc != null && !desc.trim().isEmpty()) {
-                    b.append(desc.trim());
-                }
+                b.append(powerLine(f));
                 return b.toString();
             }
         });
@@ -1220,20 +1286,24 @@ public class FactionPanelTabs implements GUIActiveInterface {
         sc.setContent(t);
         sc.onInit();
         diplomacyHeader.attach(sc);
+    }
 
-        /*
-         * Top right, clear of the prose, because it is the one thing on this panel that identifies the
-         * faction at a glance rather than describing it. Draws nothing when they have no emblem, so the
-         * corner is simply empty rather than holding a placeholder that says so.
-         */
-        GUIFactionEmblem emblem = new GUIFactionEmblem(getState(), DIPLOMACY_EMBLEM_SIZE, () -> f) {
-            @Override
-            public void draw() {
-                setPos(diplomacyHeader.getWidth() - DIPLOMACY_EMBLEM_SIZE - 8, 8, 0);
-                super.draw();
-            }
-        };
-        diplomacyHeader.attach(emblem);
+    /**
+     * Who the selected faction is, in the left column under the list: the same vitals and prose the
+     * overview shows for our own faction, so a neighbour reads the way we read ourselves.
+     */
+    private void fillDiplomacyIdentity(Faction f) {
+        if (diplomacyVitals == null) {
+            return;
+        }
+        diplomacyVitals.getChilds().clear();
+        diplomacyAbout.getChilds().clear();
+        if (f == null) {
+            wrappedText(diplomacyAbout, Lng.str("Select a faction to see who they are."));
+            return;
+        }
+        fillVitals(diplomacyVitals, f);
+        fillDescription(diplomacyAbout, f);
     }
 
     /**

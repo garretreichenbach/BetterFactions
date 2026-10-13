@@ -11,6 +11,7 @@ import org.schema.game.common.data.fleet.Fleet;
 import org.schema.game.common.data.fleet.FleetCommandTypes;
 import org.schema.game.common.data.world.Sector;
 import org.schema.game.common.data.world.SimpleTransformableSendableObject;
+import org.schema.game.network.objects.remote.FleetCommand;
 import org.schema.game.server.ai.program.common.TargetProgram;
 import org.schema.schine.ai.AiEntityStateInterface;
 import org.schema.schine.ai.stateMachines.State;
@@ -107,9 +108,9 @@ public final class BattleWorldTests implements WorldTestExtension {
 				if (target == null) {
 					throw new IllegalArgumentException("battle setup: no entity '" + targetId + "'");
 				}
-				action = () -> fleet.sendFleetCommand(order, new Vector3i(sectorOf(target)));
+				action = () -> fleet.getFleetManager().executeCommand(new FleetCommand(order, fleet, new Vector3i(sectorOf(target))));
 			} else {
-				action = () -> fleet.sendFleetCommand(order);
+				action = () -> fleet.getFleetManager().executeCommand(new FleetCommand(order, fleet));
 			}
 		} else if (json.has("command")) {
 			String command = json.get("command").getAsString();

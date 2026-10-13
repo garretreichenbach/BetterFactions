@@ -3,6 +3,7 @@ package videogoose.betterfactions;
 import api.common.GameCommon;
 import org.schema.schine.resource.tag.Tag;
 import videogoose.betterfactions.battle.BattleTracker;
+import videogoose.betterfactions.civics.Civics;
 import videogoose.betterfactions.repair.FactionDesigns;
 import videogoose.betterfactions.fleet.FleetIntercepts;
 import videogoose.betterfactions.repair.ShipyardRepairs;
@@ -68,6 +69,14 @@ public final class BFStore {
 
 	public static void save(FactionDesigns d) {
 		write("designs", d.toTag());
+	}
+
+	public static void load(Civics c) {
+		read("civics", c::fromTag);
+	}
+
+	public static void save(Civics c) {
+		write("civics", c.toTag());
 	}
 
 	private static void read(String name, Consumer<Tag> into) {

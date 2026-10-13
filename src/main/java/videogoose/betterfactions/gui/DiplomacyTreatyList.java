@@ -7,10 +7,12 @@ import org.schema.game.client.controller.PlayerOkCancelInput;
 import org.schema.game.client.data.GameClientState;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.player.faction.FactionPermission;
+import org.schema.game.common.data.player.faction.FactionRelation;
 import videogoose.betterfactions.diplomacy.DiplomacyProposal;
 import videogoose.betterfactions.diplomacy.FactionTreaty;
 import videogoose.betterfactions.diplomacy.SettlementTerm;
 import videogoose.betterfactions.diplomacy.TreatyType;
+import videogoose.betterfactions.diplomacy.TreatyTypeRegistry;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.*;
@@ -95,6 +97,10 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
         //accepts the treaty permission. The server is still the gate; this only hides a button that
         //would be refused.
         TreatyType type = t.getType();
+        if (type != null && type.getKind() == TreatyType.Kind.DEMAND && t.to == own.getIdFaction()) {
+            //the vassal or tributary is released, it does not walk out
+            return false;
+        }
         boolean hostility = type == null || type.getImplies() == org.schema.game.common.data.player.faction.FactionRelation.RType.ENEMY;
         return p.hasRelationshipPermission(own) || (!hostility && Perms.has(own, p, Perms.TREATIES));
     }
@@ -303,8 +309,7 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
                 }) {
             @Override
             public void draw() {
-                TreatyType type = t.getType();
-                if (type != null && type.isBreakable() && mayBreak(t)) {
+                if (showBreak(t)) {
                     super.draw();
                 }
             }
@@ -333,7 +338,32 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
                 }) {
             @Override
             public void draw() {
-                if (DiplomacyProposeDialog.mayPropose(client(), client().getFaction())) {
+                if (showRename(t)) {
+                    //slides left into the break button's place when that one is hidden
+                    getPos().x = showBreak(t) ? 130 : 4;
+                    super.draw();
+                }
+            }
+        };
+
+        GUITextButton battlesButton = new GUITextButton(getState(), 120, 24, ColorPalette.NEUTRAL, Lng.str("VIEW BATTLES"),
+                new GUICallback() {
+                    @Override
+                    public boolean isOccluded() {
+                        return !isActive();
+                    }
+
+                    @Override
+                    public void callback(GUIElement callingGuiElement, MouseEvent event) {
+                        if (event.pressedLeftMouse()) {
+                            new WarBattlesDialog(client(), t).activate();
+                        }
+                    }
+                }) {
+            @Override
+            public void draw() {
+                if (TreatyTypeRegistry.WAR.equals(t.typeId)) {
+                    getPos().x = 4 + ((showBreak(t) ? 1 : 0) + (showRename(t) ? 1 : 0)) * 126;
                     super.draw();
                 }
             }
@@ -342,9 +372,34 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
         c.attach(scroll);
         c.attach(breakButton);
         c.attach(renameButton);
+        c.attach(battlesButton);
         breakButton.setPos(4, 30, 0);
         renameButton.setPos(130, 30, 0);
+        battlesButton.setPos(256, 30, 0);
         return c;
+    }
+
+    private boolean showBreak(FactionTreaty t) {
+        TreatyType type = t.getType();
+        return type != null && type.isBreakable() && mayBreak(t);
+    }
+
+    /**
+     * Whether a rename - the agreement offered again under a new name - is something the viewer can
+     * send and the server will take. A war or a federation is not offered at all (a war keeps the name
+     * it was declared with), nothing but peace is offered at war, and a one-sided agreement re-offered
+     * from the bound side would turn it around.
+     */
+    private boolean showRename(FactionTreaty t) {
+        TreatyType type = t.getType();
+        Faction own = client().getFaction();
+        if (type == null || own == null || !type.needsAcceptance() || !DiplomacyProposeDialog.mayPropose(client(), own)) {
+            return false;
+        }
+        if (!type.isSymmetric() && t.from != own.getIdFaction()) {
+            return false;
+        }
+        return other == null || client().getFactionManager().getRelation(own.getIdFaction(), other.getIdFaction()) != FactionRelation.RType.ENEMY;
     }
 
     private class TreatyRow extends ScrollableTableList.Row {

@@ -9,6 +9,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.common.data.fleet.Fleet;
 import org.schema.game.common.data.fleet.FleetCommandTypes;
+import org.schema.game.network.objects.remote.FleetCommand;
 import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.server.controller.BluePrintController;
 import org.schema.game.server.data.GameServerState;
@@ -173,7 +174,7 @@ public final class BattleCommands {
 			return;
 		}
 		//on sentry it fights whatever comes, and a fleet with orders stays cached while its owner is away
-		fleet.sendFleetCommand(FleetCommandTypes.SENTRY);
+		fleet.getFleetManager().executeCommand(new FleetCommand(FleetCommandTypes.SENTRY, fleet));
 		ctx.reply("[SUCCESS] " + fleetName + ": " + spawned + " x " + bp.getName() + " (" + Math.round(bp.getMass() * spawned)
 				+ " mass) for " + faction.getName() + " at " + sector + ", on sentry. Command it from your fleet menu.");
 	}

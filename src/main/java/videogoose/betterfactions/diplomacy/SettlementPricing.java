@@ -70,13 +70,24 @@ public final class SettlementPricing {
      * @param peaceValue   the archetype's price of peace between equals
      */
     public static double need(boolean peace, boolean ruleAccepts, double theirLead, double peaceValue) {
+        return need(peace, ruleAccepts, theirLead, peaceValue, 0);
+    }
+
+    /**
+     * @param weariness 0 to 1: how badly its recent battles have gone ({@link FactionStrength#momentum}
+     *                  below zero, over its cap). A beaten NPC asks less to stop, down to nothing, and
+     *                  gives up to twice as much. On top of {@code theirLead}, which already counts the
+     *                  losses as lost strength: this is the will to keep fighting, not the means.
+     */
+    public static double need(boolean peace, boolean ruleAccepts, double theirLead, double peaceValue, double weariness) {
         if (!peace) {
             //only peace is bought: an alliance the archetype will not make is not for sale
             return ruleAccepts ? 0 : Double.POSITIVE_INFINITY;
         }
         double lead = Math.clamp(theirLead, -LEVERAGE_CLAMP, LEVERAGE_CLAMP);
+        double w = Math.clamp(weariness, 0, 1);
         //willing: it concedes more the stronger they are; unwilling: it wants paying, less the stronger they are
-        return ruleAccepts ? -peaceValue * Math.pow(2, lead) : peaceValue * Math.pow(2, -lead);
+        return ruleAccepts ? -peaceValue * Math.pow(2, lead) * (1 + w) : peaceValue * Math.pow(2, -lead) * (1 - w);
     }
 
     /**
