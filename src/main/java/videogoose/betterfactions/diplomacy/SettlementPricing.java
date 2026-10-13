@@ -74,8 +74,8 @@ public final class SettlementPricing {
     }
 
     /**
-     * @param weariness 0 to 1: how badly its recent battles have gone ({@link FactionStrength#momentum}
-     *                  below zero, over its cap). A beaten NPC asks less to stop, down to nothing, and
+     * @param weariness 0 to 1: how badly its recent battles against this side have gone
+     *                  ({@link DiplomacyEntity#getWeariness()}). A beaten NPC asks less to stop, down to nothing, and
      *                  gives up to twice as much. On top of {@code theirLead}, which already counts the
      *                  losses as lost strength: this is the will to keep fighting, not the means.
      */

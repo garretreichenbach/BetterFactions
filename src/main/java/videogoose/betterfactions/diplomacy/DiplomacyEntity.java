@@ -1085,9 +1085,15 @@ public class DiplomacyEntity implements LogInterface {
         return Math.clamp(doublings, -STRENGTH_CLAMP, STRENGTH_CLAMP);
     }
 
-    /** How badly our own recent battles have gone, 0 to 1; see {@link FactionStrength#weariness}. */
+    /**
+     * How badly our recent battles against them have gone, 0 to 1; see {@code BattleReports.weariness}.
+     * Only against them: losing to one enemy is no reason to make peace with another. Server only - the
+     * reports are; a client, or a lone player, reads 0.
+     */
     public double getWeariness() {
-        return FactionStrength.weariness(getFaction());
+        Faction us = getFaction();
+        return us == null || !isFaction() ? 0
+                : videogoose.betterfactions.battle.BattleTracker.get().archive().weariness(us.getIdFaction(), (int) dbId, System.currentTimeMillis());
     }
 
     /**

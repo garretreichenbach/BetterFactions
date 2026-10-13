@@ -127,7 +127,7 @@ public final class BattleReports {
 	/** Power gained per fresh outright win (lost per loss); half for coming off better or worse. */
 	static final double MOMENTUM_PER_WIN = 0.05;
 	/** Momentum never moves power by more than this share either way. */
-	public static final double MOMENTUM_CAP = 0.25;
+	static final double MOMENTUM_CAP = 0.25;
 
 	/**
 	 * Server: every faction with recent results, to its momentum: a share of its power to add (or take
@@ -141,11 +141,11 @@ public final class BattleReports {
 			if (age >= MOMENTUM_MS) {
 				break; //newest first
 			}
-			int victor = r.winner != Integer.MIN_VALUE ? r.winner : r.favoured;
+			int victor = victor(r);
 			if (victor == Integer.MIN_VALUE || age < 0) {
 				continue;
 			}
-			double swing = MOMENTUM_PER_WIN * (r.winner != Integer.MIN_VALUE ? 1 : 0.5) * (1 - (double) age / MOMENTUM_MS);
+			double swing = swing(r, age);
 			for (Line l : r.sides) {
 				out.put(l.faction, out.get(l.faction) + (l.faction == victor ? swing : -swing));
 			}
@@ -154,6 +154,37 @@ public final class BattleReports {
 			e.setValue(Math.max(-MOMENTUM_CAP, Math.min(MOMENTUM_CAP, e.getDoubleValue())));
 		}
 		return out;
+	}
+
+	/**
+	 * Server: 0 to 1, how badly {@code faction}'s recent battles against {@code against} have gone - the
+	 * same swings as {@link #momentum}, counting only the battles both were sides in and only the ones
+	 * either of them won, over the same cap. Wins back against them make up for losses.
+	 */
+	public synchronized double weariness(int faction, int against, long now) {
+		double net = 0;
+		for (Report r : all) {
+			long age = now - r.time;
+			if (age >= MOMENTUM_MS) {
+				break;
+			}
+			int victor = victor(r);
+			if (age < 0 || (victor != faction && victor != against) || !r.involves(faction) || !r.involves(against)) {
+				continue;
+			}
+			net += victor == faction ? swing(r, age) : -swing(r, age);
+		}
+		return Math.max(0, Math.min(1, -net / MOMENTUM_CAP));
+	}
+
+	/** The side that held the field, else the side that came off better, else {@link Integer#MIN_VALUE}. */
+	private static int victor(Report r) {
+		return r.winner != Integer.MIN_VALUE ? r.winner : r.favoured;
+	}
+
+	/** What a report with a victor is worth to it, {@code age} after it was fought. */
+	private static double swing(Report r, long age) {
+		return MOMENTUM_PER_WIN * (r.winner != Integer.MIN_VALUE ? 1 : 0.5) * (1 - (double) age / MOMENTUM_MS);
 	}
 
 	private static final Object2LongOpenHashMap<String> answeredAt = new Object2LongOpenHashMap<>();

@@ -73,13 +73,7 @@ public final class FactionStrength {
      * Share of its power a faction is up (or down) on its recent battles: a run of wins makes it look
      * and count as stronger for a while, a run of losses weaker. Scales the whole number rather than
      * adding a term, so the shares the panel draws still add up.
-     *
-     * <p>{@link #weariness} is the losing half of it on a 0 to 1 scale: how much a beaten faction wants out.</p>
      */
-    public static double weariness(Faction f) {
-        return -Math.min(0, momentum(f)) / videogoose.betterfactions.battle.BattleReports.MOMENTUM_CAP;
-    }
-
     public static double momentum(Faction f) {
         return f == null ? 0 : videogoose.betterfactions.DiplomacyManager.of(f.isOnServer()).getCombatRatings().momentumOf(f.getIdFaction());
     }

@@ -2500,7 +2500,7 @@ public final class DiplomacyManager extends Observable {
         boolean rule = e.wouldAccept(offer.typeId, ruleUnmet);
         boolean peace = offer.typeId == null && getRelation(offer.a, offer.b) == FactionRelation.RType.ENEMY;
         double treatyValue = e.getConfig().getSettlementTreatyValue();
-        double need = SettlementPricing.need(peace, rule, e.getRelativeStrength(), e.getConfig().getSettlementPeaceValue(), FactionStrength.weariness(npc));
+        double need = SettlementPricing.need(peace, rule, e.getRelativeStrength(), e.getConfig().getSettlementPeaceValue(), e.getWeariness());
         double net = SettlementPricing.net(offer.terms, offer.b, offer.a, offer.b, treatyValue);
         if (net >= need) {
             return new NpcVerdict(true, null);

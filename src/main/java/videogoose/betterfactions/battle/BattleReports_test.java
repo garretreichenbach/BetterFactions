@@ -89,6 +89,19 @@ public final class BattleReports_test {
 		m.add(new BattleReports.Report(day, new Vector3i(), "v", "b", 1, false, Integer.MIN_VALUE, Integer.MIN_VALUE,
 				List.of(new BattleReports.Line(40, "A", 0, false), new BattleReports.Line(50, "B", 0, false)), List.of(), "Draw"));
 		assert !m.momentum(day).containsKey(40) : "an inconclusive battle moves nobody";
+		//weariness is per opponent: 20 lost to 30 often enough to want out, and has no quarrel with 10
+		assert m.weariness(20, 30, day) == 1 && m.weariness(30, 20, day) == 0 : "the winner is not weary";
+		assert m.weariness(20, 10, day) == 0 : "losing to one enemy is no reason to make peace with another";
+		BattleReports w = new BattleReports();
+		w.add(new BattleReports.Report(0, new Vector3i(), "v", "b", 1, false, 30, Integer.MIN_VALUE,
+				List.of(new BattleReports.Line(30, "Edge", 0, false), new BattleReports.Line(20, "Them", 1, false)), List.of(), "Loss"));
+		assert Math.abs(w.weariness(20, 30, 0) - BattleReports.MOMENTUM_PER_WIN / BattleReports.MOMENTUM_CAP) < 1e-9;
+		w.add(new BattleReports.Report(0, new Vector3i(), "v", "b", 1, false, 20, Integer.MIN_VALUE,
+				List.of(new BattleReports.Line(30, "Edge", 1, false), new BattleReports.Line(20, "Them", 0, false)), List.of(), "Revenge"));
+		assert w.weariness(20, 30, 0) == 0 : "a win back makes up for a loss";
+		w.add(new BattleReports.Report(0, new Vector3i(), "v", "b", 1, false, 40, Integer.MIN_VALUE,
+				List.of(new BattleReports.Line(40, "Third", 0, false), new BattleReports.Line(30, "Edge", 1, false), new BattleReports.Line(20, "Them", 1, false)), List.of(), "Third"));
+		assert w.weariness(20, 30, 0) == 0 : "a third side beating both is not 30 beating 20";
 		System.out.println("BattleReports_test: OK");
 	}
 }
