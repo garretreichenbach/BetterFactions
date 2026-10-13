@@ -1,7 +1,13 @@
 package videogoose.betterfactions.gui;
 
+import videogoose.betterfactions.BFConfig;
 import videogoose.betterfactions.DiplomacyManager;
+import videogoose.betterfactions.net.BFPacket;
 import java.util.Collection;
+import java.util.function.IntSupplier;
+
+import org.schema.game.client.controller.PlayerOkCancelInput;
+import org.schema.schine.resource.tag.Tag;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -53,6 +59,11 @@ public class DiplomacyOpinionList extends ScrollableTableList<OpinionModifier> {
      * Whose opinion entry is shown: the viewer's faction id, or their own player db id.
      */
     private boolean showingFaction = true;
+    /**
+     * Whose standing the ledger is read for when it is not the viewer's: another faction picked on
+     * the faction list. Null for the viewer's own.
+     */
+    private Faction viewpoint;
 
     public DiplomacyOpinionList(InputState state, GUIElement p) {
         super(state, 100, 100, p);
@@ -85,6 +96,11 @@ public class DiplomacyOpinionList extends ScrollableTableList<OpinionModifier> {
         flagDirty();
     }
 
+    public void setViewpoint(Faction viewpoint) {
+        this.viewpoint = viewpoint;
+        flagDirty();
+    }
+
     private GameClientState client() {
         return (GameClientState) getState();
     }
@@ -97,6 +113,9 @@ public class DiplomacyOpinionList extends ScrollableTableList<OpinionModifier> {
     }
 
     private long subjectId() {
+        if (viewpoint != null) {
+            return viewpoint.getIdFaction();
+        }
         return showingFaction && hasOwnFaction()
                 ? client().getPlayer().getFactionId()
                 : client().getPlayer().getDbId();
@@ -179,7 +198,7 @@ public class DiplomacyOpinionList extends ScrollableTableList<OpinionModifier> {
 
             @Override
             public void callback(GUIElement callingGuiElement, MouseEvent event) {
-                if (event.pressedLeftMouse() && hasOwnFaction()) {
+                if (event.pressedLeftMouse() && hasOwnFaction() && viewpoint == null) {
                     showingFaction = !showingFaction;
                     flagDirty();
                 }
@@ -187,11 +206,61 @@ public class DiplomacyOpinionList extends ScrollableTableList<OpinionModifier> {
         }, new Object() {
             @Override
             public String toString() {
+                if (viewpoint != null) {
+                    return Lng.str("OPINION OF: %s", viewpoint.getName().toUpperCase(Locale.ENGLISH));
+                }
                 return isShowingFaction() ? Lng.str("OPINION OF: YOUR FACTION") : Lng.str("OPINION OF: YOU");
             }
         }, HButtonType.BUTTON_BLUE_MEDIUM, FilterRowStyle.FULL, FilterPos.BOTTOM);
 
+        spendButton(BFPacket.Kind.GIFT, FilterRowStyle.LEFT, HButtonType.BUTTON_BLUE_MEDIUM,
+                BFConfig::giftCost, Lng.str("GIFT"),
+                Lng.str("Send %s a gift worth %s faction points?\nThe points are spent. Gifts sent close together are worth less."));
+        spendButton(BFPacket.Kind.FABRICATE_CLAIM, FilterRowStyle.RIGHT, HButtonType.BUTTON_RED_MEDIUM,
+                BFConfig::fabricateClaimCost, Lng.str("FABRICATE CLAIM"),
+                Lng.str("Fabricate a claim on %s for %s faction points?\nOnce it is ready it justifies any war goal against them."));
+
         activeSortColumnIndex = 0;
+    }
+
+    /**
+     * A button that spends faction points on the faction shown, after a confirmation. The server
+     * checks everything again and says why if it refuses.
+     *
+     * @param question formatted with the faction's name and the cost
+     */
+    private void spendButton(BFPacket.Kind kind, FilterRowStyle side, HButtonType style, IntSupplier cost, String label, String question) {
+        addButton(new GUICallback() {
+            @Override
+            public boolean isOccluded() {
+                return !isActive();
+            }
+
+            @Override
+            public void callback(GUIElement callingGuiElement, MouseEvent event) {
+                Faction target = toFaction;
+                if (!event.pressedLeftMouse() || target == null || !hasOwnFaction() || cost.getAsInt() <= 0
+                        || !DiplomacyProposeDialog.mayPropose(client(), client().getFaction())) {
+                    return;
+                }
+                new PlayerOkCancelInput("BF_SPEND", getState(), 440, 200, label, String.format(question, target.getName(), cost.getAsInt())) {
+                    @Override
+                    public void pressedOK() {
+                        BFPacket.toServer(kind, new Tag(Tag.Type.INT, null, target.getIdFaction()));
+                        deactivate();
+                    }
+
+                    @Override
+                    public void onDeactivate() {
+                    }
+                }.activate();
+            }
+        }, new Object() {
+            @Override
+            public String toString() {
+                return cost.getAsInt() > 0 ? Lng.str("%s (%s FP)", label, cost.getAsInt()) : Lng.str("%s (OFF)", label);
+            }
+        }, style, side, FilterPos.BOTTOM);
     }
 
     @Override

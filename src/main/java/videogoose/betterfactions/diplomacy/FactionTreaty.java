@@ -50,6 +50,28 @@ public class FactionTreaty {
      * and either side haggles from there; accepting them unchanged is surrender.
      */
     public final List<SettlementTerm> goals = new ArrayList<>();
+    /**
+     * War only: how it is going for {@link #from}, the declarer, 0 to 1 with 0.5 even. Worked out by the
+     * server (see {@link #progress(double, double[])}) and sent along, because only the server holds the
+     * battles and who owns which system.
+     */
+    public float progress = 0.5f;
+
+    /**
+     * A war's progress for the declarer: the battle balance (0 to 1), and how far each territorial
+     * goal is in its hands ({@code held}, 0 to 1 each). Territory counts for half when there is any,
+     * because taking what you went to war for is the point of the war.
+     */
+    public static double progress(double balance, double[] held) {
+        if (held.length == 0) {
+            return balance;
+        }
+        double sum = 0;
+        for (double h : held) {
+            sum += h;
+        }
+        return (balance + sum / held.length) / 2;
+    }
 
     /**
      * The name to show: the agreed one, falling back to the type for a treaty from a save that
@@ -111,6 +133,7 @@ public class FactionTreaty {
                 new Tag(Tag.Type.STRING, null, clause == null ? "" : clause),
                 new Tag(Tag.Type.STRING, null, name == null ? "" : name),
                 SettlementTerm.listToTag(goals),
+                new Tag(Tag.Type.FLOAT, null, progress),
                 FinishTag.INST,
         });
     }
@@ -133,6 +156,7 @@ public class FactionTreaty {
         if (t.length > 8 && t[8].getType() != Tag.Type.FINISH) {
             SettlementTerm.listFromTag(t[8], goals);
         }
+        progress = t.length > 9 && t[9].getType() == Tag.Type.FLOAT ? t[9].getFloat() : 0.5f;
         return TreatyTypeRegistry.exists(typeId);
     }
 }

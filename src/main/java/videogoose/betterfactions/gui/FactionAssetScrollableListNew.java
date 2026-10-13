@@ -16,7 +16,6 @@ import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
 import videogoose.betterfactions.DiplomacyManager;
-import videogoose.betterfactions.Perms;
 import videogoose.betterfactions.assets.FactionAssets;
 import videogoose.betterfactions.assets.FleetRoutes;
 
@@ -187,15 +186,6 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
     }
 
     /**
-     * Whether this member's rank may read the holdings. Claimed systems are shown either way - they are
-     * on the galaxy map in the faction's own colour for the whole server to see, so hiding them here
-     * would protect nothing and only make the tab look broken.
-     */
-    private boolean mayView() {
-        return Perms.mine(Perms.ASSETS_VIEW);
-    }
-
-    /**
      * The centre sector of a system. There is a helper for sector-to-system and none for the way back,
      * so this is the same arithmetic the admin claim command does.
      */
@@ -348,26 +338,6 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
             }
         }, dropdownLabels(), ControllerElement.FilterRowStyle.RIGHT);
 
-        addButton(new GUICallback() {
-                      @Override
-                      public boolean isOccluded() {
-                          return !isActive();
-                      }
-
-                      @Override
-                      public void callback(GUIElement callingGuiElement, MouseEvent event) {
-                          if (event.pressedLeftMouse()) {
-                              DiplomacyManager.client().requestFactionAssets(true);
-                          }
-                      }
-                  }, new Object() {
-                      @Override
-                      public String toString() {
-                          return asOf();
-                      }
-                  }, GUIHorizontalArea.HButtonType.BUTTON_GREY_MEDIUM, ControllerElement.FilterRowStyle.FULL,
-                ControllerElement.FilterPos.BOTTOM);
-
         activeSortColumnIndex = 3;
     }
 
@@ -442,26 +412,10 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
         };
     }
 
-    /**
-     * The button caption doubles as the staleness readout: there is one thing to press and one thing to
-     * know, and both are "how old is this".
-     */
-    private String asOf() {
-        if (!mayView()) {
-            return Lng.str("RANK CANNOT SEE HOLDINGS");
-        }
-        FactionAssets a = DiplomacyManager.client().getFactionAssets();
-        if (a == null) {
-            return DiplomacyManager.client().isFactionAssetsPending()
-                    ? Lng.str("ASKING...") : Lng.str("REFRESH");
-        }
-        return Lng.str("REFRESH");
-    }
-
     @Override
     public void draw() {
-        //keeps routes moving while the tab is open; throttled to one ask per 30s in the channel
-        DiplomacyManager.client().requestFactionAssets(false);
+        //keeps the list current while the tab is open; throttled in the channel
+        DiplomacyManager.client().requestFactionAssets();
         FactionAssets a = DiplomacyManager.client().getFactionAssets();
         long stamp = a == null ? -1 : a.queriedAt;
         if (stamp != builtFrom) {
@@ -478,7 +432,7 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
         }
         //the one place that knows the list is being looked at. Rate-limited in the channel, and cached
         //again on the server, so a redraw storm cannot turn into a query storm
-        DiplomacyManager.client().requestFactionAssets(false);
+        DiplomacyManager.client().requestFactionAssets();
 
         Set<Vector3i> claimed = new ObjectOpenHashSet<Vector3i>();
         for (Vector3i sectorPos : faction.lastSystemSectors) {

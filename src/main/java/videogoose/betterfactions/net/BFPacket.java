@@ -46,7 +46,13 @@ public final class BFPacket extends Packet {
 		// client -> server: put a civic in a slot; server -> client: civics, the whole store on join or one faction's change
 		CIVICS_PICK, CIVICS,
 		// server -> client: every faction's galaxy-wide reputation
-		REPUTATION
+		REPUTATION,
+		// client -> server: spend faction points on another faction, by id
+		GIFT, FABRICATE_CLAIM,
+		// client -> server: adopt or drop an institution; cast a Senate ballot. server -> client: the faction's open Senate votes
+		INSTITUTION_SET, SENATE_BALLOT, SENATE, SENATE_RULES, SENATE_LEADER,
+		// server -> client: one new line of the diplomatic history between two factions
+		HISTORY
 	}
 
 	private Kind kind;

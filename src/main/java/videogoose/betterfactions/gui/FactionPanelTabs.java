@@ -4,6 +4,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.schema.common.util.StringTools;
 import org.schema.game.client.controller.PlayerCreateFactionNewsInputNew;
 import org.schema.game.client.controller.PlayerFactionPointDialogNew;
+import org.schema.game.client.controller.PlayerGameDropDownInput;
+import org.schema.game.client.controller.PlayerOkCancelInput;
 import org.schema.game.client.controller.PlayerTextInput;
 import org.schema.game.client.data.GameClientState;
 import org.schema.game.client.view.gui.faction.newfaction.*;
@@ -18,13 +20,18 @@ import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.core.settings.PrefixNotFoundException;
 import org.schema.schine.graphicsengine.forms.font.FontLibrary;
 import org.schema.schine.graphicsengine.forms.gui.*;
+import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActivatableTextBar;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActiveInterface;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIMainWindow;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUITabbedContent;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUITextOverlayTable;
 import videogoose.betterfactions.DiplomacyManager;
+import videogoose.betterfactions.civics.CivicRegistry;
 import videogoose.betterfactions.civics.Civics;
+import videogoose.betterfactions.civics.Senate;
+import videogoose.betterfactions.civics.FactionCivics;
+import org.schema.game.common.data.element.ElementKeyMap;
 import videogoose.betterfactions.Perms;
 import videogoose.betterfactions.assets.FactionAssets;
 import videogoose.betterfactions.battle.BattleReports;
@@ -33,6 +40,7 @@ import videogoose.betterfactions.diplomacy.FactionStrength;
 import videogoose.betterfactions.diplomacy.Federation;
 import videogoose.betterfactions.diplomacy.Reputation;
 import videogoose.betterfactions.diplomacy.FederationCommand;
+import videogoose.betterfactions.diplomacy.TreatyTypeRegistry;
 import videogoose.betterfactions.emblem.FactionEmblemCache;
 import videogoose.betterfactions.emblem.GUIFactionEmblem;
 
@@ -75,8 +83,8 @@ public class FactionPanelTabs implements GUIActiveInterface {
 		if (getOwnFaction() != null) {
 			assetsTab = factionPanel.addTab(TAB_ASSETS);
 			createAssetsPane();
-			membersTab = factionPanel.addTab(Lng.str("MEMBERS"));
-			createMembersPane();
+			governanceTab = factionPanel.addTab(Lng.str("GOVERNANCE"));
+			createGovernancePane();
 		}
 		diplomacyTab = factionPanel.addTab(TAB_DIPLOMACY);
 		createFactionDiplomacyPane();
@@ -88,18 +96,24 @@ public class FactionPanelTabs implements GUIActiveInterface {
 		promptCivics();
 	}
 
-	/** Once a session: a faction with no civics yet (new, or from before civics) is asked to pick them. */
+	/**
+	 * Once a session: a faction with no civics yet (new, or from before civics) is asked to pick them,
+	 * then its fleet doctrine; one with civics but no doctrine is asked for the doctrine.
+	 */
 	private static boolean civicsPrompted;
 
 	private void promptCivics() {
 		Faction own = getOwnFaction();
 		//version 0: the join sync has not arrived, so we cannot tell yet
-		if (civicsPrompted || own == null || Civics.client().version() == 0 || !Civics.client().of(own.getIdFaction()).civics.isEmpty()
+		if (civicsPrompted || own == null || Civics.client().version() == 0
 				|| !getOwnPlayer().getFactionController().hasPermissionEditPermission()) {
 			return;
 		}
-		civicsPrompted = true;
-		CivicChooser.open(getState(), 0, true);
+		//the doctrine is not prompted for: its three cards sit in Faction Settings, under the civics
+		if (Civics.client().of(own.getIdFaction()).civics.isEmpty()) {
+			civicsPrompted = true;
+			CivicChooser.open(getState(), 0, true);
+		}
 	}
 
 	public GameClientState getState() {
@@ -113,7 +127,13 @@ public class FactionPanelTabs implements GUIActiveInterface {
 
 	public GUIMainWindow factionPanel;
     private GUIContentPane overviewTab;
+	private GUIContentPane governanceTab;
+	private GUITabbedContent governanceSub;
+	private GUITabbedContent settingsSub;
+	/** The MEMBERS sub-tab of SETTINGS. */
 	private GUIContentPane membersTab;
+	/** Governance's card column; the summary beside it takes the rest. */
+	private static final int GOVERNANCE_CARDS_WIDTH = 640;
     private GUIContentPane assetsTab;
     private FactionAssetScrollableListNew aList;
     private FactionDesignsList dList;
@@ -183,6 +203,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
      */
     private static final int CHIP_WIDTH = 104;
     private static final int SCOPE_WIDTH = 78;
+    private static final int NEWS_WRAP_CHARS = 56;
     /**
      * Left column, in px: wide enough for name, relation and the treaty summary together.
      */
@@ -193,6 +214,8 @@ public class FactionPanelTabs implements GUIActiveInterface {
     private static final int DIPLOMACY_FACTION_LIST_HEIGHT = 240;
     /** The emblem at the top of the description box, above the government. */
     private static final int DESCRIPTION_EMBLEM_SIZE = 128;
+    /** The description's share of its column; the modifiers box under it takes the rest. */
+    private static final float DESCRIPTION_FRACTION = 0.5f;
     /**
      * Name, founding, chair and the charter text.
      */
@@ -221,6 +244,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
     private GUIAnchor diplomacyHeader;
     private GUIAnchor diplomacyVitals;
     private GUIAnchor diplomacyAbout;
+    private GUIAnchor diplomacyModifiers;
     private GUIContentPane federationTab;
     private FederationList federationList;
     private FederationMemberList federationMemberList;
@@ -259,8 +283,11 @@ public class FactionPanelTabs implements GUIActiveInterface {
         diplomacyTab.setTextBoxHeightLast(0, DIPLOMACY_FACTION_LIST_HEIGHT);
         diplomacyTab.addNewTextBox(0, OVERVIEW_VITALS_HEIGHT);
         diplomacyTab.addNewTextBox(0, 10);
+        diplomacyTab.setTextBoxHeightFractionLast(0, DESCRIPTION_FRACTION);
+        diplomacyTab.addNewTextBox(0, 10);
         diplomacyVitals = diplomacyTab.getContent(0, 1);
         diplomacyAbout = diplomacyTab.getContent(0, 2);
+        diplomacyModifiers = diplomacyTab.getContent(0, 3);
 
         diplomacyFactionList = new DiplomacyFactionList(getState(), diplomacyTab.getContent(0, 0), this);
         diplomacyFactionList.onInit();
@@ -304,6 +331,69 @@ public class FactionPanelTabs implements GUIActiveInterface {
 		onSelectFaction(f);
 	}
 
+
+	/**
+	 * Institutions first, then a sub-tab for each institution the faction holds. Adopting or dissolving
+	 * one rebuilds the tabs, so the sub-tabs follow what is held.
+	 */
+	private void createGovernancePane() {
+		int wasSelected = governanceSub == null ? 0 : governanceSub.getSelectedTab();
+		GUITabbedContent sub = governanceSub = new GUITabbedContent(getState(), governanceTab.getContent(0));
+		sub.activationInterface = this;
+		sub.onInit();
+		governanceTab.getContent(0).attach(sub);
+
+		int own = getOwnFaction().getIdFaction();
+		java.util.List<String> held = new java.util.ArrayList<>(Civics.client().of(own).institutions);
+		GUIContentPane institutions = sub.addTab(Lng.str("INSTITUTIONS"));
+		InstitutionsContent ic = new InstitutionsContent(getState(), this);
+		cardsBeside(institutions, ic, ic::summary);
+		if (held.contains(CivicRegistry.SENATE)) {
+			GUIContentPane senate = sub.addTab(Lng.str("SENATE"));
+			SenateContent sc = new SenateContent(getState(), this);
+			GUITextButton rules = FactionSettingsContent.button(getState(), 140, Lng.str("SENATE RULES"), GUITextButton.ColorPalette.OK,
+					() -> getOwnPlayer().getFactionController().hasPermissionEditPermission(),
+					() -> new SenateRulesDialog(getState(), getOwnFaction()).activate());
+			cardsBeside(senate, sc, sc::summary, rules);
+		}
+		sub.setSelectedTab(Math.min(wasSelected, sub.getTabs().size() - 1));
+
+		institutions.getContent(0, 0).attach(new GUIAnchor(getState(), 0, 0) {
+			@Override
+			public void draw() {
+				Faction f = getOwnFaction();
+				if (f != null && !Civics.client().of(f.getIdFaction()).institutions.equals(held)) {
+					requestRebuild();
+				}
+			}
+		});
+	}
+
+	/** Cards on the left, a summary that keeps itself current on the right. */
+	private void cardsBeside(GUIContentPane pane, GUIAnchor cards, java.util.function.Supplier<String> summary) {
+		cardsBeside(pane, cards, summary, null);
+	}
+
+	/** @param action a button above the summary, beside what it changes; null for none */
+	private void cardsBeside(GUIContentPane pane, GUIAnchor cards, java.util.function.Supplier<String> summary, GUIElement action) {
+		pane.addDivider(GOVERNANCE_CARDS_WIDTH);
+		cards.onInit();
+		pane.setContent(0, 0, cards);
+		int textBox = 0;
+		if (action != null) {
+			pane.setTextBoxHeightLast(1, BAR_HEIGHT);
+			pane.addNewTextBox(1, 10);
+			action.setPos(6, 6, 0);
+			pane.getContent(1, 0).attach(action);
+			textBox = 1;
+		}
+		wrappedText(pane.getContent(1, textBox), new Object() {
+			@Override
+			public String toString() {
+				return summary.get();
+			}
+		});
+	}
 
 	public void createMembersPane() {
 		if(mList != null) {
@@ -388,9 +478,20 @@ public class FactionPanelTabs implements GUIActiveInterface {
      * them rather than a grid.</p>
      */
     private void createSettingsPane() {
+        int wasSelected = settingsSub == null ? 0 : settingsSub.getSelectedTab();
+        GUITabbedContent sub = settingsSub = new GUITabbedContent(getState(), settingsTab.getContent(0));
+        sub.activationInterface = this;
+        sub.onInit();
+        settingsTab.getContent(0).attach(sub);
+        if (getOwnFaction() != null) {
+            membersTab = sub.addTab(Lng.str("MEMBERS"));
+            createMembersPane();
+        }
+        GUIContentPane settings = sub.addTab(Lng.str("FACTION"));
         FactionSettingsContent c = new FactionSettingsContent(getState(), this);
         c.onInit();
-        settingsTab.setContent(0, c);
+        settings.setContent(0, c);
+        sub.setSelectedTab(Math.min(wasSelected, sub.getTabs().size() - 1));
 	}
 
 	public PlayerState getOwnPlayer() {
@@ -410,12 +511,32 @@ public class FactionPanelTabs implements GUIActiveInterface {
 		return getState().getFactionManager().getRelation(getState().getPlayerName(), getState().getPlayer().getFactionId(), f.getIdFaction());
     }
 
+    /**
+     * The faction whose relations the diplomacy list is showing, or null for our own.
+     */
+    private Faction viewing() {
+        return diplomacyFactionList == null ? null : diplomacyFactionList.viewing();
+    }
+
+    /**
+     * The list switched whose relations it shows: the detail panel follows. A faction cannot have
+     * relations with itself, so selecting the new viewpoint clears the selection.
+     */
+    public void onViewpointChanged() {
+        Faction v = viewing();
+        Faction f = selectedDiplomacyFaction;
+        onSelectFaction(v != null && f != null && v.getIdFaction() == f.getIdFaction() ? null : f);
+    }
+
     public void onSelectFaction(Faction f) {
         selectedDiplomacyFaction = f;
+        Faction v = viewing();
         if (treatyList != null) {
+            treatyList.setViewpoint(v);
             treatyList.setOther(f);
         }
         if (opinionList != null) {
+            opinionList.setViewpoint(v);
             opinionList.setToFaction(f);
         }
         fillDiplomacyHeader(f);
@@ -457,8 +578,11 @@ public class FactionPanelTabs implements GUIActiveInterface {
 
         overviewTab.setTextBoxHeightLast(0, OVERVIEW_VITALS_HEIGHT);
         overviewTab.addNewTextBox(0, 10);
+        overviewTab.setTextBoxHeightFractionLast(0, DESCRIPTION_FRACTION);
+        overviewTab.addNewTextBox(0, 10);
         fillVitals(overviewTab.getContent(0, 0), own);
         fillDescription(overviewTab.getContent(0, 1), own);
+        fillModifiers(overviewTab.getContent(0, 2), own);
 
         //the feed and the battles it reports on, as two sub-tabs of the news column. The panel rebuilds
         //on a faction or scope change, so carry the selected sub-tab over from the old one
@@ -700,7 +824,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
      * there is more of it than that.
      */
     /**
-     * The government in bold, then civics and description as wrapped prose. Two overlays because one
+     * The government in bold, then the description as wrapped prose. Two overlays because one
      * cannot mix fonts; they scroll together.
      */
     private void fillDescription(GUIAnchor box, Faction f) {
@@ -720,9 +844,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
             @Override
             public String toString() {
                 String d = f.getDescription();
-                d = d == null || d.trim().isEmpty() ? Lng.str("No description.") : d.trim();
-                String civics = Civics.client().of(f.getIdFaction()).names();
-                return civics.isEmpty() ? d : Lng.str("Civics: %s", civics) + BREAK + d;
+                return d == null || d.trim().isEmpty() ? Lng.str("No description.") : d.trim();
             }
         });
         t.onInit();
@@ -952,9 +1074,12 @@ public class FactionPanelTabs implements GUIActiveInterface {
         ObjectArrayList<Chip> chips = new ObjectArrayList<>();
         chips.add(chip(CHIP_WIDTH, voteOr(Federation.CHARTER_VOTE_ADMISSION, Lng.str("VOTE TO ADMIT"), Lng.str("INVITE")),
                 () -> mayRaise(Federation.CHARTER_VOTE_ADMISSION),
-                () -> pickFaction(Lng.str("Faction to invite"), FederationCommand.Kind.INVITE)));
+                () -> pickFaction(Lng.str("Faction to invite"), FederationCommand.Kind.INVITE,
+                        f -> DiplomacyManager.client().getFederationOf(f.getIdFaction()) == null)));
         chips.add(chip(CHIP_WIDTH, Lng.str("LEAVE"), this::maySpeak,
-                () -> sendToShown(new FederationCommand(FederationCommand.Kind.LEAVE, 0))));
+                () -> confirm(getState(), Lng.str("Leave %s", shownFederationName()),
+                        Lng.str("Really leave the federation?\nYour alliance with every member ends."),
+                        () -> sendToShown(new FederationCommand(FederationCommand.Kind.LEAVE, 0)))));
         actionBar(box, new GUIElement[0], chips);
     }
 
@@ -965,14 +1090,22 @@ public class FactionPanelTabs implements GUIActiveInterface {
         ObjectArrayList<Chip> chips = new ObjectArrayList<Chip>();
         chips.add(chip(CHIP_WIDTH, voteOr(Federation.CHARTER_VOTE_WAR, Lng.str("VOTE ON WAR"), Lng.str("DECLARE WAR")),
                 () -> mayRaise(Federation.CHARTER_VOTE_WAR),
-                () -> pickFaction(Lng.str("Faction to go to war with"), FederationCommand.Kind.DECLARE_WAR)));
+                () -> pickFaction(Lng.str("Faction to go to war with"), FederationCommand.Kind.DECLARE_WAR,
+                        f -> atWarWith(f) < ownFederation().members.size())));
+        //only drawn while some member is at war, so it costs the bar no room in peacetime
+        chips.add(chip(CHIP_WIDTH, voteOr(Federation.CHARTER_VOTE_WAR, Lng.str("VOTE ON PEACE"), Lng.str("MAKE PEACE")),
+                () -> mayRaise(Federation.CHARTER_VOTE_WAR) && anyAtWar(),
+                () -> pickFaction(Lng.str("Faction to offer peace"), FederationCommand.Kind.MAKE_PEACE,
+                        f -> atWarWith(f) > 0)));
         chips.add(chip(CHIP_WIDTH, Lng.str("CHARTER"), () -> mayRaise(Federation.CHARTER_VOTE_CHARTER),
                 this::editCharter));
         chips.add(chip(CHIP_WIDTH, Lng.str("RENAME"), this::leadsShown,
                 () -> federationText(Lng.str("Rename the federation"), shownFederationName(),
                         name -> sendToShown(new FederationCommand(FederationCommand.Kind.RENAME, 0).text(name)))));
         chips.add(chip(CHIP_WIDTH, Lng.str("DISSOLVE"), this::leadsShown,
-                () -> sendToShown(new FederationCommand(FederationCommand.Kind.DISSOLVE, 0))));
+                () -> confirm(getState(), Lng.str("Dissolve %s", shownFederationName()),
+                        Lng.str("Really dissolve the federation?\nEvery member's alliance with the others ends."),
+                        () -> sendToShown(new FederationCommand(FederationCommand.Kind.DISSOLVE, 0)))));
         actionBar(box, new GUIElement[0], chips);
     }
 
@@ -996,21 +1129,91 @@ public class FactionPanelTabs implements GUIActiveInterface {
     }
 
     /**
-     * Names a faction by typing it rather than through a picker: the faction list is already two
-     * tabs away, and a name that resolves to nothing is one message rather than a dialog nobody
-     * needed.
+     * How many members of your own bloc are at war with {@code f}.
      */
-    private void pickFaction(String title, FederationCommand.Kind kind) {
-        federationText(title, "", name -> {
-            String wanted = name.trim();
-            for (Faction f : getState().getFactionManager().getFactionCollection()) {
-                if (DiplomacyFactionList.isParty(f) && f.getName().equalsIgnoreCase(wanted)) {
-                    sendToShown(new FederationCommand(kind, 0).target(f.getIdFaction()));
-                    return;
+    private int atWarWith(Faction f) {
+        Federation own = ownFederation();
+        int n = 0;
+        if (own != null) {
+            for (int i = 0; i < own.members.size(); i++) {
+                if (DiplomacyManager.client().hasTreaty(own.members.getInt(i), f.getIdFaction(), TreatyTypeRegistry.WAR)) {
+                    n++;
                 }
             }
-            getState().getController().popupAlertTextMessage(Lng.str("No faction called\n%s", wanted), 0);
-        });
+        }
+        return n;
+    }
+
+    private boolean anyAtWar() {
+        for (Faction f : getState().getFactionManager().getFactionCollection()) {
+            if (atWarWith(f) > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * A dropdown of the factions the command can sensibly name: never a member, never one the
+     * filter rules out. The server checks again; this only keeps the obvious refusals off the list.
+     */
+    private void pickFaction(String title, FederationCommand.Kind kind, java.util.function.Predicate<Faction> fits) {
+        Federation own = ownFederation();
+        java.util.List<Faction> factions = new ObjectArrayList<>(getState().getFactionManager().getFactionCollection());
+        factions.sort(java.util.Comparator.comparing(Faction::getName, String.CASE_INSENSITIVE_ORDER));
+        java.util.List<GUIElement> items = new ObjectArrayList<>();
+        for (Faction f : factions) {
+            if (!DiplomacyFactionList.isParty(f) || own == null || own.isMember(f.getIdFaction()) || !fits.test(f)) {
+                continue;
+            }
+            GUITextOverlay name = new GUITextOverlay(10, 10, FontLibrary.getBlenderProMedium16(), getState());
+            name.setTextSimple(f.getName());
+            name.setPos(5, 4, 0);
+            GUIAnchor a = new GUIAnchor(getState(), 400, 24);
+            a.attach(name);
+            a.setUserPointer(f.getIdFaction());
+            items.add(a);
+        }
+        if (items.isEmpty()) {
+            getState().getController().popupAlertTextMessage(Lng.str("No faction to choose."), 0);
+            return;
+        }
+        new PlayerGameDropDownInput("FEDERATION_FACTION", getState(), 440, 300, title, 24, "", items) {
+            @Override
+            public void onDeactivate() {
+            }
+
+            @Override
+            public boolean isOccluded() {
+                return false;
+            }
+
+            @Override
+            public void pressedOK(GUIListElement current) {
+                if (current != null && current.getContent() != null) {
+                    sendToShown(new FederationCommand(kind, 0).target((Integer) current.getContent().getUserPointer()));
+                }
+                deactivate();
+            }
+        }.activate();
+    }
+
+    /**
+     * Asks before an act that cannot be taken back. Shared with the member list's expel and chair
+     * buttons.
+     */
+    static void confirm(GameClientState state, String title, String question, Runnable onOk) {
+        new PlayerOkCancelInput("BF_FEDERATION_CONFIRM", state, 440, 200, title, question) {
+            @Override
+            public void pressedOK() {
+                onOk.run();
+                deactivate();
+            }
+
+            @Override
+            public void onDeactivate() {
+            }
+        }.activate();
     }
 
     private void editCharter() {
@@ -1087,6 +1290,23 @@ public class FactionPanelTabs implements GUIActiveInterface {
     }
 
     /**
+     * The engine's news dialog builds its body as a five-line text bar but never sets a wrap width,
+     * so everything runs off the right edge on one line. The bar is private, hence the reflection.
+     */
+    private void openNewsPost() {
+        PlayerCreateFactionNewsInputNew input = new PlayerCreateFactionNewsInputNew(getState());
+        try {
+            java.lang.reflect.Field body = GUICreateNewsPostPanel.class.getDeclaredField("messageTextBar");
+            body.setAccessible(true);
+            //characters per line, not pixels: roughly what fits the 500px dialog at MEDIUM
+            ((GUIActivatableTextBar) body.get(input.getInputPanel())).setLineWrap(NEWS_WRAP_CHARS);
+        } catch (ReflectiveOperationException e) {
+            e.printStackTrace();
+        }
+        input.activate();
+    }
+
+    /**
      * One row above the feed: which log you are reading on the left, and on the right only the
      * things actually waiting for an answer.
      *
@@ -1116,7 +1336,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
         //They belong beside the member list, which is the thing they change.
         chips.add(chip(CHIP_WIDTH, Lng.str("POST NEWS"),
                 () -> !overviewGalaxy && getOwnPlayer().getFactionController().hasDescriptionAndNewsPostPermission(),
-                () -> new PlayerCreateFactionNewsInputNew(getState()).activate()));
+                this::openNewsPost));
 
         GUITextButton ours = new GUITextButton(getState(), SCOPE_WIDTH, CHIP_HEIGHT,
                 overviewGalaxy ? GUITextButton.ColorPalette.TRANSPARENT : GUITextButton.ColorPalette.OK, Lng.str("OUR LOG"), scopeTo(false));
@@ -1259,7 +1479,8 @@ public class FactionPanelTabs implements GUIActiveInterface {
             return;
         }
         diplomacyHeader.getChilds().clear();
-        if (f == null) {
+        Faction viewing = viewing();
+        if (f == null && viewing == null) {
             return;
         }
         GUIScrollablePanel sc = new GUIScrollablePanel(10, 10, diplomacyHeader, getState());
@@ -1270,19 +1491,42 @@ public class FactionPanelTabs implements GUIActiveInterface {
             @Override
             public String toString() {
                 StringBuilder b = new StringBuilder();
-                switch (getOwnRelationTo(f)) {
-					case ENEMY:
-                        b.append(Lng.str("At war with you."));
-                        break;
-                    case FRIEND:
-                        b.append(Lng.str("Allied to you."));
-						break;
-                    default:
-                        b.append(Lng.str("Neutral toward you."));
-                        break;
+                if (viewing != null) {
+                    b.append(Lng.str("Showing %s's relations. Right-click a faction to go back to yours.", viewing.getName()));
+                    if (f == null) {
+                        return b.toString();
+                    }
+                    b.append(BREAK);
+                    switch (getState().getFactionManager().getRelation(viewing.getIdFaction(), f.getIdFaction())) {
+                        case ENEMY:
+                            b.append(Lng.str("At war with %s.", viewing.getName()));
+                            break;
+                        case FRIEND:
+                            b.append(Lng.str("Allied to %s.", viewing.getName()));
+                            break;
+                        default:
+                            b.append(Lng.str("Neutral toward %s.", viewing.getName()));
+                            break;
+                    }
+                    DiplomacyEntity e = DiplomacyManager.client().diplomacyOf(f).entities.get((long) viewing.getIdFaction());
+                    b.append("  ").append(Lng.str("Opinion of %s: %s", viewing.getName(), e != null ? e.getPoints() : 0)).append(BREAK);
+                    b.append(Lng.str("Power: %s vs %s's %s   %s", Math.round(FactionStrength.of(f)), viewing.getName(),
+                            Math.round(FactionStrength.of(viewing)), powerBreakdown(f)));
+                } else {
+                    switch (getOwnRelationTo(f)) {
+                        case ENEMY:
+                            b.append(Lng.str("At war with you."));
+                            break;
+                        case FRIEND:
+                            b.append(Lng.str("Allied to you."));
+                            break;
+                        default:
+                            b.append(Lng.str("Neutral toward you."));
+                            break;
+                    }
+                    b.append("  ").append(opinionLine(f)).append(BREAK);
+                    b.append(powerLine(f));
                 }
-                b.append("  ").append(opinionLine(f)).append(BREAK);
-                b.append(powerLine(f));
                 String rep = reputationLine(f);
                 if (rep != null) {
                     b.append(BREAK).append(rep);
@@ -1306,12 +1550,26 @@ public class FactionPanelTabs implements GUIActiveInterface {
         }
         diplomacyVitals.getChilds().clear();
         diplomacyAbout.getChilds().clear();
+        diplomacyModifiers.getChilds().clear();
         if (f == null) {
             wrappedText(diplomacyAbout, Lng.str("Select a faction to see who they are."));
             return;
         }
         fillVitals(diplomacyVitals, f);
         fillDescription(diplomacyAbout, f);
+        fillModifiers(diplomacyModifiers, f);
+    }
+
+    /** What the faction's civics, doctrine and institutions do, kept current as they change. */
+    private void fillModifiers(GUIAnchor box, Faction f) {
+        wrappedText(box, new Object() {
+            @Override
+            public String toString() {
+                FactionCivics c = Civics.client().of(f.getIdFaction());
+                String m = c.modifiers(Civics.isResource(c.resource) ? ElementKeyMap.getInfo(c.resource).getName() : null);
+                return Lng.str("MODIFIERS") + BREAK + (m.isEmpty() ? Lng.str("None.") : m);
+            }
+        });
     }
 
     /**

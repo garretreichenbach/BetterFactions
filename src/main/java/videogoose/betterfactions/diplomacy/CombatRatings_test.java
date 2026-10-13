@@ -69,10 +69,13 @@ public class CombatRatings_test {
         back.fromTag(r.toTag());
         assert back.totalOf(8) == 110 : back.totalOf(8);
         //an NPC's systems ride with the totals, even for a faction with no rated ships
-        assert r.setNpcSystems(-5, 12) && !r.setNpcSystems(-5, 12);
+        java.util.List<org.schema.common.util.linAlg.Vector3i> held = java.util.List.of(
+                new org.schema.common.util.linAlg.Vector3i(1, 2, 3), new org.schema.common.util.linAlg.Vector3i(-4, 0, 9));
+        assert r.setNpcSystems(-5, held) && !r.setNpcSystems(-5, new java.util.ArrayList<>(held));
         CombatRatings client = new CombatRatings();
         client.fromTotalsTag(r.totalsTag());
-        assert client.npcSystemsOf(-5) == 12 && client.totalOf(-5) == 0;
+        assert client.npcSystemsOf(-5) == 2 && client.totalOf(-5) == 0;
+        assert client.npcSystemListOf(-5).equals(held) : "the positions ride along, so a war can demand them";
         assert client.totalOf(8) == 110 && client.ratedFactions().length == 0;
 
         r.removeFaction(8);

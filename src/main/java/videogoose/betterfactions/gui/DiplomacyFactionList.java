@@ -53,6 +53,12 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
 
     private final FactionPanelTabs panel;
 
+    /**
+     * Whose relations the list shows: 0 for the viewer's own, else another faction picked from the
+     * right-click menu.
+     */
+    private int viewpoint;
+
     public DiplomacyFactionList(InputState state, GUIElement p, FactionPanelTabs panel) {
         super(state, 100, 100, p);
         this.panel = panel;
@@ -73,16 +79,43 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
         return client().getPlayer().getFactionId();
     }
 
+    /**
+     * The faction whose relations are on show, or null when it is the viewer's own.
+     */
+    public Faction viewing() {
+        return viewpoint == 0 ? null : client().getFactionManager().getFaction(viewpoint);
+    }
+
+    private void view(int factionId) {
+        viewpoint = factionId == ownFactionId() ? 0 : factionId;
+        flagDirty();
+        panel.onViewpointChanged();
+    }
+
+    /**
+     * The faction the list is seen from: the viewpoint if one is picked, else our own.
+     */
+    private int selfId() {
+        //a viewpoint that has since disbanded falls back to our own
+        if (viewpoint != 0 && client().getFactionManager().getFaction(viewpoint) == null) {
+            viewpoint = 0;
+        }
+        return viewpoint != 0 ? viewpoint : ownFactionId();
+    }
+
     private FactionRelation.RType relationTo(Faction f) {
+        if (viewpoint != 0) {
+            return client().getFactionManager().getRelation(selfId(), f.getIdFaction());
+        }
         return client().getFactionManager().getRelation(client().getPlayerName(), ownFactionId(), f.getIdFaction());
     }
 
     /**
      * Their opinion of us: of the viewer's faction, or of the viewer when they have none. The same
-     * number the overview's opinion line shows.
+     * number the overview's opinion line shows. From another viewpoint, their opinion of that faction.
      */
     private int standing(Faction f) {
-        int own = ownFactionId();
+        int own = selfId();
         long subject = own != 0 ? own : client().getPlayer().getDbId();
         DiplomacyEntity e = DiplomacyManager.client().diplomacyOf(f).entities.get(subject);
         return e != null ? e.getPoints() : 0;
@@ -96,7 +129,7 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
      * Treaty type names in force between the viewer's faction and this one.
      */
     private String treatySummary(Faction f) {
-        int own = ownFactionId();
+        int own = selfId();
         if (own == 0) {
             return NO_TREATIES;
         }
@@ -181,7 +214,7 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
     @Override
     protected Collection<Faction> getElementList() {
         List<Faction> d = new ObjectArrayList<Faction>();
-        int own = ownFactionId();
+        int own = selfId();
         for (Faction f : client().getFactionManager().getFactionCollection()) {
             //there is no foreign policy to have with yourself
             if (f.getIdFaction() != own && isParty(f)) {
@@ -194,10 +227,12 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
     /**
      * Whether a faction is somebody you can have diplomacy with. Id 0 is "no faction", and the
      * Trading Guild is the engine's shop owner rather than a polity - the NPC traders who fly for it
-     * are a faction of their own, and that is the one listed.
+     * are a faction of their own, and that is the one listed. Pirates are at war with everyone and
+     * take no proposals, so they are left off too.
      */
     public static boolean isParty(Faction f) {
-        return f.getIdFaction() != 0 && f.getIdFaction() != FactionManager.TRAIDING_GUILD_ID && f.isShowInHub();
+        return f.getIdFaction() != 0 && f.getIdFaction() != FactionManager.TRAIDING_GUILD_ID
+                && f.getIdFaction() != FactionManager.PIRATES_ID && f.isShowInHub();
     }
 
     @Override
@@ -280,17 +315,27 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
         }
 
         /**
-         * Right click, admins only: the faction id for commands, which the name column has no room for.
+         * Right click: see the list as this faction sees it, or go back to your own. Admins also get the
+         * faction id for commands, which the name column has no room for.
          */
         @Override
         protected GUIContextPane createContext() {
-            if (!client().getPlayer().isAdmin()) {
-                return null;
-            }
-            GUIContextPane pane = new GUIContextPane(getState(), 140, 25);
-            GUIHorizontalButtonTablePane buttons = new GUIHorizontalButtonTablePane(getState(), 1, 1, pane);
+            boolean admin = client().getPlayer().isAdmin();
+            boolean back = viewpoint != 0;
+            int rows = 1 + (back ? 1 : 0) + (admin ? 1 : 0);
+            GUIContextPane pane = new GUIContextPane(getState(), 160, 25 * rows);
+            GUIHorizontalButtonTablePane buttons = new GUIHorizontalButtonTablePane(getState(), 1, rows, pane);
             buttons.onInit();
-            buttons.addButton(0, 0, Lng.str("COPY ID (%s)", f.getIdFaction()), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new GUICallback() {
+            int row = 0;
+            buttons.addButton(0, row++, Lng.str("VIEW THEIR RELATIONS"), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, closing(() -> view(f.getIdFaction())), null);
+            if (back) {
+                buttons.addButton(0, row++, Lng.str("BACK TO YOUR RELATIONS"), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, closing(() -> view(0)), null);
+            }
+            if (!admin) {
+                pane.attach(buttons);
+                return pane;
+            }
+            buttons.addButton(0, row, Lng.str("COPY ID (%s)", f.getIdFaction()), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new GUICallback() {
                 @Override
                 public boolean isOccluded() {
                     return false;
@@ -306,6 +351,23 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
             }, null);
             pane.attach(buttons);
             return pane;
+        }
+
+        private GUICallback closing(Runnable action) {
+            return new GUICallback() {
+                @Override
+                public boolean isOccluded() {
+                    return false;
+                }
+
+                @Override
+                public void callback(GUIElement callingGuiElement, MouseEvent event) {
+                    if (event.pressedLeftMouse()) {
+                        action.run();
+                        getState().getController().getInputController().setCurrentContextPane(null);
+                    }
+                }
+            };
         }
     }
 }

@@ -2,11 +2,12 @@ package videogoose.betterfactions.diplomacy;
 
 import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
 import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap;
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.common.controller.ElementCountMap;
 import org.schema.game.common.data.ManagedSegmentController;
 import org.schema.game.common.controller.SegmentController;
@@ -147,10 +148,16 @@ public final class CombatRatings {
      * Systems an NPC faction holds. They live in the NPC simulation rather than in the claim list a
      * player faction pays upkeep on, and only the server has them, so they ride along with the totals.
      */
-    private final Int2IntOpenHashMap npcSystems = new Int2IntOpenHashMap();
+    private final Int2ObjectOpenHashMap<java.util.List<Vector3i>> npcSystems = new Int2ObjectOpenHashMap<>();
 
     public synchronized int npcSystemsOf(int faction) {
-        return npcSystems.get(faction);
+        java.util.List<Vector3i> held = npcSystems.get(faction);
+        return held != null ? held.size() : 0;
+    }
+
+    /** The systems (system coordinates) an NPC faction holds; what a war can demand it cede. */
+    public synchronized java.util.List<Vector3i> npcSystemListOf(int faction) {
+        return java.util.List.copyOf(npcSystems.getOrDefault(faction, java.util.List.of()));
     }
 
     /**
@@ -175,8 +182,8 @@ public final class CombatRatings {
     }
 
     /** Server. @return whether it changed */
-    public synchronized boolean setNpcSystems(int faction, int systems) {
-        return npcSystems.put(faction, systems) != systems;
+    public synchronized boolean setNpcSystems(int faction, java.util.List<Vector3i> systems) {
+        return !systems.equals(npcSystems.put(faction, systems));
     }
 
     public synchronized void put(long dbId, int faction, double rating) {
@@ -276,7 +283,17 @@ public final class CombatRatings {
         for (int f : factions) {
             t[i++] = new Tag(Tag.Type.STRUCT, null, new Tag[]{
                     new Tag(Tag.Type.INT, null, f), new Tag(Tag.Type.DOUBLE, null, totals.get(f)),
-                    new Tag(Tag.Type.INT, null, npcSystems.get(f)), new Tag(Tag.Type.DOUBLE, null, momentum.get(f)), FinishTag.INST});
+                    new Tag(Tag.Type.INT, null, npcSystemsOf(f)), new Tag(Tag.Type.DOUBLE, null, momentum.get(f)),
+                    systemsTag(npcSystems.getOrDefault(f, java.util.List.of())), FinishTag.INST});
+        }
+        t[t.length - 1] = FinishTag.INST;
+        return new Tag(Tag.Type.STRUCT, null, t);
+    }
+
+    private static Tag systemsTag(java.util.List<Vector3i> systems) {
+        Tag[] t = new Tag[systems.size() + 1];
+        for (int i = 0; i < systems.size(); i++) {
+            t[i] = new Tag(Tag.Type.VECTOR3i, null, new Vector3i(systems.get(i)));
         }
         t[t.length - 1] = FinishTag.INST;
         return new Tag(Tag.Type.STRUCT, null, t);
@@ -290,8 +307,17 @@ public final class CombatRatings {
         for (int i = 0; i < t.length - 1; i++) {
             Tag[] e = t[i].getStruct();
             totals.put(e[0].getInt(), (double) (Double) e[1].getValue());
-            if (e.length > 3) {
-                npcSystems.put(e[0].getInt(), e[2].getInt());
+            //the positions were appended after the count; a server one version behind sends no list
+            if (e.length > 5) {
+                java.util.List<Vector3i> held = new java.util.ArrayList<>();
+                for (Tag v : e[4].getStruct()) {
+                    if (v.getType() == Tag.Type.VECTOR3i) {
+                        held.add((Vector3i) v.getValue());
+                    }
+                }
+                if (!held.isEmpty()) {
+                    npcSystems.put(e[0].getInt(), held);
+                }
             }
             if (e.length > 4) {
                 momentum.put(e[0].getInt(), (double) (Double) e[3].getValue());

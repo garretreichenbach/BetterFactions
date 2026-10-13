@@ -19,14 +19,50 @@ public final class CivicType {
     private final String description;
     private final Set<String> excludes;
     private final String impliesGovernment;
+    private final boolean choosesResource;
+    private final Set<String> requires;
+    private final Kind kind;
 
-    private CivicType(String id, String registeredBy, String displayName, String description, Set<String> excludes, String impliesGovernment) {
+    private CivicType(String id, String registeredBy, String displayName, String description, Set<String> excludes, String impliesGovernment, boolean choosesResource, Set<String> requires, Kind kind) {
         this.id = id;
         this.registeredBy = registeredBy;
         this.displayName = displayName;
         this.description = description;
         this.excludes = Collections.unmodifiableSet(excludes);
         this.impliesGovernment = impliesGovernment;
+        this.choosesResource = choosesResource;
+        this.requires = Collections.unmodifiableSet(requires);
+        this.kind = kind;
+    }
+
+    /** What a faction holds this as: a civic in a slot, its one fleet doctrine, or one of its institutions. */
+    public enum Kind {
+        CIVIC,
+        /** Held in the faction's one doctrine slot ({@link FactionCivics#DOCTRINE}), never a civic slot. */
+        DOCTRINE,
+        /** Adopted or dropped freely, any number at once, each adding upkeep ({@link FactionCivics#institutions}). */
+        INSTITUTION
+    }
+
+    public Kind getKind() {
+        return kind;
+    }
+
+    public boolean isDoctrine() {
+        return kind == Kind.DOCTRINE;
+    }
+
+    /**
+     * Ids that must be held in another slot before this civic can be picked. ponytail: the HOLDS_CIVIC
+     * case of #19's unlock rules; folds into {@code requires} conditions when those land.
+     */
+    public Set<String> getRequires() {
+        return requires;
+    }
+
+    /** Whether picking this civic also picks a resource, kept in {@link FactionCivics#resource}. */
+    public boolean choosesResource() {
+        return choosesResource;
     }
 
     /** Namespaced, stable, and what gets written to disk and the wire. */
@@ -84,6 +120,9 @@ public final class CivicType {
         private String description = "";
         private final Set<String> excludes = new LinkedHashSet<>();
         private String impliesGovernment;
+        private boolean choosesResource;
+        private final Set<String> requires = new LinkedHashSet<>();
+        private Kind kind = Kind.CIVIC;
 
         public Builder(String name) {
             this.name = name;
@@ -111,12 +150,38 @@ public final class CivicType {
             return this;
         }
 
+        /** @param ids namespaced ids, or bare names meaning the registering namespace */
+        public Builder requires(String... ids) {
+            Collections.addAll(requires, ids);
+            return this;
+        }
+
+        public Builder doctrine() {
+            kind = Kind.DOCTRINE;
+            return this;
+        }
+
+        public Builder institution() {
+            kind = Kind.INSTITUTION;
+            return this;
+        }
+
+        public Builder choosesResource() {
+            choosesResource = true;
+            return this;
+        }
+
         CivicType build(String namespace) {
-            Set<String> ex = new LinkedHashSet<>();
-            for (String e : excludes) {
-                ex.add(e.indexOf(':') >= 0 ? e : namespace + ":" + e);
+            return new CivicType(namespace + ":" + name, namespace, displayName, description, qualify(excludes, namespace),
+                    impliesGovernment, choosesResource, qualify(requires, namespace), kind);
+        }
+
+        private static Set<String> qualify(Set<String> ids, String namespace) {
+            Set<String> out = new LinkedHashSet<>();
+            for (String e : ids) {
+                out.add(e.indexOf(':') >= 0 ? e : namespace + ":" + e);
             }
-            return new CivicType(namespace + ":" + name, namespace, displayName, description, ex, impliesGovernment);
+            return out;
         }
 
         String getName() {

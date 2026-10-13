@@ -22,6 +22,17 @@ public final class CivicRegistry {
     public static final String ISOLATIONISTS = NAMESPACE + ":isolationists";
     public static final String DIPLOMATIC_CORPS = NAMESPACE + ":diplomatic_corps";
     public static final String RAIDERS = NAMESPACE + ":raiders";
+    public static final String SPICE_DEALER = NAMESPACE + ":spice_dealer";
+    public static final String RESOURCE_SPECIALIST = NAMESPACE + ":resource_specialist";
+    public static final String SCAVENGERS = NAMESPACE + ":scavengers";
+    public static final String MINER_GUILDS = NAMESPACE + ":miner_guilds";
+    public static final String PACIFISTS = NAMESPACE + ":pacifists";
+    public static final String ELITE_CREWS = NAMESPACE + ":elite_crews";
+    public static final String HORDE_TACTICS = NAMESPACE + ":horde_tactics";
+    public static final String FAMOUS_ADMIRALS = NAMESPACE + ":famous_admirals";
+    public static final String SENATE = NAMESPACE + ":senate";
+    public static final String INDUSTRIALIST = NAMESPACE + ":industrialist";
+    public static final String RELIGIOUS = NAMESPACE + ":religious";
 
     private static final Map<String, CivicType> TYPES = new LinkedHashMap<>();
 
@@ -33,7 +44,7 @@ public final class CivicRegistry {
     }
 
     private static void registerOwn() {
-        register(NAMESPACE, new CivicType.Builder("holy_leader").displayName("Holy Leader").impliesGovernment("Holy Empire")
+        register(NAMESPACE, new CivicType.Builder("holy_leader").displayName("Holy Leader").impliesGovernment("Holy Empire").requires("religious")
                 .description("Ruled by a self-declared god. The leader's kills of enemy players earn faction points; the leader's death costs them."));
         register(NAMESPACE, new CivicType.Builder("shadow_council").displayName("Shadow Council")
                 .description("A council in the shadows issues directives. Fulfil them for faction points; fail or refuse them and pay."));
@@ -47,11 +58,39 @@ public final class CivicRegistry {
                 .description("Every newly claimed system earns faction points; losing one costs them."));
         register(NAMESPACE, new CivicType.Builder("isolationists").displayName("Isolationists")
                 .description("Days spent with no treaty beyond non-aggression earn faction points.")
-                .excludes("diplomatic_corps"));
+                .excludes("diplomatic_corps", "expansionists"));
         register(NAMESPACE, new CivicType.Builder("diplomatic_corps").displayName("Diplomatic Corps")
                 .description("Signing treaties earns faction points, and other factions' opinion of us fades more slowly."));
         register(NAMESPACE, new CivicType.Builder("raiders").displayName("Raiders")
                 .description("Destroying ships of factions we are not at war with earns faction points. Every victim gains a just cause against us."));
+        register(NAMESPACE, new CivicType.Builder("spice_dealer").displayName("Neighbourhood Spice Dealer")
+                .description("Other factions pay more faction point upkeep on their systems that border ours."));
+        register(NAMESPACE, new CivicType.Builder("resource_specialist").displayName("Resource Specialist").choosesResource()
+                .description("Pick one resource when choosing this civic. Systems rich in it are a war goal; mining it yields more and other resources less."));
+        register(NAMESPACE, new CivicType.Builder("industrialist").displayName("Industrialist")
+                .description("Ship mass built at our shipyards earns faction points. Religious factions think less of us."));
+        register(NAMESPACE, new CivicType.Builder("religious").displayName("Religious")
+                .description("Other Religious factions think better of us, and Industrialists worse. Industrialists are a just cause for war.")
+                .excludes("industrialist"));
+        register(NAMESPACE, new CivicType.Builder("scavengers").displayName("Scavengers")
+                .description("Salvage beams on wrecks and overheating ships yield double resources."));
+        register(NAMESPACE, new CivicType.Builder("miner_guilds").displayName("Miner Guilds")
+                .description("The guilds set mining goals. Sacrifice the resources they ask for to earn faction points."));
+        register(NAMESPACE, new CivicType.Builder("pacifists").displayName("Pacifists")
+                .description("Planets and stations count double toward our strength, and fleets count half. Fleets cost double faction point upkeep.")
+                .excludes("raiders", "warrior_code"));
+
+        //fleet doctrines: one per faction, in its own slot
+        register(NAMESPACE, new CivicType.Builder("elite_crews").displayName("Elite Crews").doctrine()
+                .description("Fewer, better-kept ships. Shipyard repairs are cheaper and faster; fleet upkeep per mass is higher."));
+        register(NAMESPACE, new CivicType.Builder("horde_tactics").displayName("Horde Tactics").doctrine()
+                .description("Many cheap ships. Fleet upkeep per mass is lower and shipyard builds cost less; repairs cost more."));
+        register(NAMESPACE, new CivicType.Builder("famous_admirals").displayName("Famous Admirals").doctrine()
+                .description("Captains over fleets. A ship a player flies pays no fleet upkeep; AI-run fleet ships cost more."));
+
+        //institutions: any number, each adding upkeep
+        register(NAMESPACE, new CivicType.Builder("senate").displayName("Senate").institution()
+                .description("Our members sit as senators, and any of them may propose. Proposing, accepting or countering a treaty, declaring war and breaking a treaty all go to a Senate vote."));
     }
 
     /**

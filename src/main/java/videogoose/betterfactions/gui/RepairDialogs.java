@@ -45,7 +45,7 @@ public final class RepairDialogs {
 	public static void orderRepair(GameClientState state, Fleet fleet, String shipUid, String what) {
 		FactionAssets assets = DiplomacyManager.client().getFactionAssets();
 		if (assets == null) {
-			DiplomacyManager.client().requestFactionAssets(true);
+			DiplomacyManager.client().requestFactionAssets();
 			state.getController().popupAlertTextMessage(Lng.str("Still asking the server for our stations - try again in a moment."));
 			return;
 		}

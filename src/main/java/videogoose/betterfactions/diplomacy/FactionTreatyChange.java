@@ -34,6 +34,8 @@ public class FactionTreatyChange {
         c.treaty.expiresAt = treaty.expiresAt;
         c.treaty.clause = treaty.clause;
         c.treaty.name = treaty.name;
+        c.treaty.goals.addAll(treaty.goals);
+        c.treaty.progress = treaty.progress;
         c.removed = removed;
         return c;
     }

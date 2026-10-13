@@ -57,6 +57,19 @@ public final class BattleReports_test {
 		assert BattleReports.mayAnswer("p", 10_000) && !BattleReports.mayAnswer("p", 10_500) && BattleReports.mayAnswer("q", 10_500)
 				: "one answer a second per player";
 
+		List<BattleReports.Line> usThem = List.of(new BattleReports.Line(10, "Us", 1, false), new BattleReports.Line(20, "Them", 1, false));
+		List<BattleReports.Report> war = List.of(
+				new BattleReports.Report(100, new Vector3i(), "v", "b", 1, false, 10, Integer.MIN_VALUE, usThem, List.of(), "W"),
+				new BattleReports.Report(100, new Vector3i(), "v", "b", 1, false, Integer.MIN_VALUE, 20, usThem, List.of(), "F"),
+				new BattleReports.Report(5, new Vector3i(), "v", "b", 1, false, 20, Integer.MIN_VALUE, usThem, List.of(), "before the war"));
+		//battles 2/3 (a win outweighs coming off better), ships 2 for 2 = 1/2; the pre-war battle is ignored
+		assert Math.abs(BattleReports.warBalance(war, 10, 20, 50) - 7.0 / 12) < 1e-9 : "battles and kills averaged";
+		assert Math.abs(BattleReports.warBalance(war, 20, 10, 50) - 5.0 / 12) < 1e-9 : "the other side sees the mirror";
+		assert BattleReports.warBalance(war, 10, 30, 0) == 0.5 : "even with no battles";
+		List<BattleReports.Report> draw = List.of(new BattleReports.Report(100, new Vector3i(), "v", "b", 1, false, Integer.MIN_VALUE, Integer.MIN_VALUE,
+				List.of(new BattleReports.Line(10, "Us", 1, false), new BattleReports.Line(20, "Them", 3, false)), List.of(), "D"));
+		assert BattleReports.warBalance(draw, 10, 20, 0) == 0.75 : "kills alone count when nobody won";
+
 		BattleTracker.Battle b = new BattleTracker.Battle(1, new Vector3i(), 0);
 		b.side(10).lost = 3;
 		b.side(20).lost = 1;

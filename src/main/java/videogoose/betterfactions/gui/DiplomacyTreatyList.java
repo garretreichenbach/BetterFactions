@@ -20,6 +20,7 @@ import org.schema.schine.graphicsengine.forms.gui.GUITextButton.ColorPalette;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
 
+import javax.vecmath.Vector4f;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -40,6 +41,11 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
 
     private final GUIElement parent;
     private Faction other;
+    /**
+     * Whose side the list is seen from: null for the viewer's own faction. Another faction's treaties
+     * are shown read-only.
+     */
+    private Faction viewpoint;
 
     public DiplomacyTreatyList(InputState state, GUIElement p) {
         super(state, 100, 100, p);
@@ -73,12 +79,24 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
         flagDirty();
     }
 
+    public void setViewpoint(Faction viewpoint) {
+        this.viewpoint = viewpoint;
+        flagDirty();
+    }
+
     private GameClientState client() {
         return (GameClientState) getState();
     }
 
     private int ownFactionId() {
         return client().getPlayer().getFactionId();
+    }
+
+    /**
+     * The faction on "our" side of the list: the viewpoint, else the viewer's own.
+     */
+    private int sideId() {
+        return viewpoint != null ? viewpoint.getIdFaction() : ownFactionId();
     }
 
     /**
@@ -159,6 +177,20 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
             }
         }, GUIHorizontalArea.HButtonType.BUTTON_GREY_MEDIUM, ControllerElement.FilterRowStyle.RIGHT, ControllerElement.FilterPos.BOTTOM);
 
+        addButton(new GUICallback() {
+            @Override
+            public boolean isOccluded() {
+                return !isActive();
+            }
+
+            @Override
+            public void callback(GUIElement callingGuiElement, MouseEvent event) {
+                if (event.pressedLeftMouse() && other != null && sideId() != 0) {
+                    new DiplomacyHistoryDialog(client(), sideId(), other).activate();
+                }
+            }
+        }, Lng.str("HISTORY"), GUIHorizontalArea.HButtonType.BUTTON_GREY_MEDIUM, ControllerElement.FilterRowStyle.FULL, ControllerElement.FilterPos.BOTTOM);
+
         activeSortColumnIndex = 0;
     }
 
@@ -179,7 +211,7 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
 
     @Override
     protected Collection<FactionTreaty> getElementList() {
-        int own = ownFactionId();
+        int own = sideId();
         if (other == null || own == 0) {
             return Collections.emptyList();
         }
@@ -247,14 +279,18 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
      * The clause the proposer wrote, plus the way out.
      */
     private GUIAnchor expandedFor(FactionTreaty t) {
-        GUIAnchor c = new GUIAnchor(getState(), 100, 59) {
+        boolean war = TreatyTypeRegistry.WAR.equals(t.typeId);
+        //wars get room for a second line of clause above the progress bar, which sits under it
+        int textH = war ? 46 : 30;
+        int buttonsY = war ? textH + PROGRESS_HEIGHT : textH;
+        GUIAnchor c = new GUIAnchor(getState(), 100, buttonsY + 29) {
             @Override
             public void draw() {
                 setWidth(parent.getWidth());
                 super.draw();
             }
         };
-        GUIScrollablePanel scroll = new GUIScrollablePanel(80, 30, c, getState());
+        GUIScrollablePanel scroll = new GUIScrollablePanel(80, textH, c, getState());
         GUITextOverlayTableInnerDescription clause = new GUITextOverlayTableInnerDescription(10, 10, getState());
         clause.autoWrapOn = c;
         clause.setTextSimple(new Object() {
@@ -288,9 +324,18 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
                         if (!event.pressedLeftMouse()) {
                             return;
                         }
+                        Faction own = client().getFaction();
+                        if (DiplomacyProposeDialog.inDebt(own)) {
+                            client().getController().popupAlertTextMessage(Lng.str("%s is in debt (%s faction points) and cannot break a treaty until it is paid off.",
+                                    own.getName(), (int) own.factionPoints), 0);
+                            return;
+                        }
                         PlayerOkCancelInput confirm = new PlayerOkCancelInput("DIPLOMACY_BREAK", getState(), 440, 230,
                                 Lng.str("Break %s", name(t)),
-                                Lng.str("Really end this agreement with %s?\nThey will be told, and it will cost you standing.",
+                                videogoose.betterfactions.BFConfig.breakTreatyCost() > 0
+                                        ? Lng.str("Really end this agreement with %s?\nThey will be told, and it will cost you standing and %s faction points.",
+                                        other != null ? other.getName() : "", videogoose.betterfactions.BFConfig.breakTreatyCost())
+                                        : Lng.str("Really end this agreement with %s?\nThey will be told, and it will cost you standing.",
                                         other != null ? other.getName() : "")) {
                             @Override
                             public void pressedOK() {
@@ -310,6 +355,7 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
             @Override
             public void draw() {
                 if (showBreak(t)) {
+                    setColorPalette(DiplomacyProposeDialog.inDebt(client().getFaction()) ? ColorPalette.TRANSPARENT : ColorPalette.CANCEL);
                     super.draw();
                 }
             }
@@ -370,18 +416,79 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
         };
 
         c.attach(scroll);
+        if (war) {
+            c.attach(warProgress(t, c, textH));
+        }
         c.attach(breakButton);
         c.attach(renameButton);
         c.attach(battlesButton);
-        breakButton.setPos(4, 30, 0);
-        renameButton.setPos(130, 30, 0);
-        battlesButton.setPos(256, 30, 0);
+        breakButton.setPos(4, buttonsY, 0);
+        renameButton.setPos(130, buttonsY, 0);
+        battlesButton.setPos(256, buttonsY, 0);
         return c;
+    }
+
+    private static final int PROGRESS_HEIGHT = 22;
+    private static final Vector4f OURS = new Vector4f(0.31f, 0.50f, 0.35f, 1.0f);
+    private static final Vector4f THEIRS = new Vector4f(0.50f, 0.31f, 0.31f, 1.0f);
+
+    /**
+     * Who is winning, ours from the left: the server's {@link FactionTreaty#progress} - the battles won
+     * and ships destroyed since the war began, and the systems it is being fought over. Read from the
+     * treaty in force each frame, since a progress update replaces the treaty object.
+     */
+    private GUIAnchor warProgress(FactionTreaty t, GUIAnchor c, int y) {
+        GUITextOverlayTable label = new GUITextOverlayTable(10, 10, getState());
+        GUIColoredRectangle ours = new GUIColoredRectangle(getState(), 1, 7, new Vector4f(OURS));
+        GUIColoredRectangle theirs = new GUIColoredRectangle(getState(), 1, 7, new Vector4f(THEIRS));
+        double[] balance = {0.5};
+        GUIAnchor box = new GUIAnchor(getState(), 10, PROGRESS_HEIGHT) {
+            @Override
+            public void draw() {
+                FactionTreaty live = DiplomacyManager.client().getTreaties(t.from, t.to).get(t.typeId);
+                FactionTreaty war = live != null ? live : t;
+                balance[0] = war.from == sideId() ? war.progress : 1 - war.progress;
+                setWidth(Math.max(10, c.getWidth() - 16));
+                float barX = 110, barW = Math.max(0, getWidth() - barX - 50);
+                float split = (float) balance[0] * barW;
+                ours.setPos(barX, 7, 0);
+                ours.setWidth(Math.max(0, split - 1));
+                theirs.setPos(barX + split + 1, 7, 0);
+                theirs.setWidth(Math.max(0, barW - split - 1));
+                super.draw();
+            }
+        };
+        label.setTextSimple(new Object() {
+            @Override
+            public String toString() {
+                return Lng.str("War Progress");
+            }
+        });
+        label.setPos(0, 3, 0);
+        GUITextOverlayTable percent = new GUITextOverlayTable(10, 10, getState()) {
+            @Override
+            public void draw() {
+                setPos(box.getWidth() - 42, 3, 0);
+                super.draw();
+            }
+        };
+        percent.setTextSimple(new Object() {
+            @Override
+            public String toString() {
+                return Math.round(balance[0] * 100) + "%";
+            }
+        });
+        box.attach(label);
+        box.attach(ours);
+        box.attach(theirs);
+        box.attach(percent);
+        box.setPos(4, y, 0);
+        return box;
     }
 
     private boolean showBreak(FactionTreaty t) {
         TreatyType type = t.getType();
-        return type != null && type.isBreakable() && mayBreak(t);
+        return viewpoint == null && type != null && type.isBreakable() && mayBreak(t);
     }
 
     /**
@@ -393,7 +500,7 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
     private boolean showRename(FactionTreaty t) {
         TreatyType type = t.getType();
         Faction own = client().getFaction();
-        if (type == null || own == null || !type.needsAcceptance() || !DiplomacyProposeDialog.mayPropose(client(), own)) {
+        if (viewpoint != null || type == null || own == null || !type.needsAcceptance() || !DiplomacyProposeDialog.mayPropose(client(), own)) {
             return false;
         }
         if (!type.isSymmetric() && t.from != own.getIdFaction()) {

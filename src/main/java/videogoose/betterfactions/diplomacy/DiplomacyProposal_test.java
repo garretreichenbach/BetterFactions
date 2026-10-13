@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.List;
 
 import org.schema.game.common.data.player.faction.FactionRelation;
 import org.schema.game.common.data.player.faction.FactionRelation.RType;
@@ -38,6 +39,7 @@ public final class DiplomacyProposal_test {
         queryResultRoundTripsThroughTheWire();
         counterKeepsItsName();
         termsSurviveWireAndTag();
+        treatyFoldsIntoTerms();
         counterKeepsWhoPays();
         termsAreCheckedOnTheirOwn();
         System.out.println("DiplomacyProposal_test: OK");
@@ -230,9 +232,37 @@ public final class DiplomacyProposal_test {
         DiplomacyProposal p = new DiplomacyProposal();
         p.set("Someone", 3, 4, null, RType.NEUTRAL.code, "enough", DiplomacyProposal.Action.PROPOSE);
         p.terms.add(SettlementTerm.points(4, 500));
-        p.terms.add(SettlementTerm.signTreaty(4, TreatyTypeRegistry.ALLIANCE));
+        //a treaty's term and name ride its own term now, so they have to survive the trip too
+        p.terms.add(SettlementTerm.signTreaty(4, TreatyTypeRegistry.ALLIANCE, 123456789L, "Accord of Ends"));
         p.terms.add(SettlementTerm.breakTreaty(3, TreatyTypeRegistry.DEFENSIVE_PACT, 9));
         return p;
+    }
+
+    /**
+     * A deal is its terms: an offer still naming a treaty of its own - an older client, a saved offer,
+     * an NPC's - is turned into the same thing, binding the side it was put to, with its term and name.
+     */
+    private static void treatyFoldsIntoTerms() {
+        DiplomacyProposal p = new DiplomacyProposal();
+        p.set("Someone", 3, 4, TreatyTypeRegistry.VASSALAGE, RType.NEUTRAL.code, "kneel", DiplomacyProposal.Action.PROPOSE, 999L);
+        p.name = "The Yoke";
+        p.terms.add(SettlementTerm.points(3, 100));
+        p.foldTreatyIntoTerms();
+        assert p.typeId == null : p.typeId;
+        assert p.terms.equals(List.of(SettlementTerm.signTreaty(4, TreatyTypeRegistry.VASSALAGE, 999L, "The Yoke"),
+                SettlementTerm.points(3, 100))) : p.terms;
+
+        //a counter is turned around before it is folded, so its treaty binds the side it now goes to
+        DiplomacyProposal counter = DiplomacyProposal.counterTo(p, "Other", TreatyTypeRegistry.TRIBUTARY, 0L, "", "", List.of());
+        DiplomacyProposal back = counter.asCounterProposal();
+        assert back.a == 4 && back.b == 3;
+        assert back.typeId == null && back.terms.contains(SettlementTerm.signTreaty(3, TreatyTypeRegistry.TRIBUTARY)) : back.terms;
+
+        //what is not agreed stays the proposal's own: a war, its declaration and goals
+        DiplomacyProposal war = new DiplomacyProposal();
+        war.set("Someone", 3, 4, TreatyTypeRegistry.WAR, RType.ENEMY.code, "", DiplomacyProposal.Action.PROPOSE);
+        war.foldTreatyIntoTerms();
+        assert TreatyTypeRegistry.WAR.equals(war.typeId) && war.terms.isEmpty();
     }
 
     /**

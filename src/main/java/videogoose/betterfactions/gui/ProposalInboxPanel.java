@@ -86,7 +86,7 @@ public class ProposalInboxPanel extends GUIInputPanel implements Observer {
             return Lng.str("Call to Arms");
         }
         if (offer.typeId == null) {
-            return Lng.str("Peace Offer");
+            return DiplomacyManager.client().isSettlement(offer) ? Lng.str("Settlement") : Lng.str("Peace Offer");
         }
         TreatyType type = TreatyTypeRegistry.get(offer.typeId);
         return type != null ? type.getDisplayName() : offer.typeId;

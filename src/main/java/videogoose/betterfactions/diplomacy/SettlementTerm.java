@@ -1,5 +1,6 @@
 package videogoose.betterfactions.diplomacy;
 
+import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.common.data.player.faction.FactionRelation;
 import org.schema.schine.resource.tag.FinishTag;
 import org.schema.schine.resource.tag.Tag;
@@ -29,6 +30,8 @@ public final class SettlementTerm {
         BREAK_TREATY,
         /** The giver hands {@link #amount} faction points to the other signatory. */
         TRANSFER_FACTION_POINTS,
+        /** The giver hands its claim on star system {@link #system} to the other signatory. */
+        CEDE_SYSTEM,
     }
 
     public Kind kind;
@@ -39,6 +42,12 @@ public final class SettlementTerm {
     public int with;
     /** TRANSFER_FACTION_POINTS only. */
     public float amount;
+    /** CEDE_SYSTEM only: the system's coordinates, not a sector's. */
+    public Vector3i system = new Vector3i();
+    /** SIGN_TREATY only: when the treaty lapses, or 0 for never. */
+    public long expiresAt;
+    /** SIGN_TREATY only: what the proposer wants it called, or empty to have the server name it. */
+    public String name = "";
 
     public SettlementTerm() {
     }
@@ -55,12 +64,25 @@ public final class SettlementTerm {
         return new SettlementTerm(Kind.SIGN_TREATY, giver, typeId, 0, 0);
     }
 
+    public static SettlementTerm signTreaty(int giver, String typeId, long expiresAt, String name) {
+        SettlementTerm t = signTreaty(giver, typeId);
+        t.expiresAt = expiresAt;
+        t.name = name == null ? "" : name;
+        return t;
+    }
+
     public static SettlementTerm breakTreaty(int giver, String typeId, int with) {
         return new SettlementTerm(Kind.BREAK_TREATY, giver, typeId, with, 0);
     }
 
     public static SettlementTerm points(int giver, float amount) {
         return new SettlementTerm(Kind.TRANSFER_FACTION_POINTS, giver, "", 0, amount);
+    }
+
+    public static SettlementTerm cedeSystem(int giver, Vector3i system) {
+        SettlementTerm t = new SettlementTerm(Kind.CEDE_SYSTEM, giver, "", 0, 0);
+        t.system = new Vector3i(system);
+        return t;
     }
 
     /** The signatory that is not the giver. */
@@ -88,6 +110,8 @@ public final class SettlementTerm {
         switch (kind) {
             case TRANSFER_FACTION_POINTS:
                 return amount > 0 && Float.isFinite(amount) ? null : "a faction point transfer that is not a positive amount";
+            case CEDE_SYSTEM:
+                return system != null ? null : "a system with no coordinates";
             case SIGN_TREATY:
             case BREAK_TREATY: {
                 TreatyType type = TreatyTypeRegistry.get(typeId);
@@ -99,6 +123,9 @@ public final class SettlementTerm {
                 }
                 if (kind == Kind.SIGN_TREATY && type.getImplies() == FactionRelation.RType.ENEMY) {
                     return "a war, which is declared rather than agreed";
+                }
+                if (kind == Kind.BREAK_TREATY && type.getImplies() == FactionRelation.RType.ENEMY) {
+                    return "a war, which ends in peace rather than being broken";
                 }
                 if (kind == Kind.BREAK_TREATY && breakWith(a, b) == giver) {
                     return "a treaty with itself";
@@ -130,12 +157,20 @@ public final class SettlementTerm {
             case TRANSFER_FACTION_POINTS:
                 return who + " pays " + Math.round(amount) + " faction points to " + nameOf.apply(receiver(a, b));
             case SIGN_TREATY:
-                return who + " signs " + typeName;
+                return who + " signs " + typeName + (name.isEmpty() ? "" : " \"" + name + "\"")
+                        + (expiresAt > 0 ? " for " + remaining(expiresAt) : "");
             case BREAK_TREATY:
                 return who + " breaks its " + typeName + " with " + nameOf.apply(breakWith(a, b));
+            case CEDE_SYSTEM:
+                return who + " cedes system " + system + " to " + nameOf.apply(receiver(a, b));
             default:
                 return String.valueOf(kind);
         }
+    }
+
+    private static String remaining(long expiresAt) {
+        long hours = Math.max(0, expiresAt - System.currentTimeMillis()) / (1000L * 60L * 60L);
+        return hours < 24 ? hours + " hours" : hours / 24 + " days";
     }
 
     /** One line per term, each starting "- ", or {@code none} for an empty list. */
@@ -179,6 +214,9 @@ public final class SettlementTerm {
                 new Tag(Tag.Type.STRING, null, typeId),
                 new Tag(Tag.Type.INT, null, with),
                 new Tag(Tag.Type.FLOAT, null, amount),
+                new Tag(Tag.Type.VECTOR3i, null, new Vector3i(system)),
+                new Tag(Tag.Type.LONG, null, expiresAt),
+                new Tag(Tag.Type.STRING, null, name),
                 FinishTag.INST});
     }
 
@@ -186,8 +224,18 @@ public final class SettlementTerm {
     public static SettlementTerm fromTag(Tag tag) {
         Tag[] s = (Tag[]) tag.getValue();
         Kind kind = DiplomacyTags.read(Kind.class, s[0]);
-        return new SettlementTerm(kind, (Integer) s[1].getValue(), (String) s[2].getValue(),
+        SettlementTerm t = new SettlementTerm(kind, (Integer) s[1].getValue(), (String) s[2].getValue(),
                 (Integer) s[3].getValue(), (Float) s[4].getValue());
+        //appended with CEDE_SYSTEM; a term saved before it stops at the finish tag
+        if (s.length > 5 && s[5].getType() == Tag.Type.VECTOR3i) {
+            t.system = new Vector3i((Vector3i) s[5].getValue());
+        }
+        //appended with per-treaty terms, when a deal stopped having a treaty of its own
+        if (s.length > 7 && s[6].getType() == Tag.Type.LONG) {
+            t.expiresAt = (Long) s[6].getValue();
+            t.name = (String) s[7].getValue();
+        }
+        return t;
     }
 
     public void serialize(DataOutput out) throws IOException {
@@ -196,26 +244,34 @@ public final class SettlementTerm {
         out.writeUTF(typeId);
         out.writeInt(with);
         out.writeFloat(amount);
+        system.serialize(out);
+        out.writeLong(expiresAt);
+        out.writeUTF(name);
     }
 
     public static SettlementTerm deserialize(DataInput in) throws IOException {
         Kind kind = DiplomacyTags.byName(Kind.class, in.readUTF());
-        return new SettlementTerm(kind, in.readInt(), in.readUTF(), in.readInt(), in.readFloat());
+        SettlementTerm t = new SettlementTerm(kind, in.readInt(), in.readUTF(), in.readInt(), in.readFloat());
+        t.system = Vector3i.deserializeStatic(in);
+        t.expiresAt = in.readLong();
+        t.name = in.readUTF();
+        return t;
     }
 
     @Override
     public boolean equals(Object o) {
         return o instanceof SettlementTerm t && t.kind == kind && t.giver == giver && t.typeId.equals(typeId)
-                && t.with == with && Float.compare(t.amount, amount) == 0;
+                && t.with == with && Float.compare(t.amount, amount) == 0 && t.system.equals(system)
+                && t.expiresAt == expiresAt && t.name.equals(name);
     }
 
     @Override
     public int hashCode() {
-        return java.util.Objects.hash(kind, giver, typeId, with, amount);
+        return java.util.Objects.hash(kind, giver, typeId, with, amount, system, expiresAt, name);
     }
 
     @Override
     public String toString() {
-        return kind + "(" + giver + ", " + typeId + ", " + with + ", " + amount + ")";
+        return kind + "(" + giver + ", " + typeId + ", " + with + ", " + amount + ", " + system + ")";
     }
 }

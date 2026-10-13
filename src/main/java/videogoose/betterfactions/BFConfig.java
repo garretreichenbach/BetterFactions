@@ -21,7 +21,23 @@ public final class BFConfig {
 	private static SimpleConfigInt encounterTimeoutMinutes;
 	private static SimpleConfigInt civicSwapCost;
 	private static SimpleConfigInt civicSwapCooldownDays;
+	private static SimpleConfigInt civicRushCost;
+	private static SimpleConfigInt proposeTreatyCost;
+	private static SimpleConfigInt breakTreatyCost;
+	private static SimpleConfigInt declareWarCost;
+	private static SimpleConfigInt unjustWarCost;
+	private static SimpleConfigInt giftCost;
+	private static SimpleConfigInt giftOpinion;
+	private static SimpleConfigInt fabricateClaimCost;
+	private static SimpleConfigInt fabricateClaimHours;
+	private static SimpleConfigInt claimLastsHours;
 	private static SimpleConfigInt reputationHalfLifeDays;
+	private static SimpleConfigInt spiceDealerPercent;
+	private static SimpleConfigInt wreckLifetimeHours;
+	private static SimpleConfigInt fleetUpkeepMassPerPoint;
+	private static SimpleConfigInt institutionUpkeep;
+	private static SimpleConfigInt senateVoteHours;
+	private static SimpleConfigInt senateMaxVoteHours;
 
 	private BFConfig() {
 	}
@@ -52,14 +68,76 @@ public final class BFConfig {
 				"Faction points it costs to replace a civic a faction holds. Filling an empty slot is free. 0 makes swaps free.");
 		civicSwapCooldownDays = new SimpleConfigInt(config, "civic_swap_cooldown_days", 7,
 				"Days after swapping a civic before the faction may swap one again. 0 means no wait.");
+		civicRushCost = new SimpleConfigInt(config, "civic_rush_cost", 3000,
+				"Extra faction points, on top of civic_swap_cost, to swap a civic before the cooldown is over. 0 means the cooldown cannot be skipped.");
+		proposeTreatyCost = new SimpleConfigInt(config, "propose_treaty_cost", 100,
+				"Faction points a player faction pays to propose a treaty, whether or not it is accepted. Peace offers are always free. 0 makes proposals free.");
+		breakTreatyCost = new SimpleConfigInt(config, "break_treaty_cost", 1000,
+				"Faction points a player faction pays to break a treaty in force on its own. Withdrawing a pending offer is free. 0 makes breaking free.");
+		declareWarCost = new SimpleConfigInt(config, "declare_war_cost", 2000,
+				"Faction points a player faction pays to declare war. Answering a call to arms is free. 0 makes declaring free.");
+		unjustWarCost = new SimpleConfigInt(config, "unjust_war_cost", 3000,
+				"Extra faction points, on top of declare_war_cost, to declare war with goals no casus belli justifies. 0 makes unjust wars cost only their aggression.");
+		giftCost = new SimpleConfigInt(config, "gift_cost", 500,
+				"Faction points a gift to another faction costs. The points are spent, not handed over. 0 turns gifts off.");
+		giftOpinion = new SimpleConfigInt(config, "gift_opinion", 200,
+				"Opinion a gift earns with the faction it is sent to. Each further gift sent within an hour of the last is worth less: half, then a third, and so on.");
+		fabricateClaimCost = new SimpleConfigInt(config, "fabricate_claim_cost", 1500,
+				"Faction points it costs to fabricate a claim on another faction: a casus belli for any war goal against it. 0 turns claims off.");
+		fabricateClaimHours = new SimpleConfigInt(config, "fabricate_claim_hours", 12,
+				"Hours of server uptime a fabricated claim takes before it can be used.");
+		claimLastsHours = new SimpleConfigInt(config, "claim_lasts_hours", 72,
+				"Hours of server uptime a fabricated claim can be used for once it is ready.");
 		reputationHalfLifeDays = new SimpleConfigInt(config, "reputation_half_life_days", 14,
 				"Days for half of a faction's galaxy-wide reputation for broken treaties and started fights to fade. 0 never fades.");
+		spiceDealerPercent = new SimpleConfigInt(config, "spice_dealer_upkeep_percent", 25,
+				"Percent more faction point upkeep a system costs for each Neighbourhood Spice Dealer faction owning a system that shares a face with it. 0 turns the effect off.");
+		wreckLifetimeHours = new SimpleConfigInt(config, "wreck_lifetime_hours", 48,
+				"A ship whose overheat timer runs out stays as an ownerless wreck for this many hours (counted while its sector is loaded) instead of vanishing, docked turrets and all; anyone may board and reboot it. 0 turns wrecks off: ships vanish as in vanilla.");
+		fleetUpkeepMassPerPoint = new SimpleConfigInt(config, "fleet_upkeep_mass_per_point", 10000,
+				"Player factions pay one faction point of upkeep each income period for every this much mass in their members' fleets (docked ships count with what they are docked to). With the vanilla config a 100k mass fleet costs about what one claimed system does. 0 turns fleet upkeep off.");
+		institutionUpkeep = new SimpleConfigInt(config, "institution_upkeep_points", 10,
+				"Faction points of upkeep each income period for a faction's first institution; the second adds twice this, the third three times, and so on. 0 makes institutions free.");
+		senateVoteHours = new SimpleConfigInt(config, "senate_vote_hours", 24,
+				"Hours a Senate vote stays open. It carries early once more than half the faction's active members are for it; at the close, more for than against carries.");
+		senateMaxVoteHours = new SimpleConfigInt(config, "senate_vote_max_hours", 72,
+				"Longest a faction may set its own Senate votes to stay open, in hours. senate_vote_hours is used until a faction chooses.");
 		config.readWriteFields();
+	}
+
+	public static int senateMaxVoteHours() {
+		Integer v = senateMaxVoteHours != null ? senateMaxVoteHours.getValue() : null;
+		return v == null ? 72 : Math.max(1, v);
 	}
 
 	public static int reputationHalfLifeDays() {
 		Integer v = reputationHalfLifeDays != null ? reputationHalfLifeDays.getValue() : null;
 		return v == null ? 14 : Math.max(0, v);
+	}
+
+	public static int institutionUpkeep() {
+		Integer v = institutionUpkeep != null ? institutionUpkeep.getValue() : null;
+		return v == null ? 0 : Math.max(0, v);
+	}
+
+	public static int senateVoteHours() {
+		Integer v = senateVoteHours != null ? senateVoteHours.getValue() : null;
+		return v == null ? 24 : Math.max(1, v);
+	}
+
+	public static int fleetUpkeepMassPerPoint() {
+		Integer v = fleetUpkeepMassPerPoint != null ? fleetUpkeepMassPerPoint.getValue() : null;
+		return v == null ? 0 : Math.max(0, v);
+	}
+
+	public static int wreckLifetimeHours() {
+		Integer v = wreckLifetimeHours != null ? wreckLifetimeHours.getValue() : null;
+		return v == null ? 0 : Math.max(0, v);
+	}
+
+	public static int spiceDealerPercent() {
+		Integer v = spiceDealerPercent != null ? spiceDealerPercent.getValue() : null;
+		return v == null ? 0 : Math.max(0, v);
 	}
 
 	public static int maxSoftBattles() {
@@ -105,6 +183,56 @@ public final class BFConfig {
 	public static int civicSwapCooldownDays() {
 		Integer v = civicSwapCooldownDays != null ? civicSwapCooldownDays.getValue() : null;
 		return v == null ? 0 : Math.max(0, v);
+	}
+
+	public static int civicRushCost() {
+		Integer v = civicRushCost != null ? civicRushCost.getValue() : null;
+		return v == null ? 0 : Math.max(0, v);
+	}
+
+	public static int proposeTreatyCost() {
+		Integer v = proposeTreatyCost != null ? proposeTreatyCost.getValue() : null;
+		return v == null ? 0 : Math.max(0, v);
+	}
+
+	public static int breakTreatyCost() {
+		Integer v = breakTreatyCost != null ? breakTreatyCost.getValue() : null;
+		return v == null ? 0 : Math.max(0, v);
+	}
+
+	public static int declareWarCost() {
+		Integer v = declareWarCost != null ? declareWarCost.getValue() : null;
+		return v == null ? 0 : Math.max(0, v);
+	}
+
+	public static int unjustWarCost() {
+		Integer v = unjustWarCost != null ? unjustWarCost.getValue() : null;
+		return v == null ? 0 : Math.max(0, v);
+	}
+
+	public static int giftCost() {
+		Integer v = giftCost != null ? giftCost.getValue() : null;
+		return v == null ? 0 : Math.max(0, v);
+	}
+
+	public static int giftOpinion() {
+		Integer v = giftOpinion != null ? giftOpinion.getValue() : null;
+		return v == null ? 0 : Math.max(0, v);
+	}
+
+	public static int fabricateClaimCost() {
+		Integer v = fabricateClaimCost != null ? fabricateClaimCost.getValue() : null;
+		return v == null ? 0 : Math.max(0, v);
+	}
+
+	public static long fabricateClaimMs() {
+		Integer v = fabricateClaimHours != null ? fabricateClaimHours.getValue() : null;
+		return (v == null ? 12 : Math.max(0, v)) * 60L * 60L * 1000L;
+	}
+
+	public static long claimLastsMs() {
+		Integer v = claimLastsHours != null ? claimLastsHours.getValue() : null;
+		return (v == null ? 72 : Math.max(1, v)) * 60L * 60L * 1000L;
 	}
 
 	public static boolean customEmblemsEnabled() {

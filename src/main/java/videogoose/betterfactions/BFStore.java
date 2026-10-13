@@ -4,6 +4,7 @@ import api.common.GameCommon;
 import org.schema.schine.resource.tag.Tag;
 import videogoose.betterfactions.battle.BattleTracker;
 import videogoose.betterfactions.civics.Civics;
+import videogoose.betterfactions.civics.Senate;
 import videogoose.betterfactions.repair.FactionDesigns;
 import videogoose.betterfactions.fleet.FleetIntercepts;
 import videogoose.betterfactions.repair.ShipyardRepairs;
@@ -77,6 +78,30 @@ public final class BFStore {
 
 	public static void save(Civics c) {
 		write("civics", c.toTag());
+	}
+
+	public static void load(FleetUpkeep u) {
+		read("fleet-mass", u::fromTag);
+	}
+
+	public static void save(FleetUpkeep u) {
+		write("fleet-mass", u.toTag());
+	}
+
+	public static void load(Senate s) {
+		read("senate", s::fromTag);
+	}
+
+	public static void save(Senate s) {
+		write("senate", s.toTag());
+	}
+
+	public static void load(Wrecks w) {
+		read("wrecks", w::fromTag);
+	}
+
+	public static void save(Wrecks w) {
+		write("wrecks", w.toTag());
 	}
 
 	private static void read(String name, Consumer<Tag> into) {

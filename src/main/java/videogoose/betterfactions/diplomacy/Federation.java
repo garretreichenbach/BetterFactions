@@ -64,7 +64,8 @@ public class Federation {
      */
     public static final long CHARTER_VOTE_EXPULSION = 2L;
     /**
-     * Declaring war in the bloc's name goes to the members instead of being the chair's call.
+     * Declaring war - or making peace - in the bloc's name goes to the members instead of being the
+     * chair's call.
      */
     public static final long CHARTER_VOTE_WAR = 4L;
     /**
@@ -317,6 +318,11 @@ public class Federation {
              * Declare war on {@link #subject} in the bloc's name.
              */
             WAR,
+            /**
+             * Offer {@link #subject} white peace from every member at war with it. Put to a vote
+             * under the same charter flag as war.
+             */
+            PEACE,
             /**
              * Replace the charter with {@link #text} and {@link #value}. Has no subject.
              */

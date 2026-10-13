@@ -81,7 +81,14 @@ public class DiplomacyAction {
         TREATY_SIGNED(en -> Lng.str("Signed a treaty with us")),
         TREATY_REFUSED(en -> Lng.str("Turned down a treaty")),
         TREATY_BROKEN(en -> Lng.str("Broke a treaty with us")),
-        TREATY_EXPIRED(en -> Lng.str("Let a treaty lapse"));
+        TREATY_EXPIRED(en -> Lng.str("Let a treaty lapse")),
+        /** Bought with faction points; see {@code DiplomacyManager#giftServer}. Worth nothing per turn. */
+        GIFT(en -> Lng.str("Sent us gifts")),
+        /**
+         * In the claimant's own ledger of the target: a casus belli bought with faction points, which
+         * holds once it has been prepared. See {@link DiplomacyEntity#claimReadyIn}.
+         */
+        FABRICATED_CLAIM(en -> Lng.str("We hold a claim on them"));
 
         private final Translatable description;
 

@@ -192,10 +192,16 @@ public class FederationMemberList extends ScrollableTableList<FederationMemberLi
                             }
                         }, GUITextButton.ColorPalette.CANCEL, 56,
                         () -> mayAct() && (leads() || byVote.getAsBoolean()) && s.factionId != ownFactionId(),
-                        () -> send(FederationCommand.Kind.EXPEL, s.factionId));
+                        () -> FactionPanelTabs.confirm(client(), Lng.str("Expel %s", nameOf(s)),
+                                byVote.getAsBoolean()
+                                        ? Lng.str("Put expelling %s to a vote?", nameOf(s))
+                                        : Lng.str("Really expel %s?\nTheir alliance with every member ends.", nameOf(s)),
+                                () -> send(FederationCommand.Kind.EXPEL, s.factionId)));
                 GUITextButton lead = button(Lng.str("CHAIR"), GUITextButton.ColorPalette.OK, 46,
                         () -> mayAct() && leads(),
-                        () -> send(FederationCommand.Kind.TRANSFER_LEAD, s.factionId));
+                        () -> FactionPanelTabs.confirm(client(), Lng.str("Hand over the chair"),
+                                Lng.str("Really make %s the chair?\nYou cannot take it back.", nameOf(s)),
+                                () -> send(FederationCommand.Kind.TRANSFER_LEAD, s.factionId)));
                 expel.setPos(0, 0, 0);
                 lead.setPos(60, 0, 0);
                 actions.attach(expel);

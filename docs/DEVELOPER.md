@@ -469,7 +469,8 @@ Reactor output and thrust are not read.
 weighting, binding, chair rotation days). Commands are `FederationCommand`s over `BFPacket`, all gated by
 `Perms.FEDERATION_VOTE`, and the chair-or-vote rule per command lives in `DiplomacyManager`. Membership writes a
 `starmade:federation` treaty with every other member; a federation war signs a `starmade:war` treaty from each
-bound member. Votes and ballots are only sent to members.
+bound member, and a federation peace files a server-authored white peace offer from each bound member at
+war with the target (war and peace share `CHARTER_VOTE_WAR`). Votes and ballots are only sent to members.
 
 ## Emblems
 

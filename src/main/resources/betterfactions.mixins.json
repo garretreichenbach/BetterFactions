@@ -37,7 +37,12 @@
 		"FleetMissionLabelMixin",
 		"FleetMassColumnMixin",
 		"FleetMemberMassColumnMixin",
-		"FleetMemberMassMixin"
+		"FleetMemberMassMixin",
+		"FactionAccessor",
+		"SpiceDealerUpkeepMixin",
+		"WreckOverheatMixin",
+		"TurretKnockedOffMixin",
+		"FleetUpkeepMixin"
 	],
 	"client": [],
 	"server": []

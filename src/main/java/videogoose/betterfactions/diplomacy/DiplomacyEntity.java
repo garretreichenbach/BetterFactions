@@ -228,7 +228,9 @@ public class DiplomacyEntity implements LogInterface {
         } else {
             if (mod != null) {
                 mod.elapsedTimeInactive += timeElapsed;
-                if (mod.type == DiplStatusType.NON_AGGRESSION || mod.elapsedTimeInactive > getConfig().getDiplomacyStaticTimeout(status)) {
+                //a relation is a fact, not a grudge: "at war with them" outliving the peace (the
+                //relation-change recalc passes 0 elapsed, so it lingered up to two status checks)
+                if (mod.type == DiplStatusType.NON_AGGRESSION || mod.type.isRelation() || mod.elapsedTimeInactive > getConfig().getDiplomacyStaticTimeout(status)) {
                     map.remove(status);
                 }
             }
@@ -260,7 +262,7 @@ public class DiplomacyEntity implements LogInterface {
                     List<Faction> enemies = getFaction().getEnemies();
                     int alliances = 0;
                     for (Faction f : enemies) {
-                        if (f.getIdFaction() != dbId) {
+                        if (f.getIdFaction() != dbId && f != getFaction()) {
                             FactionRelation.RType orel = f.getRelationshipWithFactionOrPlayer(dbId);
                             if (orel == FactionRelation.RType.FRIEND) {
                                 alliances++;
@@ -283,7 +285,7 @@ public class DiplomacyEntity implements LogInterface {
                 List<Faction> enemies = getFaction().getEnemies();
                 int wars = 0;
                 for (Faction f : enemies) {
-                    if ((f.isNPC() || f.isPlayerFaction()) && f.getIdFaction() != dbId) {
+                    if ((f.isNPC() || f.isPlayerFaction()) && f.getIdFaction() != dbId && f != getFaction()) {
                         FactionRelation.RType orel = f.getRelationshipWithFactionOrPlayer(dbId);
                         if (orel == FactionRelation.RType.ENEMY) {
                             wars++;
@@ -296,7 +298,7 @@ public class DiplomacyEntity implements LogInterface {
                     List<Faction> friends = getFaction().getFriends();
                     int friendsWFriends = 0;
                     for (Faction f : friends) {
-                        if ((f.isNPC() || f.isPlayerFaction()) && f.getIdFaction() != dbId) {
+                        if ((f.isNPC() || f.isPlayerFaction()) && f.getIdFaction() != dbId && f != getFaction()) {
                             FactionRelation.RType orel = f.getRelationshipWithFactionOrPlayer(dbId);
                             if (orel == FactionRelation.RType.FRIEND) {
                                 friendsWFriends++;
@@ -308,10 +310,11 @@ public class DiplomacyEntity implements LogInterface {
                     return 0;
                 }
             case IN_WAR_WITH_FRIENDS:
+                //getFriends() includes the faction itself, which is how our own war counted as a friend's
                 List<Faction> friends = getFaction().getFriends();
                 int warsWFriends = 0;
                 for (Faction f : friends) {
-                    if ((f.isNPC() || f.isPlayerFaction()) && f.getIdFaction() != dbId) {
+                    if ((f.isNPC() || f.isPlayerFaction()) && f.getIdFaction() != dbId && f != getFaction()) {
                         FactionRelation.RType orel = f.getRelationshipWithFactionOrPlayer(dbId);
                         if (orel == FactionRelation.RType.ENEMY) {
                             warsWFriends++;
@@ -891,6 +894,23 @@ public class DiplomacyEntity implements LogInterface {
         if (getActionCount(DiplomacyAction.DiplActionType.TREATY_REFUSED, r.treatyId) > 0) {
             return false;
         }
+        //a peace just signed is a truce: the grudge that started the war usually outlives it, so the
+        //same reaction would otherwise re-declare the moment the ink dries
+        if (type != null && type.getImplies() == FactionRelation.RType.ENEMY
+                && getActionCount(DiplomacyAction.DiplActionType.TREATY_SIGNED)
+                > getActionCount(DiplomacyAction.DiplActionType.TREATY_SIGNED, type.getId())) {
+            return false;
+        }
+        //an NPC is held to the same casus belli rules as a player: its war is for reparations, and
+        //it only declares one it can justify
+        List<SettlementTerm> goals = List.of();
+        if (type != null && type.getImplies() == FactionRelation.RType.ENEMY) {
+            //ponytail: flat ask of one declaration's cost; peace talks price the real amount
+            goals = List.of(SettlementTerm.points((int) dbId, videogoose.betterfactions.BFConfig.declareWarCost()));
+            if (!hasCasusBelli(goals, null)) {
+                return false;
+            }
+        }
         if (type == null && getFaction().getRelationshipWithFactionOrPlayer(dbId) != FactionRelation.RType.ENEMY) {
             //plain peace is only meaningful while there is something to end
             return false;
@@ -902,6 +922,7 @@ public class DiplomacyEntity implements LogInterface {
                 r.message != null && !r.message.isEmpty() ? r.message
                         : Lng.str("Since you haven't been attacking for some time, we wanted to make peace"),
                 DiplomacyProposal.Action.PROPOSE);
+        offer.terms.addAll(goals);
         offer.serverAuthored = true;
         mgr.getRelationOffersToAdd().add(offer);
         log("Faction offered " + (r.treatyId != null ? r.treatyId : "peace"), LogLevel.NORMAL);
@@ -970,12 +991,47 @@ public class DiplomacyEntity implements LogInterface {
     }
 
     /**
+     * Starts a claim on them in this, the claimant's, ledger. One action whose countdown covers both
+     * the preparation and the use: it is ready once no more than {@code lastsMs} is left on it.
+     *
+     * @return false if a listener cancelled it
+     */
+    public boolean fabricateClaim(long readyMs, long lastsMs) {
+        diplomacyAction(DiplomacyAction.DiplActionType.FABRICATED_CLAIM);
+        DiplomacyAction a = actions.get(DiplomacyAction.key(DiplomacyAction.DiplActionType.FABRICATED_CLAIM, null));
+        if (a == null) {
+            return false;
+        }
+        a.timeDuration = readyMs + lastsMs;
+        return true;
+    }
+
+    /**
+     * How long until the claim on them can be used: 0 when it can, -1 when there is none.
+     */
+    public long claimReadyIn(long lastsMs) {
+        DiplomacyAction a = actions.get(DiplomacyAction.key(DiplomacyAction.DiplActionType.FABRICATED_CLAIM, null));
+        return a == null ? -1 : Math.max(0, a.timeDuration - lastsMs);
+    }
+
+    /**
      * Whether this faction - the ledger's owner - has a casus belli against the other for every goal
      * listed. Each kind is checked once, however many goals share it.
      *
      * @param unmet if non-null, filled with a line per kind that is not justified
      */
     public boolean hasCasusBelli(List<SettlementTerm> goals, List<String> unmet) {
+        if (claimReadyIn(videogoose.betterfactions.BFConfig.claimLastsMs()) == 0) {
+            //bought, so it answers for every goal and is not subject to the server's casus belli rules
+            return true;
+        }
+        if (goals.isEmpty()) {
+            //a war for nothing in particular has nothing a casus belli could justify
+            if (unmet != null) {
+                unmet.add(Lng.str("a war with no goals is never justified"));
+            }
+            return false;
+        }
         boolean all = true;
         java.util.EnumSet<SettlementTerm.Kind> seen = java.util.EnumSet.noneOf(SettlementTerm.Kind.class);
         for (SettlementTerm g : goals) {
@@ -999,6 +1055,10 @@ public class DiplomacyEntity implements LogInterface {
             } else {
                 unmet.addAll(why);
             }
+        }
+        long pending = claimReadyIn(videogoose.betterfactions.BFConfig.claimLastsMs());
+        if (!all && pending > 0) {
+            unmet.add(Lng.str("your claim on them is ready in %s hours", (pending + 3_599_999L) / 3_600_000L));
         }
         return all;
     }
@@ -1094,14 +1154,25 @@ public class DiplomacyEntity implements LogInterface {
     }
 
     /**
-     * How badly our recent battles against them have gone, 0 to 1; see {@code BattleReports.weariness}.
+     * How badly the war against them is going, 0 to 1: the worse of our recent battles against them
+     * (see {@code BattleReports.weariness}, which fades over a day) and the war's progress since it was
+     * declared - battles and the territory it is being fought over, the War Progress bar's number. A war
+     * lost two days ago is still lost.
      * Only against them: losing to one enemy is no reason to make peace with another. Server only - the
      * reports are; a client, or a lone player, reads 0.
      */
     public double getWeariness() {
         Faction us = getFaction();
-        return us == null || !isFaction() ? 0
-                : videogoose.betterfactions.battle.BattleTracker.get().archive().weariness(us.getIdFaction(), (int) dbId, System.currentTimeMillis());
+        if (us == null || !isFaction()) {
+            return 0;
+        }
+        double recent = videogoose.betterfactions.battle.BattleTracker.get().archive()
+                .weariness(us.getIdFaction(), (int) dbId, System.currentTimeMillis());
+        FactionTreaty war = mgr.getTreaties(us.getIdFaction(), (int) dbId).get(TreatyTypeRegistry.WAR);
+        //progress is the declarer's; 0.5 is even, 0 is lost outright
+        double ours = war == null ? 0.5 : war.from == us.getIdFaction() ? war.progress : 1 - war.progress;
+        double losing = Math.max(0, 1 - 2 * ours);
+        return Math.max(recent, losing);
     }
 
     /**
@@ -1238,6 +1309,14 @@ public class DiplomacyEntity implements LogInterface {
 
         public String getDescription() {
             return description.getName(this);
+        }
+
+        /** Read straight off the relation table, so it ends the moment the relation does. */
+        public boolean isRelation() {
+            return switch (this) {
+                case IN_WAR, IN_WAR_WITH_ENEMY, ALLIANCE, ALLIANCE_WITH_ENEMY, ALLIANCE_WITH_FRIENDS, IN_WAR_WITH_FRIENDS -> true;
+                default -> false;
+            };
         }
     }
 }

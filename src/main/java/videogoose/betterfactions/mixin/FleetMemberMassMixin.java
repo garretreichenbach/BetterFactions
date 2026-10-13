@@ -7,7 +7,9 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import videogoose.betterfactions.FleetUpkeep;
 
 /**
  * Server: a fleet member's mass as the fleet menu shows it. Vanilla takes it from the physics body, which is
@@ -30,7 +32,18 @@ public abstract class FleetMemberMassMixin {
 	@Redirect(method = {"<init>(Lorg/schema/game/common/controller/SegmentController;)V", "loadEntityInSectorWithDocks"},
 			at = @At(value = "INVOKE", target = "Lorg/schema/game/common/controller/SegmentController;getTotalPhysicalMass()F"))
 	private float betterFactions$blockMass(SegmentController sc) {
-		return sc.getMassWithoutDockIncludingStation();
+		float m = sc.getMassWithoutDockIncludingStation();
+		if (sc.isOnServer()) {
+			FleetUpkeep.get().sawMass(sc.getUniqueIdentifier(), m);
+		}
+		return m;
+	}
+
+	/** A member read from the database has no mass until its ship loads; start it at the last one seen. */
+	@Inject(method = "<init>(Lorg/schema/game/server/data/GameServerState;JLjava/lang/String;Ljava/lang/String;Lorg/schema/common/util/linAlg/Vector3i;JJ)V",
+			at = @At("RETURN"))
+	private void betterFactions$savedMass(CallbackInfo ci) {
+		lastMass = FleetUpkeep.get().massOf(((FleetMember) (Object) this).UID);
 	}
 
 	/**
@@ -47,6 +60,7 @@ public abstract class FleetMemberMassMixin {
 			return;
 		}
 		double m = sc.getMassWithoutDockIncludingStation();
+		FleetUpkeep.get().sawMass(sc.getUniqueIdentifier(), m);
 		if (Math.abs(m - lastMass) > Math.max(1, lastMass * 0.005)) {
 			lastMass = m;
 			cir.setReturnValue(true);

@@ -48,12 +48,19 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
      * True only for proposals the engine built for itself. Never set by a deserialize.
      */
     public boolean serverAuthored;
+    /** Server, never sent: the proposer's faction's Senate already approved this, so it is not put to a vote again. */
+    public transient boolean senateApproved;
     /**
      * Server only, never saved or sent: a war that is itself the answer to a call to arms (or set by an
      * admin), so it does not call the other side's pact partners in turn. Without it every pact on
      * both sides would chain into one galaxy-wide war.
      */
     public transient boolean noCallToArms;
+    /**
+     * Server only, never saved or sent: a member's share of a federation's war. Server authored, yet
+     * still pays the unjust war penalty when it has no casus belli.
+     */
+    public transient boolean federationWar;
     /**
      * Only meaningful on a {@link Action#QUERY_RESULT}: whether they would say yes. When they would
      * not, {@link #getMessage()} carries the reasons the acceptance rule gave.
@@ -76,6 +83,12 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
      * treaty term. Only the server makes these; it zeroes the field on anything a client sends.
      */
     public int against;
+    /**
+     * Why the proposer wants this, for their own faction's Senate to read; never shown to the other
+     * side. Empty when there is no Senate or nothing was said.
+     */
+    public String justification = "";
+    public static final int MAX_JUSTIFICATION = 240;
     private String message;
     private String initiator;
 
@@ -216,7 +229,28 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
 		p.initiator = initiator;
 		p.action = Action.PROPOSE;
 		p.serverAuthored = serverAuthored;
+        p.foldTreatyIntoTerms();
         return p;
+    }
+
+    /**
+     * Turns a treaty offered as the proposal's own into a term, binding {@link #b} - the side it is put
+     * to - with the proposal's expiry and name. A deal is only its terms, which is what lets either side
+     * sign a one-sided treaty and each treaty carry its own term; everything that still names a treaty
+     * here (an older client, a saved offer, an NPC's) is folded on arrival. A declaration, a call to
+     * arms, a federation and a revocation are not agreements, so they keep theirs.
+     */
+    public void foldTreatyIntoTerms() {
+        TreatyType type = typeId != null ? TreatyTypeRegistry.get(typeId) : null;
+        if (type == null || !type.needsAcceptance() || TreatyTypeRegistry.FEDERATION.equals(typeId) || against != 0
+                || action != Action.PROPOSE && action != Action.QUERY) {
+            return;
+        }
+        terms.add(0, SettlementTerm.signTreaty(b, typeId, expiresAt, name));
+        typeId = null;
+        rel = FactionRelation.RType.NEUTRAL.code;
+        expiresAt = 0L;
+        name = "";
     }
 
     public String getInitiator() {
@@ -301,6 +335,7 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
         against = subs.length > 10 && subs[10].getType() != Tag.Type.FINISH ? (Integer) subs[10].getValue() : 0;
         //a query's answer travels by tag too, and without this every answer read as a refusal
         accepted = subs.length > 11 && subs[11].getType() != Tag.Type.FINISH && (Byte) subs[11].getValue() != 0;
+        justification = subs.length > 12 && subs[12].getType() != Tag.Type.FINISH ? (String) subs[12].getValue() : "";
 		if (action == null) {
             action = Action.PROPOSE;
         }
@@ -321,6 +356,7 @@ public class DiplomacyProposal extends FactionRelation implements Serialializati
                 SettlementTerm.listToTag(terms),
                 new Tag(Tag.Type.INT, null, against),
                 new Tag(Tag.Type.BYTE, null, (byte) (accepted ? 1 : 0)),
+                new Tag(Tag.Type.STRING, null, nullToEmpty(justification)),
                 FinishTag.INST});
     }
 

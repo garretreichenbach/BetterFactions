@@ -177,6 +177,35 @@ public final class BattleReports {
 		return Math.max(0, Math.min(1, -net / MOMENTUM_CAP));
 	}
 
+	/**
+	 * A war's balance from {@code faction}'s side, 0 to 1: the mean of two shares over the battles against
+	 * {@code enemy} since {@code since} - the battles won (weighted like {@link #swing} without the fade)
+	 * and the ships destroyed. A share with nothing in it sits out; 0.5 when both are empty.
+	 */
+	public static double warBalance(List<Report> reports, int faction, int enemy, long since) {
+		double ours = 0, theirs = 0;
+		int killed = 0, lost = 0;
+		for (Report r : reports) {
+			if (r.time < since || !r.involves(faction) || !r.involves(enemy)) {
+				continue;
+			}
+			int victor = victor(r);
+			double w = r.winner != Integer.MIN_VALUE ? 1 : 0.5;
+			ours += victor == faction ? w : 0;
+			theirs += victor == enemy ? w : 0;
+			killed += r.lostBy(enemy);
+			lost += r.lostBy(faction);
+		}
+		boolean battles = ours + theirs > 0, ships = killed + lost > 0;
+		double b = battles ? ours / (ours + theirs) : 0, s = ships ? (double) killed / (killed + lost) : 0;
+		return battles && ships ? (b + s) / 2 : battles ? b : ships ? s : 0.5;
+	}
+
+	/** Server: {@link #warBalance} over every kept report. */
+	public synchronized double warBalance(int faction, int enemy, long since) {
+		return warBalance(new ArrayList<>(all), faction, enemy, since);
+	}
+
 	/** The side that held the field, else the side that came off better, else {@link Integer#MIN_VALUE}. */
 	private static int victor(Report r) {
 		return r.winner != Integer.MIN_VALUE ? r.winner : r.favoured;

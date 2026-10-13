@@ -247,7 +247,7 @@ public class FederationVoteList extends GUIAnchor {
             yours = v.ballots.get(own()) != 0 ? Lng.str("You voted for.") : Lng.str("You voted against.");
         }
         String binding = "";
-        if (v.kind == Federation.FederationVote.Kind.WAR) {
+        if (v.kind == Federation.FederationVote.Kind.WAR || v.kind == Federation.FederationVote.Kind.PEACE) {
             binding = f.hasCharterFlag(Federation.CHARTER_BIND_SUPPORTERS)
                     ? Lng.str(" Binds only those who vote for it.")
                     : Lng.str(" Binds every member either way.");

@@ -70,6 +70,13 @@ public final class DiplomacyCommands {
 		StarLoader.registerCommand(mod, new Command("faction_federation_dissolve", "<federationId>",
 				"Winds up a federation, ending the alliances its membership created.", DiplomacyCommands::federationDissolve,
 				CommandArg.integer("federationId", "1")));
+		StarLoader.registerCommand(mod, new Command("senate_pause", "[on|off]",
+				"DEBUG: nothing the Senate votes on takes effect. A vote that passes waits as if for the leader, the founder's own proposals included, so assent and veto can be tried; one that fails stays open. Assenting still carries it out. No argument flips it. Unpaused, each vote is settled at its next ballot or its close. Resets on restart.",
+				ctx -> {
+					String[] raw = ctx.rawArgs();
+					videogoose.betterfactions.civics.Senate.paused = raw.length == 0 ? !videogoose.betterfactions.civics.Senate.paused : raw[0].equalsIgnoreCase("on");
+					ctx.reply("Senate votes are " + (videogoose.betterfactions.civics.Senate.paused ? "paused: passed votes wait for the leader, even the founder's own, until /senate_pause off." : "running again."));
+				}, CommandArg.string("onOff", "on").optional()));
 		StarLoader.registerCommand(mod, new Command("faction_npc_yield", "<npcFactionId> [on|off]",
 				"DEBUG: makes an NPC faction accept every demand made of it (treaties like vassalage, and terms it gives). NPC factions only; resets on restart.", DiplomacyCommands::npcYield,
 				CommandArg.integer("npcFactionId", "-10000000"), CommandArg.string("onOff", "on").optional()));

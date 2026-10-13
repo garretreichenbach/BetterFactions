@@ -70,6 +70,10 @@ public class DiplomacyConfig {
         }
         //an NPC will not re-offer a treaty while the refusal is live, so this is how long "no" lasts
         actionTimeoutMap.put(DiplomacyAction.DiplActionType.TREATY_REFUSED, 60000 * 60);
+        //and a signature is a truce for as long: an NPC will not declare war on someone it just signed with
+        actionTimeoutMap.put(DiplomacyAction.DiplActionType.TREATY_SIGNED, 60000 * 60);
+        //gifts sent within this long of the last one are worth less; see DiplomacyManager#giftServer
+        actionTimeoutMap.put(DiplomacyAction.DiplActionType.GIFT, 60000 * 60);
         for (DiplomacyAction.DiplActionType t : DiplomacyAction.DiplActionType.values()) {
             DiplomacyConfigElement c = new DiplomacyConfigElement();
             c.actionType = t;
@@ -579,8 +583,8 @@ public class DiplomacyConfig {
     }
 
     /**
-     * A grievance: they attacked us, broke a treaty with us, declared war on us, or we simply loathe
-     * them. Reparations and imposed treaties need one; dismantling their alliance also accepts their
+     * A grievance: they attacked us, broke a treaty with us, or declared war on us. Merely loathing
+     * them is not one. Reparations and imposed treaties need one; dismantling their alliance also accepts their
      * being allied with our enemies.
      */
     public void addDefaultCasusBelli() {
@@ -589,6 +593,8 @@ public class DiplomacyConfig {
         casusBelli.put(SettlementTerm.Kind.TRANSFER_FACTION_POINTS, grievance());
         casusBelli.put(SettlementTerm.Kind.SIGN_TREATY, grievance());
         casusBelli.put(SettlementTerm.Kind.BREAK_TREATY, or(grievance(), did(DiplomacyAction.DiplActionType.ALLIANCE_WITH_ENEMY)));
+        casusBelli.put(SettlementTerm.Kind.CEDE_SYSTEM, grievance());
+        casusBelliRefusals.put(SettlementTerm.Kind.CEDE_SYSTEM, Lng.str("They have done nothing to you that would justify taking their territory."));
         casusBelliRefusals.put(SettlementTerm.Kind.TRANSFER_FACTION_POINTS, Lng.str("They have done nothing to you that would justify reparations."));
         casusBelliRefusals.put(SettlementTerm.Kind.SIGN_TREATY, Lng.str("They have done nothing to you that would justify imposing a treaty."));
         casusBelliRefusals.put(SettlementTerm.Kind.BREAK_TREATY, Lng.str("Neither a grievance nor an alliance with your enemies justifies breaking up their treaties."));
@@ -598,8 +604,7 @@ public class DiplomacyConfig {
         return or(
                 did(DiplomacyAction.DiplActionType.ATTACK),
                 did(DiplomacyAction.DiplActionType.TREATY_BROKEN),
-                did(DiplomacyAction.DiplActionType.DECLARATION_OF_WAR),
-                not(rawPoints(-500)));
+                did(DiplomacyAction.DiplActionType.DECLARATION_OF_WAR));
     }
 
     private void parseAcceptance(Node node) {

@@ -39,6 +39,7 @@ import org.schema.schine.resource.tag.FinishTag;
 import org.schema.schine.resource.tag.Tag;
 import videogoose.betterfactions.BFConfig;
 import videogoose.betterfactions.DiplomacyManager;
+import videogoose.betterfactions.Wrecks;
 import videogoose.betterfactions.diplomacy.CombatRatings;
 import videogoose.betterfactions.mixin.TableAccessor;
 import videogoose.betterfactions.net.BFPacket;
@@ -1392,16 +1393,20 @@ public final class BattleTracker {
 	 * included, their aim; their parent moves them. Ships players fly are theirs.
 	 */
 	/**
-	 * In a soft-loaded battle, a ship that started overheating is removed now rather than when its timer
-	 * runs out, and its turrets with it rather than undocked to drift: nobody is there to board or salvage
-	 * them, and each is an entity the sector keeps simulating. The loss was counted when it started
-	 * ({@link #onOverheat}), and {@code destroy} still tells its faction, as the timer would.
+	 * In a soft-loaded battle, a ship that started overheating is wrecked now ({@link Wrecks}) rather than
+	 * when its timer runs out, so the sector stops simulating it as a combatant. With wrecks off, it is
+	 * removed instead, and its turrets with it rather than undocked to drift. The loss was counted when it
+	 * started ({@link #onOverheat}), and {@code destroy} still tells its faction, as the timer would.
 	 */
 	private static void scuttle(Sector sector) {
 		//a copy: destroy() takes the entity out of the sector's set mid-iteration
 		for (SimpleTransformableSendableObject<?> o : new ArrayList<>(sector.getEntities())) {
 			if (o instanceof SegmentController sc && sc.isCoreOverheating() && !sc.railController.isDocked()
-					&& !sc.isMarkedForDeleteVolatile() && (!(sc instanceof Ship ship) || ship.getAttachedPlayers().isEmpty())) {
+					&& !sc.isMarkedForDeleteVolatile() && (!(sc instanceof Ship ship) || ship.getAttachedPlayers().isEmpty())
+					&& !Wrecks.get().isWreck(sc.getUniqueIdentifier())) {
+				if (Wrecks.get().tryWreck(sc, System.currentTimeMillis())) {
+					continue;
+				}
 				sc.railController.destroyDockedRecursive();
 				sc.destroy();
 			}

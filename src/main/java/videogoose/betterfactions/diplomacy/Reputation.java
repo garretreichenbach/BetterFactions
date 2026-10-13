@@ -22,6 +22,8 @@ public final class Reputation {
     public static final double PER_BREAK = 1;
     /** Aggression one declared war adds. */
     public static final double PER_WAR = 1;
+    /** Aggression a war with no casus belli adds on top of {@link #PER_WAR}. */
+    public static final double PER_UNJUST_WAR = 2;
     /** Aggression one unprovoked attack outside a war adds - an engagement, not a hit. */
     public static final double PER_ATTACK = 0.25;
     /**
@@ -54,6 +56,11 @@ public final class Reputation {
 
     public synchronized void declaredWar(int faction) {
         add(aggression, faction, PER_WAR);
+        dirty = true;
+    }
+
+    public synchronized void declaredUnjustWar(int faction) {
+        add(aggression, faction, PER_UNJUST_WAR);
         dirty = true;
     }
 

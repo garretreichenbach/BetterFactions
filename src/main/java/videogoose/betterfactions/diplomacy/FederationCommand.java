@@ -52,6 +52,8 @@ public class FederationCommand {
         DISSOLVE,
         /** Chair, or a vote: take the bloc to war with {@link #target}. */
         DECLARE_WAR,
+        /** Chair, or a vote: offer {@link #target} white peace from every member at war with it. */
+        MAKE_PEACE,
     }
 
     public Kind kind = Kind.CREATE;

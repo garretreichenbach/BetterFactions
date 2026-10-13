@@ -34,6 +34,8 @@ import javax.swing.filechooser.FileFilter;
 import javax.vecmath.Vector3f;
 import javax.vecmath.Vector4f;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
@@ -180,6 +182,9 @@ public class FactionSettingsContent extends GUIAnchor {
                             () -> CivicChooser.open(getState(), slot, false))));
         }
 
+        add(list, section(Lng.str("Fleet doctrine"), HEADING));
+        add(list, doctrines(own));
+
         add(list, section(Lng.str("Standing orders"), HEADING));
         add(list, row(Lng.str("Return fire automatically"),
                 Lng.str("Anyone who shoots at us becomes an enemy without a person having to declare it."),
@@ -271,6 +276,129 @@ public class FactionSettingsContent extends GUIAnchor {
         return r;
     }
 
+    private static final int DOCTRINE_CARD_HEIGHT = 96;
+
+    /**
+     * The three doctrines side by side, the current one marked. Few enough to show at once, so they are
+     * picked here rather than in the civic picker. Switching costs what a civic swap does, and asks first.
+     */
+    private GUIAnchor doctrines(int own) {
+        List<GUIAnchor> cards = new ArrayList<>();
+        for (CivicType t : CivicRegistry.all()) {
+            if (t.isDoctrine()) {
+                cards.add(doctrineCard(own, t));
+            }
+        }
+        GUITextOverlay note = new GUITextOverlay(10, 10, FontLibrary.getBlenderProMedium14(), getState());
+        note.setTextSimple(new Object() {
+            @Override
+            public String toString() {
+                return Civics.client().of(own).doctrine == null
+                        ? Lng.str("How the faction fights: one doctrine at a time. The first is free; click one to choose it.")
+                        : Lng.str("One at a time. Switching costs %s faction points and shares the civic swap cooldown.", BFConfig.civicSwapCost());
+            }
+        });
+        note.setColor(DIM);
+        note.setPos(8, 4, 0);
+        GUIAnchor row = new GUIAnchor(getState(), 100, DOCTRINE_CARD_HEIGHT + 34) {
+            @Override
+            public void draw() {
+                setWidth(Math.max(CONTROL_GUTTER, FactionSettingsContent.this.getWidth() - 8));
+                int cw = ((int) getWidth() - 16 - 10 * (cards.size() - 1)) / Math.max(1, cards.size());
+                for (int i = 0; i < cards.size(); i++) {
+                    cards.get(i).setWidth(cw);
+                    cards.get(i).setPos(8 + i * (cw + 10), 26, 0);
+                }
+                super.draw();
+            }
+        };
+        row.attach(note);
+        for (GUIAnchor c : cards) {
+            row.attach(c);
+        }
+        return row;
+    }
+
+    private GUIAnchor doctrineCard(int own, CivicType t) {
+        String id = t.getId();
+        BooleanSupplier current = () -> id.equals(Civics.client().of(own).doctrine);
+        GUIColoredRectangle bg = new GUIColoredRectangle(getState(), 10, DOCTRINE_CARD_HEIGHT, new Vector4f(InstitutionsContent.CARD));
+        GUIAnchor wrap = new GUIAnchor(getState(), 10, DOCTRINE_CARD_HEIGHT);
+        GUITextOverlay name = new GUITextOverlay(10, 10, FontLibrary.getBlenderProMedium16(), getState());
+        name.setTextSimple(t.getDisplayName());
+        name.setPos(10, 8, 0);
+        GUITextOverlay tag = new GUITextOverlay(10, 10, FontLibrary.getBlenderProMedium14(), getState());
+        tag.setTextSimple(new Object() {
+            @Override
+            public String toString() {
+                return current.getAsBoolean() ? Lng.str("CURRENT")
+                        : Civics.client().of(own).doctrine == null ? Lng.str("FREE") : Lng.str("SWITCH: %s FP", BFConfig.civicSwapCost());
+            }
+        });
+        GUITextOverlay desc = new GUITextOverlay(10, 10, FontLibrary.getBlenderProMedium14(), getState());
+        desc.setTextSimple(t.getDescription());
+        desc.setColor(DIM);
+        desc.autoWrapOn = wrap;
+        desc.setPos(10, 30, 0);
+        //an empty transparent button over the card is what makes all of it clickable
+        GUITextButton hit = button(getState(), 10, "", GUITextButton.ColorPalette.TRANSPARENT,
+                () -> getOwnPlayer().getFactionController().hasPermissionEditPermission() && !current.getAsBoolean(),
+                () -> chooseDoctrine(own, t));
+        hit.setHeight(DOCTRINE_CARD_HEIGHT);
+        GUIAnchor card = new GUIAnchor(getState(), 10, DOCTRINE_CARD_HEIGHT) {
+            @Override
+            public void draw() {
+                bg.setWidth(getWidth());
+                bg.getColor().set(current.getAsBoolean() ? InstitutionsContent.CARD_HELD : InstitutionsContent.CARD);
+                wrap.setWidth(getWidth() - 20);
+                hit.setWidth(getWidth());
+                tag.setColor(current.getAsBoolean() ? InstitutionsContent.BLUE : DIM);
+                tag.setPos(getWidth() - 10 - tag.getMaxLineWidth(), 10, 0);
+                super.draw();
+            }
+        };
+        card.attach(bg);
+        card.attach(name);
+        card.attach(tag);
+        card.attach(desc);
+        card.attach(hit);
+        return card;
+    }
+
+    private void chooseDoctrine(int own, CivicType t) {
+        FactionCivics c = Civics.client().of(own);
+        if (c.doctrine == null) {
+            Civics.requestPick(FactionCivics.DOCTRINE, t.getId(), (short) 0);
+            return;
+        }
+        long now = System.currentTimeMillis();
+        long cooldownMs = BFConfig.civicSwapCooldownDays() * 24L * 60L * 60L * 1000L;
+        long days = c.cooldownDays(now, cooldownMs);
+        if (days > 0 && BFConfig.civicRushCost() <= 0) {
+            getState().getController().popupAlertTextMessage(Lng.str("You can switch again in %s days.", days), 0);
+            return;
+        }
+        int cost = c.cost(FactionCivics.DOCTRINE, now, BFConfig.civicSwapCost(), BFConfig.civicRushCost(), cooldownMs);
+        new PlayerGameOkCancelInput("CONFIRM", getState(), Lng.str("Switch to %s?", t.getDisplayName()),
+                Lng.str("Replaces %s for %s faction points. The next civic or doctrine swap waits %s days.",
+                        CivicRegistry.nameOf(c.doctrine), cost, BFConfig.civicSwapCooldownDays())) {
+            @Override
+            public boolean isOccluded() {
+                return false;
+            }
+
+            @Override
+            public void onDeactivate() {
+            }
+
+            @Override
+            public void pressedOK() {
+                deactivate();
+                Civics.requestPick(FactionCivics.DOCTRINE, t.getId(), (short) 0);
+            }
+        }.activate();
+    }
+
     /**
      * The rank ladder, top down, as the description of the row that opens it. A member whose rank may
      * not edit ranks still gets to read what the ladder is - only the button goes.
@@ -282,6 +410,11 @@ public class FactionSettingsContent extends GUIAnchor {
         }
         FactionRole[] roles = own.getRoles().getRoles();
         StringBuilder b = new StringBuilder();
+        //a long ladder ran off the row; the top four say what it is
+        if (roles.length > 4) {
+            return Lng.str("%s, %s, %s, %s and %s more - and what each of them may do.", roles[roles.length - 1].name,
+                    roles[roles.length - 2].name, roles[roles.length - 3].name, roles[roles.length - 4].name, roles.length - 4);
+        }
         for (int i = roles.length - 1; i >= 0; i--) {
             if (b.length() > 0) {
                 b.append(", ");
@@ -411,7 +544,12 @@ public class FactionSettingsContent extends GUIAnchor {
      */
     private GUITextButton button(String text, GUITextButton.ColorPalette palette, BooleanSupplier allowed,
                                  Runnable onPress) {
-        return new GUITextButton(getState(), 88, 22, palette, text, new GUICallback() {
+        return button(getState(), 88, text, palette, allowed, onPress);
+    }
+
+    static GUITextButton button(InputState state, int width, Object text, GUITextButton.ColorPalette palette,
+                                BooleanSupplier allowed, Runnable onPress) {
+        return new GUITextButton(state, width, 22, palette, text, new GUICallback() {
             @Override
             public void callback(GUIElement callingGuiElement, MouseEvent event) {
                 if (event.pressedLeftMouse() && (allowed == null || allowed.getAsBoolean())) {

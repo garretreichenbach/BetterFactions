@@ -20,8 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>Staleness is bounded by {@link #TTL_MS} rather than by invalidation hooks. A holding appearing or
  * changing hands is not something anybody watches happen on this screen, the answer carries the clock it
- * was taken at so the screen can say how old it is, and there is a refresh button for when that is not
- * good enough.</p>
+ * was taken at, and the screen re-asks on its own while it is open.</p>
  *
  * <p>Todo: the query runs on the caller's thread, which is the server tick. It is one indexed seek
  * behind a cache, and {@code FactionManager} and the region-rename path already read the database there.

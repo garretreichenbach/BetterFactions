@@ -22,6 +22,13 @@ public final class SettlementPricing {
     static final double NEVER = Double.NEGATIVE_INFINITY;
     /** A vassalage or tributary costs this many ordinary treaties. */
     static final double DEMAND_MULTIPLIER = 5;
+    /** A star system costs this many ordinary treaties. */
+    static final double SYSTEM_MULTIPLIER = 2;
+    /**
+     * Weariness at or past which an NPC has lost the war outright and will submit: a vassalage or
+     * tributary demanded of it is priced like any other term rather than refused.
+     */
+    public static final double BEATEN = 0.9;
     /** Counter demands are rounded up to this, so they read like a price rather than a calculation. */
     static final int ROUND_TO = 50;
 
@@ -32,14 +39,26 @@ public final class SettlementPricing {
      * What one term is worth to {@code npc}, signing between {@code a} and {@code b}.
      */
     public static double valueTo(int npc, SettlementTerm t, int a, int b, double treatyValue) {
+        return valueTo(npc, t, a, b, treatyValue, false);
+    }
+
+    /**
+     * @param beaten whether {@code npc} has lost the war ({@link #BEATEN}); only then is submitting for sale
+     */
+    public static double valueTo(int npc, SettlementTerm t, int a, int b, double treatyValue, boolean beaten) {
         boolean gives = t.giver == npc;
         switch (t.kind) {
             case TRANSFER_FACTION_POINTS:
                 return gives ? -t.amount : t.amount;
             case SIGN_TREATY: {
                 TreatyType type = TreatyTypeRegistry.get(t.typeId);
+                if (type != null && type.isSymmetric()) {
+                    //both sides take on the same thing, so neither is giving it to the other: whether a
+                    //pact is wanted is the archetype's rule to say, not something to be paid for
+                    return 0;
+                }
                 boolean demand = type != null && type.getKind() == TreatyType.Kind.DEMAND;
-                if (gives && demand) {
+                if (gives && demand && !beaten) {
                     return NEVER;
                 }
                 double v = treatyValue * (demand ? DEMAND_MULTIPLIER : 1);
@@ -47,15 +66,34 @@ public final class SettlementPricing {
             }
             case BREAK_TREATY:
                 return gives ? -treatyValue : treatyValue;
+            case CEDE_SYSTEM:
+                return (gives ? -1 : 1) * treatyValue * SYSTEM_MULTIPLIER;
             default:
                 return 0;
         }
     }
 
+    /**
+     * Whether everything {@code npc} gives in {@code terms} is among the war's {@code goals}: a beaten NPC
+     * signs that whatever it costs, because it is what the war was fought for.
+     */
+    public static boolean surrenders(List<SettlementTerm> terms, int npc, List<SettlementTerm> goals) {
+        for (SettlementTerm t : terms) {
+            if (t.giver == npc && !goals.contains(t)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static double net(List<SettlementTerm> terms, int npc, int a, int b, double treatyValue) {
+        return net(terms, npc, a, b, treatyValue, false);
+    }
+
+    public static double net(List<SettlementTerm> terms, int npc, int a, int b, double treatyValue, boolean beaten) {
         double sum = 0;
         for (SettlementTerm t : terms) {
-            sum += valueTo(npc, t, a, b, treatyValue);
+            sum += valueTo(npc, t, a, b, treatyValue, beaten);
         }
         return sum;
     }
@@ -87,7 +125,11 @@ public final class SettlementPricing {
         double lead = Math.clamp(theirLead, -LEVERAGE_CLAMP, LEVERAGE_CLAMP);
         double w = Math.clamp(weariness, 0, 1);
         //willing: it concedes more the stronger they are; unwilling: it wants paying, less the stronger they are
-        return ruleAccepts ? -peaceValue * Math.pow(2, lead) * (1 + w) : peaceValue * Math.pow(2, -lead) * (1 - w);
+        if (ruleAccepts) {
+            return -peaceValue * Math.pow(2, lead) * (1 + w);
+        }
+        //and once they are the stronger side it stops asking and starts conceding: the winner never pays
+        return peaceValue * (Math.pow(2, -lead) * (1 - w) - Math.max(0, lead));
     }
 
     /**
@@ -96,19 +138,24 @@ public final class SettlementPricing {
      */
     public static List<SettlementTerm> counter(List<SettlementTerm> offered, int npc, int a, int b,
                                                double need, double treatyValue) {
+        return counter(offered, npc, a, b, need, treatyValue, false);
+    }
+
+    public static List<SettlementTerm> counter(List<SettlementTerm> offered, int npc, int a, int b,
+                                               double need, double treatyValue, boolean beaten) {
         if (Double.isInfinite(need)) {
             return null;
         }
         int other = npc == a ? b : a;
         List<SettlementTerm> terms = new ArrayList<>(offered);
-        double net = net(terms, npc, a, b, treatyValue);
+        double net = net(terms, npc, a, b, treatyValue, beaten);
         List<SettlementTerm> given = new ArrayList<>();
         for (SettlementTerm t : terms) {
             if (t.giver == npc) {
                 given.add(t);
             }
         }
-        given.sort(Comparator.comparingDouble(t -> valueTo(npc, t, a, b, treatyValue)));
+        given.sort(Comparator.comparingDouble(t -> valueTo(npc, t, a, b, treatyValue, beaten)));
         for (SettlementTerm t : given) {
             double deficit = need - net;
             if (deficit <= 0) {
@@ -124,7 +171,7 @@ public final class SettlementPricing {
                     terms.remove(at);
                 }
             } else {
-                net -= valueTo(npc, t, a, b, treatyValue);
+                net -= valueTo(npc, t, a, b, treatyValue, beaten);
                 terms.remove(at);
             }
         }

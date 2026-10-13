@@ -39,6 +39,7 @@ import videogoose.betterfactions.net.BFPacket;
 import videogoose.betterfactions.repair.FactionDesigns;
 import videogoose.betterfactions.civics.CivicRegistry;
 import videogoose.betterfactions.civics.Civics;
+import videogoose.betterfactions.civics.Senate;
 import videogoose.betterfactions.fleet.FleetIntercepts;
 import videogoose.betterfactions.repair.ShipyardRepairs;
 
@@ -107,8 +108,11 @@ public final class BetterFactions extends StarMod {
 			BFStore.save(BattleTracker.get());
 			BFStore.save(FactionDesigns.server());
 			BFStore.save(Civics.server());
+			BFStore.save(Senate.server());
 			BFStore.save(ShipyardRepairs.get());
 			BFStore.save(FleetIntercepts.get());
+			BFStore.save(Wrecks.get());
+			BFStore.save(FleetUpkeep.get());
 		}
 	}
 
@@ -118,6 +122,13 @@ public final class BetterFactions extends StarMod {
 		FactionRelationQueryListener.TYPE.register((a, b, current, isServer) -> DiplomacyManager.of(isServer).derivedRelation(a, b), this);
 
 		FactionDeleteListener.TYPE.register((faction, isServer) -> DiplomacyManager.of(isServer).onFactionDeleted(faction), this);
+
+		//a player claims only free space or its own: the engine leaves that to the client's claim button,
+		//and a ceded system keeps the loser's station in it - nothing else would stop that station taking
+		//the system straight back. Server-made changes (sender 0: treaties, revokes, admins) pass.
+		api.event.faction.SystemClaimListener.TYPE.register((system, change, sectorPos, sector, faction, isServer) ->
+				isServer && change.sender != 0 && faction != null && system.getOwnerFaction() != 0
+						&& system.getOwnerFaction() != faction.getIdFaction() ? EventResult.CANCEL : EventResult.CONTINUE, this);
 
 		//every faction keeps a ledger now, not only NPC ones, so the engine's opinion events feed it
 		FactionDiplomacyActionListener.TYPE.register((type, toFaction, otherDbId) -> {
@@ -145,10 +156,16 @@ public final class BetterFactions extends StarMod {
 			BFStore.load(FactionDesigns.server());
 			Civics.server().clear();
 			BFStore.load(Civics.server());
+			Senate.server().clear();
+			BFStore.load(Senate.server());
 			ShipyardRepairs.reset();
 			BFStore.load(ShipyardRepairs.get());
 			FleetIntercepts.reset();
 			BFStore.load(FleetIntercepts.get());
+			Wrecks.reset();
+			BFStore.load(Wrecks.get());
+			FleetUpkeep.reset();
+			BFStore.load(FleetUpkeep.get());
 		}, this);
 
 		WorldSaveListener.TYPE.register(new WorldSaveListener() {
@@ -159,8 +176,11 @@ public final class BetterFactions extends StarMod {
 					BFStore.save(BattleTracker.get());
 					BFStore.save(FactionDesigns.server());
 					BFStore.save(Civics.server());
+					BFStore.save(Senate.server());
 					BFStore.save(ShipyardRepairs.get());
 					BFStore.save(FleetIntercepts.get());
+					BFStore.save(Wrecks.get());
+					BFStore.save(FleetUpkeep.get());
 				}
 			}
 		}, this);

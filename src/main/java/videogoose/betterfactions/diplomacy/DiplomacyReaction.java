@@ -37,7 +37,8 @@ public class DiplomacyReaction {
                     r.name = item.getTextContent();
                 }
                 if (item.getNodeName().trim().toLowerCase(Locale.ENGLISH).equals("message")) {
-                    r.message = item.getTextContent();
+                    //a message wrapped across lines in the xml carries the line break and indentation with it
+                    r.message = item.getTextContent().trim().replaceAll("\\s+", " ");
                 }
                 if (item.getNodeName().trim().toLowerCase(Locale.ENGLISH).equals("treaty")) {
                     String t = item.getTextContent().trim();

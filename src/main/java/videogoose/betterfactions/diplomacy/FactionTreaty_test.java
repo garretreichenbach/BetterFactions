@@ -237,9 +237,21 @@ public final class FactionTreaty_test {
         FactionTreaty war = new FactionTreaty(1, 2, TreatyTypeRegistry.WAR, 5L);
         war.goals.add(SettlementTerm.points(2, 1000));
         war.goals.add(SettlementTerm.breakTreaty(2, TreatyTypeRegistry.ALLIANCE, 7));
+        war.goals.add(SettlementTerm.cedeSystem(2, new org.schema.common.util.linAlg.Vector3i(4, -2, 11)));
+        war.progress = 0.8f;
         FactionTreaty back = new FactionTreaty();
         assert back.fromTag(war.toTag());
         assert back.goals.equals(war.goals) : back.goals;
+        assert back.progress == 0.8f;
+        //and on the wire, where a war's goals used to be left behind
+        FactionTreatyChange sent = new FactionTreatyChange();
+        assert sent.fromTag(FactionTreatyChange.of(war, false).toTag());
+        assert sent.treaty.goals.equals(war.goals) && sent.treaty.progress == 0.8f;
+
+        //no territory at stake: the battles are the war; with some, it counts for half
+        assert FactionTreaty.progress(0.7, new double[0]) == 0.7;
+        assert FactionTreaty.progress(0.5, new double[]{1, 1}) == 0.75;
+        assert FactionTreaty.progress(1, new double[]{0}) == 0.5 : "winning every battle and taking nothing is half a war";
 
         FactionTreaty none = new FactionTreaty();
         assert none.fromTag(new FactionTreaty(1, 2, TreatyTypeRegistry.WAR, 5L).toTag());
@@ -259,5 +271,9 @@ public final class FactionTreaty_test {
         assert videogoose.betterfactions.DiplomacyManager.tributeOwed(100, 10, 25) == 10;
         assert videogoose.betterfactions.DiplomacyManager.tributeOwed(-50, 1000, 25) == 0;
         assert videogoose.betterfactions.DiplomacyManager.tributeOwed(100, -5, 25) == 0;
+        //not a tribute, but the same kind of points arithmetic: gifts close together are worth less
+        assert videogoose.betterfactions.DiplomacyManager.giftOpinion(200, 0) == 200;
+        assert videogoose.betterfactions.DiplomacyManager.giftOpinion(200, 1) == 100;
+        assert videogoose.betterfactions.DiplomacyManager.giftOpinion(200, 3) == 50;
     }
 }
