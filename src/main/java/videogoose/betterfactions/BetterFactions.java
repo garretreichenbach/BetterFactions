@@ -36,6 +36,9 @@ import videogoose.betterfactions.diplomacy.DiplomacyAction;
 import videogoose.betterfactions.diplomacy.TreatyTypeRegistry;
 import videogoose.betterfactions.gui.FactionPanelTabs;
 import videogoose.betterfactions.net.BFPacket;
+import videogoose.betterfactions.repair.FactionDesigns;
+import videogoose.betterfactions.fleet.FleetIntercepts;
+import videogoose.betterfactions.repair.ShipyardRepairs;
 
 /**
  * Treaties, opinion, federations and emblems for every faction, player and NPC alike.
@@ -99,6 +102,9 @@ public final class BetterFactions extends StarMod {
 		if (GameServerState.instance != null) {
 			BFStore.save(DiplomacyManager.server());
 			BFStore.save(BattleTracker.get());
+			BFStore.save(FactionDesigns.server());
+			BFStore.save(ShipyardRepairs.get());
+			BFStore.save(FleetIntercepts.get());
 		}
 	}
 
@@ -131,6 +137,12 @@ public final class BetterFactions extends StarMod {
 			assetIndex = new FactionAssetIndex(serverState);
 			BFStore.load(DiplomacyManager.server());
 			BFStore.load(BattleTracker.get());
+			FactionDesigns.server().clear();
+			BFStore.load(FactionDesigns.server());
+			ShipyardRepairs.reset();
+			BFStore.load(ShipyardRepairs.get());
+			FleetIntercepts.reset();
+			BFStore.load(FleetIntercepts.get());
 		}, this);
 
 		WorldSaveListener.TYPE.register(new WorldSaveListener() {
@@ -139,6 +151,9 @@ public final class BetterFactions extends StarMod {
 				if (isServer) {
 					BFStore.save(DiplomacyManager.server());
 					BFStore.save(BattleTracker.get());
+					BFStore.save(FactionDesigns.server());
+					BFStore.save(ShipyardRepairs.get());
+					BFStore.save(FleetIntercepts.get());
 				}
 			}
 		}, this);
@@ -147,6 +162,8 @@ public final class BetterFactions extends StarMod {
 			DiplomacyManager.server().updateServer(timer.currentTime);
 			BattleTracker.get().update(serverState, timer.currentTime);
 			BattleWorldTests.tick();
+			ShipyardRepairs.get().update(serverState, timer.currentTime);
+			FleetIntercepts.get().update(serverState, timer.currentTime);
 		}, this);
 
 		//overheating is how a ship dies; the battle it was in counts it as a loss
@@ -163,6 +180,7 @@ public final class BetterFactions extends StarMod {
 			public void onPostServerSendableRemove(GameServerState serverState, Sendable s, boolean isServer) {
 				if (s instanceof SegmentController sc && sc.isMarkedForPermanentDelete()) {
 					DiplomacyManager.server().onEntityDeleted(sc);
+					ShipyardRepairs.get().onDeleted(sc);
 				}
 			}
 		}, this);
@@ -191,6 +209,13 @@ public final class BetterFactions extends StarMod {
 		}, this);
 
 		FactionPanelCreateListener.TYPE.register(FactionPanelTabs::addTabs, this);
+
+		//a fleet ship's blocks as it unloads, and a station's shipyard: what an unloaded repair needs
+		api.event.world.sector.SegmentControllerUnloadListener.TYPE.register((controller, isServer) -> {
+			if (isServer) {
+				ShipyardRepairs.get().onUnload(controller);
+			}
+		}, this);
 
 		ClientDisconnectListener.TYPE.register(state -> DiplomacyManager.resetClient(), this);
 	}

@@ -120,6 +120,11 @@ public final class BattleTracker {
 		return now - b.start > limit && (now - b.lastHit > ENCOUNTER_GRACE_MS || now - b.start > 2 * limit);
 	}
 
+	/** How long a battle has been fought: first hit to last, so the quiet tail and a carried wait do not count. */
+	static long fought(Battle b, long now) {
+		return (b.lastHit > 0 ? b.lastHit : now) - b.start;
+	}
+
 	/** How long a sector an admin ended a battle in is left alone, unless a player is there. */
 	static final long ADMIN_COOLDOWN_MS = 30 * 60_000;
 	public static final byte CMD_PAUSE = 0, CMD_END = 1, CMD_TELEPORT = 2, CMD_WATCH = 3;
@@ -546,7 +551,7 @@ public final class BattleTracker {
 			Sector sector = universe.getSector(b.sectorId);
 			//an encounter is asked first: past the soft-load cap it breaks off rather than being capped
 			noteRetreats(state, sector, b, now);
-			if (sector == null || breaksOff(state, b, now) || isOver(b, now) || foughtOut(b, sector, state.getFactionManager())) {
+			if (sector == null || breaksOff(state, b, now) || isOver(b, now) || foughtOut(b, sector)) {
 				if (ended == null) {
 					ended = new ArrayList<>();
 				}
@@ -620,10 +625,12 @@ public final class BattleTracker {
 	}
 
 	/**
-	 * Over without waiting out {@link #QUIET_MS}: it has fought and no one left in the sector is at war
-	 * with anyone else there, so there is nothing for reinforcements to join. Paused and held battles wait.
+	 * Over without waiting out {@link #QUIET_MS}: it has fought and fewer than two of its sides have ships
+	 * left in the sector. Sides are whoever traded hits, not whoever is formally at war: an NPC hostile to
+	 * a player, or a player shooting a neutral, fights without a war, and asking diplomacy ended those the
+	 * tick they opened. Allies left standing wait out the quiet minute. Paused and held battles wait.
 	 */
-	private static boolean foughtOut(Battle b, Sector sector, FactionManager fm) {
+	private static boolean foughtOut(Battle b, Sector sector) {
 		if (b.lastHit == 0 || b.paused || b.heldAt > 0) {
 			return false;
 		}
@@ -633,7 +640,16 @@ public final class BattleTracker {
 				here.add(sc.getFactionId());
 			}
 		}
-		return !anyEnemies(here, fm);
+		return sidesLeft(b, here) < 2;
+	}
+
+	/** How many of the battle's sides have a faction among {@code here}. */
+	static int sidesLeft(Battle b, IntSet here) {
+		int n = 0;
+		for (int faction : b.sides.keySet()) {
+			n += here.contains(faction) ? 1 : 0;
+		}
+		return n;
 	}
 
 	/** Whether the server has time to spare for a new soft-loaded battle. {@code startPct} 0 always does. */
@@ -830,7 +846,7 @@ public final class BattleTracker {
 		if (c != null) {
 			b.sides.putAll(c.sides);
 			b.observed = c.observed;
-			b.start = c.start;
+			b.start = c.lastHit > 0 ? now - fought(c, now) : c.start; //the wait while carried is not fighting
 			b.lastHit = c.lastHit > 0 ? now : 0; //a fresh quiet window: it has only just reloaded
 			b.paused = c.paused;
 			b.pausedAt = now;
@@ -1450,9 +1466,11 @@ public final class BattleTracker {
 			Faction f = fm.getFaction(id);
 			return f != null ? f.getName() : id == 0 ? "Unaffiliated" : "Faction " + id;
 		};
-		b.name = nameOf(state, b, name);
+		int owner = systemOwner(state, b.pos);
+		defendedBy(b, owner, fm::isEnemy);
+		b.name = nameOf(state, b, name, owner);
 		String body = summarize(b, name, now);
-		recent.addFirst(b.pos + ": " + body.substring(0, body.indexOf('\n')) + " (" + Math.max(1, (now - b.start) / 60_000) + " min"
+		recent.addFirst(b.pos + ": " + body.substring(0, body.indexOf('\n')) + " (" + Math.max(1, fought(b, now) / 60_000) + " min"
 				+ (b.soft ? ", soft-loaded" : "") + ")");
 		while (recent.size() > RECENT) {
 			recent.removeLast();
@@ -1462,7 +1480,7 @@ public final class BattleTracker {
 			lines.add(new BattleReports.Line(s.faction, name.apply(s.faction), s.lost, s.withdrew));
 		}
 		archive.add(new BattleReports.Report(now, new Vector3i(b.pos), body.substring(0, body.indexOf('\n')), body,
-				now - b.start, b.soft, holder(b), favoured(b), lines, new ArrayList<>(b.units.values()), b.name));
+				fought(b, now), b.soft, holder(b), favoured(b), lines, new ArrayList<>(b.units.values()), b.name));
 		String title = b.name;
 		String news = newsBody(b, body, name);
 		for (Side s : b.sides.values()) {
@@ -1483,8 +1501,35 @@ public final class BattleTracker {
 		}
 	}
 
-	/** The battle's name, after its system and whoever fleet orders say attacked whom. */
-	private String nameOf(GameServerState state, Battle b, IntFunction<String> name) {
+	/** Server: the faction that owns the system {@code pos} is in, or 0. */
+	private static int systemOwner(GameServerState state, Vector3i pos) {
+		try {
+			return state.getUniverse().getStellarSystemFromSecPos(pos).getOwnerFaction();
+		} catch (Exception e) {
+			System.err.println("[BetterFactions] could not tell who owns the system of " + pos + ": " + e);
+			return 0;
+		}
+	}
+
+	/**
+	 * Territory decides who attacked before fleet orders do: when {@code owner} fought here it defended,
+	 * and its enemies attacked. Without the owner in the fight, the order-based flags stand.
+	 */
+	static void defendedBy(Battle b, int owner, BiPredicate<Integer, Integer> enemies) {
+		if (owner == 0 || !b.sides.containsKey(owner)) {
+			return;
+		}
+		for (Side s : b.sides.values()) {
+			if (s.faction == owner) {
+				s.attacking = false;
+			} else if (enemies.test(s.faction, owner)) {
+				s.attacking = true;
+			}
+		}
+	}
+
+	/** The battle's name, after its system and who attacked whom: territory first, then fleet orders. */
+	private String nameOf(GameServerState state, Battle b, IntFunction<String> name, int owner) {
 		String system = DiplomacyManager.systemName(state, b.pos);
 		Side attacker = null;
 		Side defender = null;
@@ -1495,8 +1540,11 @@ public final class BattleTracker {
 				attacker = s;
 			}
 		}
+		if (attacker != null && owner != 0 && b.sides.containsKey(owner) && state.getFactionManager().isEnemy(owner, attacker.faction)) {
+			defender = b.sides.get(owner);
+		}
 		for (Side s : b.sides.values()) {
-			if (attacker != null && !s.attacking && state.getFactionManager().isEnemy(s.faction, attacker.faction)) {
+			if (defender == null && attacker != null && !s.attacking && state.getFactionManager().isEnemy(s.faction, attacker.faction)) {
 				defender = s;
 				break;
 			}
@@ -1513,7 +1561,7 @@ public final class BattleTracker {
 		for (Side s : b.sides.values()) {
 			losses.append(losses.length() == 0 ? "" : ", ").append(name.apply(s.faction)).append(' ').append(s.lost);
 		}
-		return body.substring(0, body.indexOf('\n')) + "\nShips lost: " + losses + ".\nFull report under Assets, Battle Reports.";
+		return body.substring(0, body.indexOf('\n')) + "\nShips lost: " + losses + ".";
 	}
 
 	/** The galaxy news line: where, who, and the report's verdict. */
@@ -1652,7 +1700,7 @@ public final class BattleTracker {
 			out.append(name.apply(s.faction)).append(": ").append(s.lost).append(s.lost == 1 ? " ship" : " ships").append(" lost")
 					.append(s.withdrew ? ", withdrew" : "").append('\n');
 		}
-		out.append("Lasted ").append(Math.max(1, (now - b.start) / 60_000)).append(" min");
+		out.append("Lasted ").append(Math.max(1, fought(b, now) / 60_000)).append(" min");
 		if (!b.observed) {
 			out.append(", unobserved");
 		}
@@ -1756,7 +1804,7 @@ public final class BattleTracker {
 						new Tag(Tag.Type.BYTE, null, (byte) (s.attacking ? 1 : 0)), FinishTag.INST});
 			}
 			sides[i] = FinishTag.INST;
-			long ran = (b.paused ? b.pausedAt : now) - b.start;
+			long ran = b.paused ? b.pausedAt - b.start : fought(b, now);
 			rows.add(new Tag(Tag.Type.STRUCT, null, new Tag[]{
 					new Tag(Tag.Type.VECTOR3i, null, new Vector3i(b.pos)), new Tag(Tag.Type.LONG, null, ran),
 					new Tag(Tag.Type.BYTE, null, (byte) (b.lastHit > 0 ? 1 : 0)), new Tag(Tag.Type.BYTE, null, (byte) (b.observed ? 1 : 0)),

@@ -24,7 +24,15 @@
 		"TableAccessor",
 		"TimerAccessor",
 		"TributeTurnMixin",
-		"WatchCcdMixin"
+		"WatchCcdMixin",
+		"ShipyardDockingMixin",
+		"ShipyardQueueButtonMixin",
+		"FleetRepairOrderMixin",
+		"ShipyardRepairComponentsMixin",
+		"ShipyardRepairRefundMixin",
+		"ShipyardRepairGoalMixin",
+		"MapInterceptMixin",
+		"FleetMissionLabelMixin"
 	],
 	"client": [],
 	"server": []

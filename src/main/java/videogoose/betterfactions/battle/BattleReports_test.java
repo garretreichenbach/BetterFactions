@@ -62,12 +62,12 @@ public final class BattleReports_test {
 		b.side(20).lost = 1;
 		String news = BattleTracker.newsBody(b, "F10 held the field.\nlong body\nLasted 3 min.", id -> "F" + id);
 		assert news.startsWith("F10 held the field.\nShips lost: ") && news.contains("F10 3") && news.contains("F20 1")
-				&& news.endsWith("Battle Reports.") : news;
-		assert news.split("\n").length == 3 : "three short lines, not the whole report";
+				&& news.endsWith(".") : news;
+		assert news.split("\n").length == 2 : "two short lines, not the whole report";
 		b.side(10).survivors = true;
 		b.side(20).survivors = true;
 		news = BattleTracker.newsBody(b, BattleTracker.summarize(b, id -> "F" + id, 60_000), id -> "F" + id);
-		assert news.startsWith("Inconclusive; F20 came off better (lost 1 ship to F10's 3).\nShips lost: ") && news.split("\n").length == 3
+		assert news.startsWith("Inconclusive; F20 came off better (lost 1 ship to F10's 3).\nShips lost: ") && news.split("\n").length == 2
 				: "the edge fits the news post's one verdict line: " + news;
 		System.out.println("BattleReports_test: OK");
 	}

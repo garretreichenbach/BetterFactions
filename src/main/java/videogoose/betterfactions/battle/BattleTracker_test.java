@@ -47,6 +47,10 @@ public final class BattleTracker_test {
 		r = BattleTracker.summarize(b, id -> "F" + id, 30_000);
 		assert r.startsWith("Inconclusive; F20 came off better (lost 1 ship to F10's 3).") : "both standing, F20 lost less: " + r;
 		assert r.endsWith("Lasted 1 min.") : r;
+		b.lastHit = 6 * 60_000;
+		r = BattleTracker.summarize(b, id -> "F" + id, 66 * 60_000);
+		assert r.endsWith("Lasted 6 min.") : "the hour it waited carried is not fighting: " + r;
+		b.lastHit = 0;
 
 		b.side(10).survivors = false;
 		b.side(20).survivors = false;
@@ -117,7 +121,7 @@ public final class BattleTracker_test {
 		assert BattleTracker.scanBackoff(2) == 2 && BattleTracker.scanBackoff(3) == 4 : "each more doubles it";
 		assert BattleTracker.scanBackoff(50) == 8 : "up to 40 minutes";
 
-		//a carried fight picked up again: its report counts from the first shot, its clocks from now
+		//a carried fight picked up again: its report counts the fighting so far, its clocks from now
 		BattleTracker tracker = new BattleTracker();
 		BattleTracker.Battle first = new BattleTracker.Battle(4, new Vector3i(3, 3, 3), t);
 		first.soft = true;
@@ -126,7 +130,7 @@ public final class BattleTracker_test {
 		long later = t + 2 * BattleTracker.SOFT_MAX_MS;
 		BattleTracker.Battle again = tracker.open(5, new Vector3i(3, 3, 3), later);
 		again.soft = true;
-		assert again.start == t && again.opened == later;
+		assert BattleTracker.fought(again, later) == 1000 && again.opened == later;
 		assert !BattleTracker.isOver(again, later + 1000) : "not capped the moment it reloads for being old";
 	}
 
@@ -204,7 +208,7 @@ public final class BattleTracker_test {
 		assert tracker.carried().isEmpty() : "picked up, so no longer carried";
 		assert resumed.sectorId == 99 : "the sector's id now, not when it was carried";
 		assert resumed.side(10).lost == 4 && resumed.side(20).hitsTaken == 12 : "one report covers the whole fight";
-		assert resumed.start == t : "its age runs from the first shot";
+		assert BattleTracker.fought(resumed, t + 600_000) == 1_000 : "its age is the fighting so far, not the wait while carried";
 		assert resumed.lastHit == t + 600_000 : "a fresh quiet window, or it would end the tick it reloads";
 		assert resumed.observed : "seen once is seen";
 		assert tracker.battles().get(99) == resumed;
@@ -260,6 +264,9 @@ public final class BattleTracker_test {
 		b.side(10).survivors = true;
 		b.side(20).survivors = true;
 		assert BattleTracker.favoured(b) == Integer.MIN_VALUE : "nothing happened: even";
+		//fought out by who is left of its sides, not by diplomacy: two sides still there fight on, war or not
+		assert BattleTracker.sidesLeft(b, new IntOpenHashSet(new int[]{10, 20, 0})) == 2 : "both sides still here";
+		assert BattleTracker.sidesLeft(b, new IntOpenHashSet(new int[]{10, 30})) == 1 : "a bystander is not a side";
 
 		b.side(10).hitsTaken = 3;
 		b.side(20).hitsTaken = 12;
@@ -304,6 +311,14 @@ public final class BattleTracker_test {
 		r.side(10).attacking = true;
 		assert BattleTracker.summarize(r, id -> "F" + id, 60_000).startsWith("F10 attacked successfully.\n") : "its fleets came to attack";
 		r.side(10).attacking = false;
+		r.side(20).attacking = false;
+		BattleTracker.defendedBy(r, 20, (x, y) -> true);
+		assert r.side(10).attacking && !r.side(20).attacking : "an enemy of the system's owner attacked it there";
+		r.side(10).attacking = false;
+		r.side(20).attacking = true;
+		BattleTracker.defendedBy(r, 30, (x, y) -> true);
+		assert r.side(20).attacking && !r.side(10).attacking : "owner not in the fight: fleet orders stand";
+		r.side(20).attacking = false;
 		assert BattleTracker.attacks(new BattleTracker.Order(FleetCommandTypes.FLEET_ATTACK, null), r.pos);
 		assert BattleTracker.attacks(new BattleTracker.Order(FleetCommandTypes.MOVE_FLEET, new Vector3i(r.pos)), r.pos);
 		assert !BattleTracker.attacks(new BattleTracker.Order(FleetCommandTypes.MOVE_FLEET, new Vector3i(9, 9, 9)), r.pos) : "passing through";

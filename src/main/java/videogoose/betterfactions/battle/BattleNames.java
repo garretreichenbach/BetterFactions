@@ -10,7 +10,7 @@ import java.util.List;
  * where it was fought and who started it, one picked by a seed so the name does not change.
  *
  * <p>{@code {place}} is the star system, or the sector when the system has no name. {@code {attacker}}
- * and {@code {defender}} are only there when fleet orders said who came to attack whom; a template naming
+ * and {@code {defender}} are only there when territory (the system's owner defends) or, failing that, fleet orders said who came to attack whom; a template naming
  * one is skipped without it. Small fights are skirmishes, not battles.</p>
  *
  * <p>Pure, so a self-check covers it without a galaxy.</p>

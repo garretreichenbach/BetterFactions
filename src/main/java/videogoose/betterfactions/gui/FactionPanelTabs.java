@@ -98,7 +98,10 @@ public class FactionPanelTabs implements GUIActiveInterface {
 	private GUIContentPane membersTab;
     private GUIContentPane assetsTab;
     private FactionAssetScrollableListNew aList;
+    private FactionDesignsList dList;
+    private GUITabbedContent assetsSub;
     private BattleReportList rList;
+    private GUITabbedContent newsSub;
 	private GUIContentPane diplomacyTab;
     private GUIContentPane settingsTab;
 	private FactionScrollableListNew fList;
@@ -405,6 +408,10 @@ public class FactionPanelTabs implements GUIActiveInterface {
             nList.cleanUp();
             nList = null;
         }
+        if (rList != null) {
+            rList.cleanUp();
+            rList = null;
+        }
 
         Faction own = getOwnFaction();
         if (own == null) {
@@ -422,135 +429,68 @@ public class FactionPanelTabs implements GUIActiveInterface {
         fillVitals(overviewTab.getContent(0, 0), own);
         fillDescription(overviewTab.getContent(0, 1), own);
 
-        overviewTab.setTextBoxHeightLast(1, BAR_HEIGHT);
-        overviewTab.addNewTextBox(1, 10);
-        fillFeedBar(overviewTab.getContent(1, 0));
+        //the feed and the battles it reports on, as two sub-tabs of the news column. The panel rebuilds
+        //on a faction or scope change, so carry the selected sub-tab over from the old one
+        int wasSelected = newsSub == null ? 0 : newsSub.getSelectedTab();
+        GUITabbedContent sub = newsSub = new GUITabbedContent(getState(), overviewTab.getContent(1, 0));
+        sub.activationInterface = this;
+        sub.onInit();
+        overviewTab.getContent(1, 0).attach(sub);
 
+        GUIContentPane news = sub.addTab(Lng.str("NEWS"));
+        news.setTextBoxHeightLast(BAR_HEIGHT);
+        news.addNewTextBox(10);
+        fillFeedBar(news.getContent(0));
         if (overviewGalaxy) {
-            attachGalaxyFeed(overviewTab.getContent(1, 1));
+            attachGalaxyFeed(news.getContent(1));
         } else {
-            nList = new FactionNewsScrollableListNew(getState(), overviewTab.getContent(1, 1), own);
+            nList = new FactionNewsScrollableListNew(getState(), news.getContent(1), own);
             nList.onInit();
-            overviewTab.getContent(1, 1).attach(nList);
+            news.getContent(1).attach(nList);
         }
+
+        GUIContentPane reports = sub.addTab(Lng.str("BATTLE REPORTS"));
+        rList = new BattleReportList(getState(), reports.getContent(0));
+        rList.onInit();
+        reports.getContent(0).attach(rList);
+        sub.setSelectedTab(wasSelected);
     }
 
     /**
-     * What the faction owns, and the battles it fought, as two sub-tabs. What a station makes, holds and
-     * is short of needs that station loaded, so it is not here - see {@link FactionAssetScrollableListNew}.
+     * What the faction owns. What a station makes, holds and is short of needs that station loaded,
+     * so it is not here - see {@link FactionAssetScrollableListNew}.
      */
     private void createAssetsPane() {
         if (aList != null) {
             aList.cleanUp();
             aList = null;
         }
-        if (rList != null) {
-            rList.cleanUp();
-            rList = null;
+        if (dList != null) {
+            dList.cleanUp();
+            dList = null;
         }
         Faction own = getOwnFaction();
         if (own == null) {
             return;
         }
 
-        GUITabbedContent sub = new GUITabbedContent(getState(), assetsTab.getContent(0));
+        //holdings, and the blueprint each ship is repaired to, as two sub-tabs
+        int wasSelected = assetsSub == null ? 0 : assetsSub.getSelectedTab();
+        GUITabbedContent sub = assetsSub = new GUITabbedContent(getState(), assetsTab.getContent(0));
         sub.activationInterface = this;
         sub.onInit();
         assetsTab.getContent(0).attach(sub);
 
         GUIContentPane holdings = sub.addTab(Lng.str("HOLDINGS"));
-        holdings.setTextBoxHeightLast(BAR_HEIGHT);
-        holdings.addNewTextBox(10);
-        fillAssetBar(holdings.getContent(0), own);
-        aList = new FactionAssetScrollableListNew(getState(), holdings.getContent(1), own);
+        aList = new FactionAssetScrollableListNew(getState(), holdings.getContent(0), own);
         aList.onInit();
-        holdings.getContent(1).attach(aList);
+        holdings.getContent(0).attach(aList);
 
-        GUIContentPane reports = sub.addTab(Lng.str("BATTLE REPORTS"));
-        reports.setTextBoxHeightLast(BAR_HEIGHT);
-        reports.addNewTextBox(10);
-        fillReportBar(reports.getContent(0));
-        rList = new BattleReportList(getState(), reports.getContent(1));
-        rList.onInit();
-        reports.getContent(1).attach(rList);
-    }
-
-    /** Wins, losses, who came off better where nobody won, and ships lost over the reports the server sent. */
-    private void fillReportBar(GUIAnchor box) {
-        GUITextOverlay summary = new GUITextOverlay(10, 10, FontLibrary.getBlenderProMedium17(), getState());
-        summary.setTextSimple(new Object() {
-            @Override
-            public String toString() {
-                java.util.List<BattleReports.Report> all = BattleReports.received();
-                if (all == null) {
-                    return Lng.str("Asking the server for our battle reports...");
-                }
-                int own = getOwnPlayer().getFactionId();
-                int won = 0, lost = 0, better = 0, worse = 0, ours = 0, theirs = 0;
-                for (BattleReports.Report r : all) {
-                    if (r.winner() != Integer.MIN_VALUE) {
-                        if (r.winner() == own) {
-                            won++;
-                        } else {
-                            lost++;
-                        }
-                    } else if (r.favoured() != Integer.MIN_VALUE) {
-                        if (r.favoured() == own) {
-                            better++;
-                        } else {
-                            worse++;
-                        }
-                    }
-                    ours += r.lostBy(own);
-                    theirs += r.lostByOthers(own);
-                }
-                return Lng.str("%s battles: %s held, %s came off better, %s came off worse, %s lost, %s even. %s of our ships lost, %s of theirs.",
-                        all.size(), won, better, worse, lost, all.size() - won - lost - better - worse, ours, theirs);
-            }
-        });
-        summary.setPos(4, 8, 0);
-        box.attach(summary);
-    }
-
-    /**
-     * The one line the list itself cannot say, because it is about the list as a whole: how much there
-     * is, and how much of it is standing outside our own borders.
-     */
-    private void fillAssetBar(GUIAnchor box, Faction f) {
-        GUITextOverlay summary = new GUITextOverlay(10, 10, FontLibrary.getBlenderProMedium17(), getState());
-        summary.setTextSimple(new Object() {
-            @Override
-            public String toString() {
-                if (!Perms.mine(Perms.ASSETS_VIEW)) {
-                    return Lng.str("%s systems claimed, %s fleets. Your rank may not see what stands in them.",
-                            FactionStrength.claimedSystems(f), fleetCount());
-                }
-                FactionAssets a = DiplomacyManager.client().getFactionAssets();
-                if (a == null) {
-                    return Lng.str("%s systems claimed, %s fleets. Asking the server what stands in them...",
-                            FactionStrength.claimedSystems(f), fleetCount());
-                }
-                return Lng.str("%s holdings, %s fleets, %s systems claimed.%s", a.assets.size(), fleetCount(),
-                        FactionStrength.claimedSystems(f),
-                        a.truncated ? Lng.str(" More than the list can show.") : "");
-            }
-        });
-        summary.setPos(4, 8, 0);
-        box.attach(summary);
-    }
-
-    /**
-     * Fleets this player may actually command, which is what the list below shows. An empty fleet is a
-     * name with nothing in it and is not counted, for the same reason it is not listed.
-     */
-    private int fleetCount() {
-        int n = 0;
-        for (Fleet fleet : getState().getFleetManager().getAvailableFleetsClient()) {
-            if (!fleet.isEmpty() && fleet.getFlagShip() != null) {
-                n++;
-            }
-        }
-        return n;
+        GUIContentPane designs = sub.addTab(Lng.str("DESIGNS"));
+        dList = new FactionDesignsList(getState(), designs.getContent(0));
+        dList.onInit();
+        designs.getContent(0).attach(dList);
+        sub.setSelectedTab(wasSelected);
     }
 
     private void attachGalaxyFeed(GUIAnchor content) {

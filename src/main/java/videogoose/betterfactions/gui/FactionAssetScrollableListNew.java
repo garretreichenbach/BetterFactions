@@ -2,6 +2,7 @@ package videogoose.betterfactions.gui;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import org.schema.common.util.StringTools;
 import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.client.data.GameClientState;
 import org.schema.game.common.data.fleet.Fleet;
@@ -226,6 +227,14 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
         return n;
     }
 
+    private static double mass(Fleet f) {
+        double m = 0;
+        for (FleetMember fm : f.getMembers()) {
+            m += fm.getDockedToRootDbId() > 0 ? 0 : fm.getMass();
+        }
+        return m;
+    }
+
     private static SimpleTransformableSendableObject.EntityType typeOf(FactionAssets.Asset a) {
         if (a == null || a.type < 0 || a.type >= SimpleTransformableSendableObject.EntityType.byDbId.length || SimpleTransformableSendableObject.EntityType.byDbId[a.type] == null) {
             return null;
@@ -321,6 +330,20 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
             return c != 0 ? c : name(o1).compareToIgnoreCase(name(o2));
         });
 
+        addDropdownFilter(new GUIListFilterDropdown<>(Category.values()) {
+            @Override
+            public boolean isOk(Category c, Holding h) {
+                return c.matches(h);
+            }
+        }, dropdownLabels(), ControllerElement.FilterRowStyle.LEFT);
+
+        addDropdownFilter(new GUIListFilterDropdown<>(Territory.values()) {
+            @Override
+            public boolean isOk(Territory t, Holding h) {
+                return t == Territory.ALL || (t == Territory.INSIDE) == h.claimed;
+            }
+        }, dropdownLabels(), ControllerElement.FilterRowStyle.RIGHT);
+
         addButton(new GUICallback() {
                       @Override
                       public boolean isOccluded() {
@@ -342,6 +365,77 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
                 ControllerElement.FilterPos.BOTTOM);
 
         activeSortColumnIndex = 2;
+    }
+
+    /** What a row is, for the left-hand filter. The homebase counts as a station. */
+    private enum Category {
+        ALL, STATIONS, SHOPS, FLEETS, CLAIMS;
+
+        boolean matches(Holding h) {
+            switch (this) {
+                case FLEETS:
+                    return h.isFleet();
+                case CLAIMS:
+                    return h.isBareClaim();
+                case SHOPS:
+                    return h.asset != null && typeOf(h.asset) == SimpleTransformableSendableObject.EntityType.SHOP;
+                case STATIONS:
+                    return h.asset != null && typeOf(h.asset) != SimpleTransformableSendableObject.EntityType.SHOP;
+                default:
+                    return true;
+            }
+        }
+
+        String label() {
+            switch (this) {
+                case STATIONS:
+                    return Lng.str("STATIONS");
+                case SHOPS:
+                    return Lng.str("SHOPS");
+                case FLEETS:
+                    return Lng.str("FLEETS");
+                case CLAIMS:
+                    return Lng.str("CLAIMS ONLY");
+                default:
+                    return Lng.str("ALL KINDS");
+            }
+        }
+    }
+
+    /** Inside our borders or not, for the right-hand filter - the same split the edge strip shows. */
+    private enum Territory {
+        ALL, INSIDE, OUTSIDE;
+
+        String label() {
+            switch (this) {
+                case INSIDE:
+                    return Lng.str("INSIDE OUR BORDERS");
+                case OUTSIDE:
+                    return Lng.str("OUTSIDE OUR BORDERS");
+                default:
+                    return Lng.str("ANYWHERE");
+            }
+        }
+    }
+
+    private <T extends Enum<T>> CreateGUIElementInterface<T> dropdownLabels() {
+        return new CreateGUIElementInterface<>() {
+            @Override
+            public GUIElement create(T o) {
+                GUIAnchor c = new GUIAnchor(getState(), 10, 24);
+                GUITextOverlayTableDropDown a = new GUITextOverlayTableDropDown(10, 10, getState());
+                a.setTextSimple(o instanceof Category ? ((Category) o).label() : ((Territory) o).label());
+                a.setPos(4, 4, 0);
+                c.setUserPointer(o);
+                c.attach(a);
+                return c;
+            }
+
+            @Override
+            public GUIElement createNeutral() {
+                return null; //first entry is "all"
+            }
+        };
     }
 
     /**
@@ -487,8 +581,8 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
                 }
                 if (h.isFleet()) {
                     FactionAssets.Route r = routeOf(h);
-                    return (r != null ? routeLine(r) + "\n" : "") + Lng.str("%s ships under %s, %s, in sector %s of %s. Open to %s.",
-                            ships(h.fleet), h.fleet.getOwner(), h.fleet.missionString,
+                    return (r != null ? routeLine(r) + "\n" : "") + Lng.str("%s ships (%s mass) under %s, %s, in sector %s of %s. Open to %s.",
+                            ships(h.fleet), StringTools.massFormat(mass(h.fleet)), h.fleet.getOwner(), h.fleet.missionString,
                             h.fleet.getFlagShip().getSector().toStringPure(), systemName(systemOf(h)),
                             h.fleet.getFactionAccessString());
                 }
@@ -521,6 +615,24 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
 
         c.attach(where);
         c.attach(navButton);
+        if (h.isFleet()) {
+            GUITextButton repair = new GUITextButton(getState(), 130, 24, GUITextButton.ColorPalette.NEUTRAL,
+                    Lng.str("SHIPYARD REPAIR"), new GUICallback() {
+                @Override
+                public boolean isOccluded() {
+                    return !isActive();
+                }
+
+                @Override
+                public void callback(GUIElement callingGuiElement, MouseEvent event) {
+                    if (event.pressedLeftMouse()) {
+                        RepairDialogs.orderRepair(client(), h.fleet);
+                    }
+                }
+            });
+            repair.setPos(100, routed ? 48 : 28, 0);
+            c.attach(repair);
+        }
         return c;
     }
 

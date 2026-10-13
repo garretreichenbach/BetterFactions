@@ -32,7 +32,13 @@ public final class BFPacket extends Packet {
 		// client -> server, then back: the player's faction's battle reports
 		BATTLE_REPORTS_REQUEST, BATTLE_REPORTS,
 		// client -> server, then back: one report's ships and stations, for its full report
-		BATTLE_DETAIL_REQUEST, BATTLE_DETAIL
+		BATTLE_DETAIL_REQUEST, BATTLE_DETAIL,
+		// client -> server: shipyard repairs and faction designs
+		REPAIR_ORDER, REPAIR_CANCEL, REPAIR_QUEUE_REQUEST, DESIGNS_REQUEST, DESIGN_SET,
+		// server -> client
+		REPAIR_QUEUE, DESIGNS,
+		// client -> server: post a fleet to intercept from a sector
+		INTERCEPT_ORDER
 	}
 
 	private Kind kind;

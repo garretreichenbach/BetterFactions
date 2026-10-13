@@ -17,6 +17,7 @@ import org.schema.game.server.data.blueprint.SegmentControllerOutline;
 import org.schema.game.server.data.blueprintnw.BlueprintEntry;
 import org.schema.game.server.data.blueprintnw.BlueprintType;
 import videogoose.betterfactions.BetterFactions;
+import videogoose.betterfactions.repair.ShipyardRepairs;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -39,7 +40,7 @@ public final class BattleCommands {
 	/** Room left between ships, in metres, on top of the blueprint's own size. */
 	static final float GAP = 40;
 
-	private record Command(String name, String usage, String description, Consumer<CommandContext> run, CommandArg... args) implements ChatCommand {
+	record Command(String name, String usage, String description, Consumer<CommandContext> run, CommandArg... args) implements ChatCommand {
 		@Override
 		public String getName() {
 			return name;
@@ -71,6 +72,12 @@ public final class BattleCommands {
 				"Spawns a fleet of one catalog blueprint for a faction in an unloaded sector, on sentry. The fleet is yours to"
 						+ " command from the fleet menu; its ships are the faction's.", BattleCommands::spawnFleet,
 				CommandArg.integer("factionId", "10001"), CommandArg.integer("count", "3"), CommandArg.integer("x", "2"), CommandArg.integer("y", "2"), CommandArg.integer("z", "2"), CommandArg.greedy("blueprint", "Isanth Type-Zero")));
+		StarLoader.registerCommand(mod, new Command("shipyard_repairs_free", "[true|false]",
+				"Debugging: shipyard repairs (fleet repair orders and any yard repair) cost no components and refund none."
+						+ " No argument flips it. Not saved: a restart turns it off.", ctx -> {
+			ShipyardRepairs.free = ctx.optBool(0, !ShipyardRepairs.free);
+			ctx.reply("Shipyard repairs are now " + (ShipyardRepairs.free ? "free." : "paid in components."));
+		}, CommandArg.bool("free", "true").optional()));
 		StarLoader.registerCommand(mod, new Command("battle_blueprints", "[filter]",
 				"Lists catalog ship blueprints, heaviest first, for /battle_spawn_fleet.", BattleCommands::listBlueprints,
 				CommandArg.greedy("filter", "isanth").optional()));

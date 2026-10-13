@@ -3,6 +3,9 @@ package videogoose.betterfactions;
 import api.common.GameCommon;
 import org.schema.schine.resource.tag.Tag;
 import videogoose.betterfactions.battle.BattleTracker;
+import videogoose.betterfactions.repair.FactionDesigns;
+import videogoose.betterfactions.fleet.FleetIntercepts;
+import videogoose.betterfactions.repair.ShipyardRepairs;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -41,6 +44,30 @@ public final class BFStore {
 
 	public static void save(BattleTracker b) {
 		write("battles", b.toTag());
+	}
+
+	public static void load(ShipyardRepairs r) {
+		read("repairs", r::fromTag);
+	}
+
+	public static void save(ShipyardRepairs r) {
+		write("repairs", r.toTag());
+	}
+
+	public static void load(FleetIntercepts i) {
+		read("intercepts", i::fromTag);
+	}
+
+	public static void save(FleetIntercepts i) {
+		write("intercepts", i.toTag());
+	}
+
+	public static void load(FactionDesigns d) {
+		read("designs", d::fromTag);
+	}
+
+	public static void save(FactionDesigns d) {
+		write("designs", d.toTag());
 	}
 
 	private static void read(String name, Consumer<Tag> into) {

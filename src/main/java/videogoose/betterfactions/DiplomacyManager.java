@@ -12,7 +12,6 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import org.schema.game.common.controller.SegmentController;
 import org.schema.game.common.controller.Ship;
 import org.schema.game.common.controller.SpaceStation;
-import org.schema.game.common.controller.database.DatabaseEntry;
 import org.schema.game.common.data.world.SimpleTransformableSendableObject;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -44,6 +43,10 @@ import videogoose.betterfactions.assets.FactionAssets;
 import videogoose.betterfactions.battle.BattleReports;
 import videogoose.betterfactions.battle.BattleTracker;
 import videogoose.betterfactions.gui.BattleAdminList;
+import videogoose.betterfactions.gui.RepairDialogs;
+import videogoose.betterfactions.repair.FactionDesigns;
+import videogoose.betterfactions.fleet.FleetIntercepts;
+import videogoose.betterfactions.repair.ShipyardRepairs;
 import videogoose.betterfactions.diplomacy.CombatRatings;
 import videogoose.betterfactions.diplomacy.NpcRatingBackfill;
 import videogoose.betterfactions.diplomacy.DiplomacyAction;
@@ -361,6 +364,41 @@ public final class DiplomacyManager extends Observable {
 					}
 				}
 			}
+			case REPAIR_ORDER -> {
+				Tag[] t = tag.getStruct();
+				FactionAssets a = BetterFactions.getInstance().getAssetIndex().get(sender.getFactionId());
+				//the station must be one the server itself lists as the sender's faction's
+				FactionAssets.Asset station = a == null ? null : a.find(t[1].getString());
+				if (station != null) {
+					ShipyardRepairs.get().order((GameServerState) state(), sender, t[0].getLong(), station.uid, station.name, station.sector);
+				}
+			}
+			case REPAIR_CANCEL -> ShipyardRepairs.get().cancel(sender, tag.getString());
+			case INTERCEPT_ORDER -> {
+				Tag[] t = tag.getStruct();
+				FleetIntercepts.get().order((GameServerState) state(), sender, t[0].getLong(), t[1].getVector3i());
+			}
+			case REPAIR_QUEUE_REQUEST -> {
+				if (sender.getFactionId() != 0 && BattleReports.mayAnswer("queue:" + sender.getName(), System.currentTimeMillis())) {
+					BFPacket.toPlayer(sender, Kind.REPAIR_QUEUE, ShipyardRepairs.get().queueTag(tag.getString(), sender.getFactionId()));
+				}
+			}
+			case DESIGNS_REQUEST -> {
+				if (sender.getFactionId() != 0 && BattleReports.mayAnswer("designs:" + sender.getName(), System.currentTimeMillis())) {
+					BFPacket.toPlayer(sender, Kind.DESIGNS, FactionDesigns.server().tagFor(sender.getFactionId()));
+				}
+			}
+			case DESIGN_SET -> {
+				//only ever writes into the sender's own faction's map, so whatever ship it names harms nobody else
+				Tag[] t = tag.getStruct();
+				//and only to a blueprint the sender may use: the picker lists no others, so anything else is a forged packet
+				String bp = t[1].getString();
+				boolean allowed = bp.isEmpty() || sender.getCatalog().getAvailableCatalog().stream().anyMatch(p -> bp.equals(p.getUid()));
+				if (sender.getFactionId() != 0 && allowed) {
+					FactionDesigns.server().assign(sender.getFactionId(), t[0].getString(), t[1].getString());
+					BFPacket.toPlayer(sender, Kind.DESIGNS, FactionDesigns.server().tagFor(sender.getFactionId()));
+				}
+			}
 			case BATTLE_COMMAND -> {
 				GameServerState st = (GameServerState) state();
 				if (st.isAdmin(sender.getName())) {
@@ -431,6 +469,8 @@ public final class DiplomacyManager extends Observable {
 			case BATTLE_REPORTS -> BattleReports.received(tag);
 			case BATTLE_DETAIL -> BattleReports.detailReceived(tag);
 			case BATTLE_WATCH -> BattleAdminList.setWatching(GameClientState.instance, tag.getByte());
+			case REPAIR_QUEUE -> RepairDialogs.queueReceived(tag);
+			case DESIGNS -> FactionDesigns.received(tag);
 			case MILITARY -> {
 				combatRatings.fromTotalsTag(tag);
 				changed();
@@ -515,6 +555,7 @@ public final class DiplomacyManager extends Observable {
 	}
 
 	public void onFactionDeleted(Faction f) {
+		FactionDesigns.server().onFactionDeleted(f.getIdFaction());
 		removeTreatiesOf(f.getIdFaction());
 		removeFederationsOf(f.getIdFaction());
 		emblems.remove(f.getIdFaction());
@@ -904,12 +945,17 @@ public final class DiplomacyManager extends Observable {
         }
         //ponytail: one database query per rated faction per sweep; round-robin them if that ever
         //shows up in a tick profile
+        java.sql.Connection db = ((videogoose.betterfactions.mixin.TableAccessor) s.getDatabaseIndex().getTableManager().getEntityTable()).betterFactions$connection();
         for (int f : combatRatings.ratedFactions()) {
-            try {
+            //not EntityTable.getByFaction: it skips docked entities, which would drop every turret's
+            //rating once it unloads, and a hull whose guns are all on turrets rates 0 by itself
+            try (java.sql.Statement st = db.createStatement();
+                 java.sql.ResultSet r = st.executeQuery("SELECT ID FROM ENTITIES WHERE FACTION = " + f + " AND TYPE IN ("
+                         + RATED_TYPES[0] + "," + RATED_TYPES[1] + ");")) {
                 //loaded counts as owned: a ship built since the last save has no row yet
                 LongOpenHashSet owned = new LongOpenHashSet(loaded);
-                for (DatabaseEntry e : s.getDatabaseIndex().getTableManager().getEntityTable().getByFaction(f, RATED_TYPES, Integer.MAX_VALUE)) {
-                    owned.add(e.dbId);
+                while (r.next()) {
+                    owned.add(r.getLong(1));
                 }
                 combatRatings.retain(f, owned);
             } catch (java.sql.SQLException e) {

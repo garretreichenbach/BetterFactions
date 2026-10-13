@@ -192,6 +192,18 @@ public class FactionAssets {
     }
 
     /**
+     * The holding with this UID, or null.
+     */
+    public Asset find(String uid) {
+        for (Asset a : assets) {
+            if (a.uid.equals(uid)) {
+                return a;
+            }
+        }
+        return null;
+    }
+
+    /**
      * The route this fleet is running, or null.
      */
     public Route route(long fleetDbId) {
