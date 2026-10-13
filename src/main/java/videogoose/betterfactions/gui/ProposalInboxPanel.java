@@ -75,6 +75,12 @@ public class ProposalInboxPanel extends GUIInputPanel implements Observer {
         if (offer.name != null && !offer.name.isEmpty()) {
             return offer.name;
         }
+        //a deal's treaties carry their own names; the first one it signs heads it
+        for (SettlementTerm t : offer.terms) {
+            if (t.kind == SettlementTerm.Kind.SIGN_TREATY && !t.name.isEmpty()) {
+                return t.name;
+            }
+        }
         return typeOf(offer);
     }
 
@@ -86,7 +92,13 @@ public class ProposalInboxPanel extends GUIInputPanel implements Observer {
             return Lng.str("Call to Arms");
         }
         if (offer.typeId == null) {
-            return DiplomacyManager.client().isSettlement(offer) ? Lng.str("Settlement") : Lng.str("Peace Offer");
+            if (!DiplomacyManager.client().isSettlement(offer)) {
+                return Lng.str("Peace Offer");
+            }
+            //a deal goes by the first treaty it signs
+            String signed = DiplomacyManager.firstSigned(offer);
+            TreatyType type = signed != null ? TreatyTypeRegistry.get(signed) : null;
+            return type != null ? type.getDisplayName() : Lng.str("Settlement");
         }
         TreatyType type = TreatyTypeRegistry.get(offer.typeId);
         return type != null ? type.getDisplayName() : offer.typeId;
@@ -211,7 +223,8 @@ public class ProposalInboxPanel extends GUIInputPanel implements Observer {
                             : offer.expiresAt > 0
                             ? Lng.str("Term: %s", StringTools.formatTimeFromMS(
                             Math.max(0, offer.expiresAt - System.currentTimeMillis())))
-                            : Lng.str("Term: none"));
+                            //a deal's treaties each say their own term, among the terms below
+                            : "");
                     if (offer.typeId == null && !DiplomacyManager.client().warGoals(offer.a, offer.b).isEmpty()) {
                         b.append("\n").append(offer.terms.equals(DiplomacyManager.client().warGoals(offer.a, offer.b))
                                 ? Lng.str("Exactly the war goals.")

@@ -809,13 +809,26 @@ public final class DiplomacyManager extends Observable {
 	}
 
 	private String offerName(DiplomacyProposal p) {
-		return isSettlement(p) ? Lng.str("a settlement") : offerName(p.typeId);
+		if (!isSettlement(p)) {
+			return offerName(p.typeId);
+		}
+		String signed = firstSigned(p);
+		return signed != null ? offerName(signed) : Lng.str("a settlement");
+	}
+
+	/** The first treaty a deal signs, which is what it is called by; null for one that signs none. */
+	public static String firstSigned(DiplomacyProposal p) {
+		for (SettlementTerm t : p.terms) {
+			if (t.kind == SettlementTerm.Kind.SIGN_TREATY) {
+				return t.typeId;
+			}
+		}
+		return null;
 	}
 
 	/**
-	 * A proposal of terms alone, between factions not at war: no treaty of its own, only what its terms
-	 * change hands - a one-sided treaty the proposer signs, say, which the proposal's own treaty cannot
-	 * express because that always binds the side it is put to. The same shape at war is peace.
+	 * A deal between factions not at war: no treaty of its own, only its terms - every treaty it signs
+	 * among them, see {@link DiplomacyProposal#foldTreatyIntoTerms}. The same shape at war is peace.
 	 */
 	public boolean isSettlement(DiplomacyProposal p) {
 		return p.typeId == null && p.against == 0 && getRelation(p.a, p.b) != FactionRelation.RType.ENEMY;
@@ -1375,6 +1388,8 @@ public final class DiplomacyManager extends Observable {
         for (int i = 0; i < relOfferTags.length - 1; i++) {
 			DiplomacyProposal relationOffer = new DiplomacyProposal();
 			relationOffer.fromTagStructure(relOfferTags[i]);
+			//saved when a deal still had a treaty of its own
+			relationOffer.foldTreatyIntoTerms();
 			if ((relationOffer.a > 0 && !existsFaction(relationOffer.a)) || (relationOffer.b > 0 && !existsFaction(relationOffer.b))) {
 				System.err.println("[SERVER][FACTION][WARNING] not adding faction relation offer for non existent faction: " + relationOffer);
 			} else {
@@ -2419,11 +2434,22 @@ public final class DiplomacyManager extends Observable {
 	 * @return false if the type is not registered
 	 */
 	public boolean signTreatyServer(int a, int b, String typeId, long expiresAt, String clause) {
+		return signTreatyServer(a, b, typeId, expiresAt, clause, "", List.of());
+	}
+
+	/**
+	 * @param name what it is to be called, or blank to have it named
+	 * @param deal the rest of the deal it is part of, which the generated name can draw on
+	 */
+	private boolean signTreatyServer(int a, int b, String typeId, long expiresAt, String clause, String name,
+									 List<SettlementTerm> deal) {
 		if (TreatyTypeRegistry.get(typeId) == null) {
 			return false;
 		}
 		DiplomacyProposal signed = new DiplomacyProposal();
 		signed.set("ADMIN", a, b, typeId, FactionRelation.RType.NEUTRAL.code, clause == null ? "" : clause, DiplomacyProposal.Action.ACCEPT, expiresAt);
+		signed.name = name == null ? "" : name;
+		signed.terms.addAll(deal);
 		signed.serverAuthored = true;
 		//an admin setting a relation is not an act of aggression anyone is pledged to answer
 		signed.noCallToArms = true;
@@ -2783,6 +2809,14 @@ public final class DiplomacyManager extends Observable {
         //faction points owed are paid even when they are not there: the payer goes into debt, which
         //bars it from new dealings until it is paid off (see handleRelationShipOffers)
         for (SettlementTerm t : offer.terms) {
+            if (t.kind == SettlementTerm.Kind.SIGN_TREATY) {
+                TreatyType type = TreatyTypeRegistry.get(t.typeId);
+                FactionTreaty held = getTreaties(offer.a, offer.b).get(t.typeId);
+                if (type != null && held != null && !type.isSymmetric() && held.from != t.receiver(offer.a, offer.b)) {
+                    //re-signing is how it is renamed or renewed, and the other way round it would be reversed
+                    return Lng.str("Only %s can renew the %s.", getFactionName(held.from), type.getDisplayName());
+                }
+            }
             if (t.kind == SettlementTerm.Kind.SIGN_TREATY && TreatyTypeRegistry.VASSALAGE.equals(t.typeId)) {
                 int lord = overlordOf(t.giver);
                 if (lord != 0 && lord != t.receiver(offer.a, offer.b)) {
@@ -2848,7 +2882,7 @@ public final class DiplomacyManager extends Observable {
                 }
                 case SIGN_TREATY:
                     //receiver first: a demand reads "a demands of b", and the giver is the one bound
-                    signTreatyServer(receiver, t.giver, t.typeId, 0L, "");
+                    signTreatyServer(receiver, t.giver, t.typeId, t.expiresAt, offer.getMessage(), t.name, offer.terms);
                     break;
                 case CEDE_SYSTEM:
                     cedeSystem(t.giver, receiver, t.system);
@@ -3365,6 +3399,8 @@ public final class DiplomacyManager extends Observable {
             while (!relationOffersToAdd.isEmpty()) {
                 changed();
                 DiplomacyProposal fk = relationOffersToAdd.remove(0);
+                //a deal is only its terms, however it was sent
+                fk.foldTreatyIntoTerms();
 
                 if (fk.a == fk.b) {
                     System.err.println("[FACTIONMANAGER] dropped diplomacy proposal to self: " + fk);
@@ -3685,10 +3721,11 @@ public final class DiplomacyManager extends Observable {
      * The news post, faction mail and opinion hit a proposal generates when it is first made.
      */
     private void announceProposal(DiplomacyProposal fk, Faction from, Faction to, TreatyType type) {
-        String typeId = type != null ? type.getId() : null;
+        //a deal goes by the first treaty it signs
+        String typeId = type != null ? type.getId() : firstSigned(fk);
         String said = fk.getMessage() == null || fk.getMessage().isBlank() ? "" : " \"" + fk.getMessage().trim() + "\"";
         history(from.getIdFaction(), to.getIdFaction(), type == null
-                ? Lng.str("%s offered peace to %s.%s", from.getName(), to.getName(), said)
+                ? Lng.str("%s offered %s to %s.%s", from.getName(), offerName(fk), to.getName(), said)
                 : switch (type.getKind()) {
                     case DECLARATION -> Lng.str("%s declared %s on %s.%s", from.getName(), type.getDisplayName(), to.getName(), said);
                     case DEMAND -> Lng.str("%s demanded %s of %s.%s", from.getName(), type.getDisplayName(), to.getName(), said);
@@ -3729,7 +3766,7 @@ public final class DiplomacyManager extends Observable {
             action = DiplomacyAction.DiplActionType.ALLIANCE_REQUEST;
         } else if (isSettlement(fk)) {
             title = "Settlement Offer";
-            body = from.getName() + " offered a settlement!\n" + fk.getMessage();
+            body = from.getName() + " offered " + offerName(fk) + "!\n" + fk.getMessage();
             action = null;
         } else if (typeId == null) {
             title = "Peace Offer";

@@ -96,7 +96,7 @@ public class DiplomacyProposeDialog extends PlayerInput {
 
     /**
      * A declaration picked from the Action list, or null for a deal - which, at war, is peace. A deal's
-     * treaty is not picked here: it is whichever one is on the table in the columns, see {@link #deal()}.
+     * treaties are not picked here but in the columns, as terms like anything else.
      */
     private String typeId;
     private long termMs;
@@ -110,8 +110,8 @@ public class DiplomacyProposeDialog extends PlayerInput {
     private final List<SettlementTerm> terms = new ObjectArrayList<SettlementTerm>();
 
     /**
-     * What goes on the wire: the proposal's own treaty, and the terms riding on it. The wire carries
-     * one treaty as the proposal itself, null meaning peace, so a deal needs one to stand on.
+     * What goes on the wire: a declaration and its goals, or a deal - null, meaning peace at war - and
+     * its terms.
      */
     private record Deal(String typeId, List<SettlementTerm> terms) {
     }
@@ -139,15 +139,13 @@ public class DiplomacyProposeDialog extends PlayerInput {
         this.counterTo = counterTo;
         this.renaming = renaming;
         if (renaming != null) {
-            terms.add(SettlementTerm.signTreaty(primaryGiver(), renaming.typeId));
+            //signed the way round it already stands: a one-sided treaty binds whoever it binds now
+            TreatyType type = TreatyTypeRegistry.get(renaming.typeId);
+            boolean oursToGive = type != null && !type.isSymmetric() && renaming.from != from.getIdFaction();
+            terms.add(SettlementTerm.signTreaty(oursToGive ? from.getIdFaction() : to.getIdFaction(), renaming.typeId));
         }
         if (counterTo != null) {
             //start from what is on the table, so a counter can be "the same, minus that one term"
-            TreatyType offered = counterTo.typeId != null ? TreatyTypeRegistry.get(counterTo.typeId) : null;
-            if (offered != null && offered.needsAcceptance()) {
-                //the offer bound the side it was put to, which is us
-                terms.add(SettlementTerm.signTreaty(counterTo.b, offered.getId()));
-            }
             terms.addAll(counterTo.terms);
         } else {
             //peace is offered first when at war, and it starts from what the war was declared for:
@@ -197,14 +195,6 @@ public class DiplomacyProposeDialog extends PlayerInput {
         return Lng.str("Nothing is on the table yet: add something to either column.");
     }
 
-    /**
-     * Who the proposal's own treaty binds when it is one-sided: the side it is put to. That holds for a
-     * counter too, because the server turns a counter around before it goes back.
-     */
-    private int primaryGiver() {
-        return to.getIdFaction();
-    }
-
     /** A treaty both sides sign alike, which is why it shows in both columns. */
     private static boolean mutual(SettlementTerm t) {
         TreatyType type = t.kind == SettlementTerm.Kind.SIGN_TREATY ? TreatyTypeRegistry.get(t.typeId) : null;
@@ -217,22 +207,33 @@ public class DiplomacyProposeDialog extends PlayerInput {
     }
 
     /**
-     * The table as it goes on the wire, or null when there is nothing on it. A declaration and a peace
-     * carry everything as terms; a deal lifts its first treaty that can be the proposal's own out to be
-     * it, and otherwise goes as a settlement of terms alone - which is how we sign a one-sided treaty.
+     * The table as it goes on the wire, or null when there is nothing on it: a deal between factions at
+     * peace is only its terms, and with none it is nothing at all.
      */
     private Deal deal() {
-        if (typeId != null || atWar()) {
-            return new Deal(typeId, List.copyOf(terms));
+        return typeId == null && !atWar() && terms.isEmpty() ? null : new Deal(typeId, List.copyOf(terms));
+    }
+
+    /**
+     * The deal with the Term and Name fields applied: the term to every treaty it signs, the name to the
+     * first. Not at war, where a peace's treaties are war goals and have to stay exactly the goals.
+     */
+    private List<SettlementTerm> withTreatyDetails(List<SettlementTerm> in, long expiresAt, String name) {
+        if (atWar() || declaringWar()) {
+            return in;
         }
-        for (SettlementTerm t : terms) {
-            if (t.kind == SettlementTerm.Kind.SIGN_TREATY && (mutual(t) || t.giver == primaryGiver())) {
-                List<SettlementTerm> rest = new ObjectArrayList<SettlementTerm>(terms);
-                rest.remove(t);
-                return new Deal(t.typeId, List.copyOf(rest));
+        List<SettlementTerm> out = new ObjectArrayList<SettlementTerm>();
+        boolean named = false;
+        for (SettlementTerm t : in) {
+            if (t.kind == SettlementTerm.Kind.SIGN_TREATY) {
+                //left blank, a field keeps what the treaty already had - in a counter, what was offered
+                t = SettlementTerm.signTreaty(t.giver, t.typeId, expiresAt > 0 ? expiresAt : t.expiresAt,
+                        named || name == null || name.isBlank() ? t.name : name);
+                named = true;
             }
+            out.add(t);
         }
-        return terms.isEmpty() ? null : new Deal(null, List.copyOf(terms));
+        return out;
     }
 
     private String describe(SettlementTerm t) {
@@ -483,13 +484,16 @@ public class DiplomacyProposeDialog extends PlayerInput {
     private void send(String treatyName, String note) {
         long expiresAt = termMs > 0 && !declaringWar() ? System.currentTimeMillis() + termMs : 0L;
         Deal d = deal();
+        //a declaration is named on the proposal, being the one thing it signs; a deal names its treaties
+        String declarationName = d.typeId() != null ? treatyName : "";
+        List<SettlementTerm> sent = withTreatyDetails(d.terms(), expiresAt, treatyName);
         if (counterTo != null) {
             DiplomacyManager.client().sendCounterOffer(getState().getPlayerName(),
-                    counterTo, d.typeId(), expiresAt, note, treatyName, d.terms());
+                    counterTo, d.typeId(), 0L, note, declarationName, sent);
         } else {
             DiplomacyManager.client().sendTreatyProposal(getState().getPlayerName(),
                     from.getIdFaction(), to.getIdFaction(), d.typeId(), note,
-                    DiplomacyProposal.Action.PROPOSE, expiresAt, treatyName, d.terms());
+                    DiplomacyProposal.Action.PROPOSE, 0L, declarationName, sent);
         }
     }
 
