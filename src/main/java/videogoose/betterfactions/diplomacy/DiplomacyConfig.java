@@ -193,6 +193,14 @@ public class DiplomacyConfig {
                 case TRUST:
                     c.value = 1;
                     break;
+                case INFAMY:
+                    //per broken treaty, fading; the wronged party's own TREATY_BROKEN hit comes on top
+                    c.value = -150;
+                    break;
+                case AGGRESSION:
+                    //per war declared, a quarter of it per unprovoked attack
+                    c.value = -100;
+                    break;
                 default:
                     c.value = -123;
                     break;

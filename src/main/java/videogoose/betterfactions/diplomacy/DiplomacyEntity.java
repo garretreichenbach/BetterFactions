@@ -219,6 +219,9 @@ public class DiplomacyEntity implements LogInterface {
                 mod.totalTimeApplied = 0;
                 map.put(status, mod);
             } else {
+                //follows the status as it moves: trust grows, reputation fades, and a value frozen at
+                //whatever it read the turn the status first held would track neither
+                mod.value = (int) Math.ceil(value * intensity);
                 mod.elapsedTimeInactive = 0;
                 mod.totalTimeApplied += timeElapsed;
             }
@@ -335,6 +338,11 @@ public class DiplomacyEntity implements LogInterface {
                 return (float) getRelativeStrength();
             case TRUST:
                 return calculateTrust();
+            case INFAMY:
+                return isFaction() ? (float) getInfamy() : 0;
+            case AGGRESSION:
+                //their allies do not count the fights they pick as picked against them
+                return isFaction() && rel != FactionRelation.RType.FRIEND ? (float) getAggression() : 0;
             default:
                 break;
         }
@@ -1172,6 +1180,16 @@ public class DiplomacyEntity implements LogInterface {
         return earned - getActionCount(DiplomacyAction.DiplActionType.TREATY_BROKEN) * TRUST_BREAK_PENALTY;
     }
 
+    /** Their galaxy-wide record of broken treaties; see {@link Reputation}. */
+    public double getInfamy() {
+        return isFaction() ? mgr.getReputation().infamyOf((int) dbId) : 0;
+    }
+
+    /** How many fights they have started lately, with anyone; see {@link Reputation}. */
+    public double getAggression() {
+        return isFaction() ? mgr.getReputation().aggressionOf((int) dbId) : 0;
+    }
+
     public boolean isSinglePlayer() {
         return dbId >= Integer.MAX_VALUE;
     }
@@ -1204,7 +1222,9 @@ public class DiplomacyEntity implements LogInterface {
         IN_WAR_WITH_FRIENDS(en -> Lng.str("You're at war with their friends")),
         FACTION_MEMBER_AT_WAR_WITH_US(en -> Lng.str("One or more of your faction members is at war with us")),
         FACTION_MEMBER_WE_DONT_LIKE(en -> Lng.str("We don't like one or more of your faction members")),
-        TRUST(en -> Lng.str("We have kept agreements with each other"));
+        TRUST(en -> Lng.str("We have kept agreements with each other")),
+        INFAMY(en -> Lng.str("They are known to break their treaties")),
+        AGGRESSION(en -> Lng.str("They keep starting fights"));
 
         private final Translatable description;
 

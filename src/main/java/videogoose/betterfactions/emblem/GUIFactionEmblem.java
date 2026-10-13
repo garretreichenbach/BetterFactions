@@ -40,8 +40,9 @@ public class GUIFactionEmblem extends GUIAnchor {
 			return;
 		}
 		s.setPositionCenter(false);
-		s.setWidth(size);
-		s.setHeight(size);
+		//width/height do not resize the quad - it draws at image size times scale. The sprite is shared
+		//across every emblem on screen, so the scale is set fresh on each draw
+		s.setScale((float) size / Math.max(1, s.getWidth()), (float) size / Math.max(1, s.getHeight()), 1);
 		GlUtil.glPushMatrix();
 		transform();
 		s.draw();

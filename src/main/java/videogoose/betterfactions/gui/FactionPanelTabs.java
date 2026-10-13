@@ -31,7 +31,9 @@ import videogoose.betterfactions.battle.BattleReports;
 import videogoose.betterfactions.diplomacy.DiplomacyEntity;
 import videogoose.betterfactions.diplomacy.FactionStrength;
 import videogoose.betterfactions.diplomacy.Federation;
+import videogoose.betterfactions.diplomacy.Reputation;
 import videogoose.betterfactions.diplomacy.FederationCommand;
+import videogoose.betterfactions.emblem.FactionEmblemCache;
 import videogoose.betterfactions.emblem.GUIFactionEmblem;
 
 import javax.vecmath.Vector4f;
@@ -189,8 +191,8 @@ public class FactionPanelTabs implements GUIActiveInterface {
     private static final int DIPLOMACY_HEADER_HEIGHT = 56;
     /** About eight rows before the list scrolls; the selected faction's identity gets the rest of the column. */
     private static final int DIPLOMACY_FACTION_LIST_HEIGHT = 240;
-    /** The emblem in the top right of the vitals box, beside the name. */
-    private static final int VITALS_EMBLEM_SIZE = 44;
+    /** The emblem at the top of the description box, above the government. */
+    private static final int DESCRIPTION_EMBLEM_SIZE = 128;
     /**
      * Name, founding, chair and the charter text.
      */
@@ -598,15 +600,6 @@ public class FactionPanelTabs implements GUIActiveInterface {
         if (f == getOwnFaction()) {
             box.attach(pointsDetail);
         }
-        //top right, clear of the lines on the left; draws nothing when they have no emblem
-        GUIFactionEmblem emblem = new GUIFactionEmblem(getState(), VITALS_EMBLEM_SIZE, () -> f) {
-            @Override
-            public void draw() {
-                setPos(box.getWidth() - VITALS_EMBLEM_SIZE - 8, 6, 0);
-                super.draw();
-            }
-        };
-        box.attach(emblem);
         box.attach(size);
         box.attach(power);
         box.attach(powerBar(box, f));
@@ -711,7 +704,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
      * cannot mix fonts; they scroll together.
      */
     private void fillDescription(GUIAnchor box, Faction f) {
-        GUITextOverlay government = new GUITextOverlay(10, 10, FontLibrary.getBlenderProHeavy14(), getState());
+        GUITextOverlay government = new GUITextOverlay(10, 10, FontLibrary.getBlenderProHeavy30(), getState());
         government.setTextSimple(new Object() {
             @Override
             public String toString() {
@@ -719,7 +712,6 @@ public class FactionPanelTabs implements GUIActiveInterface {
                 return g == null ? "" : g;
             }
         });
-        government.setPos(2, 2, 0);
 
         GUITextOverlayTable t = new GUITextOverlayTable(2, 2, getState());
         t.autoHeight = true;
@@ -735,16 +727,28 @@ public class FactionPanelTabs implements GUIActiveInterface {
         });
         t.onInit();
 
+        //centred above the text, scrolling with it; no room is kept for it until the image is here
+        GUIFactionEmblem emblem = new GUIFactionEmblem(getState(), DESCRIPTION_EMBLEM_SIZE, () -> f);
+
         GUIAnchor content = new GUIAnchor(getState(), 10, 10) {
             @Override
             public void draw() {
-                int top = Civics.client().of(f.getIdFaction()).government() == null ? 0 : 20;
+                int top = 2;
+                if (FactionEmblemCache.get((GameClientState) getState(), f) != null) {
+                    emblem.setPos((box.getWidth() - DESCRIPTION_EMBLEM_SIZE) / 2, top, 0);
+                    top += DESCRIPTION_EMBLEM_SIZE + 6;
+                }
+                government.setPos(2, top, 0);
+                if (Civics.client().of(f.getIdFaction()).government() != null) {
+                    top += 28;
+                }
                 t.setPos(0, top, 0);
                 setWidth(box.getWidth());
                 setHeight(top + t.getHeight());
                 super.draw();
             }
         };
+        content.attach(emblem);
         content.attach(government);
         content.attach(t);
         GUIScrollablePanel sc = new GUIScrollablePanel(10, 10, box, getState());
@@ -1279,6 +1283,10 @@ public class FactionPanelTabs implements GUIActiveInterface {
                 }
                 b.append("  ").append(opinionLine(f)).append(BREAK);
                 b.append(powerLine(f));
+                String rep = reputationLine(f);
+                if (rep != null) {
+                    b.append(BREAK).append(rep);
+                }
                 return b.toString();
             }
         });
@@ -1318,6 +1326,20 @@ public class FactionPanelTabs implements GUIActiveInterface {
             return Lng.str("Power: %s   %s", theirs, breakdown);
         }
         return Lng.str("Power: %s vs your %s   %s", theirs, Math.round(FactionStrength.of(own)), breakdown);
+    }
+
+    /**
+     * What the rest of the galaxy has heard about them, or null for a clean record.
+     */
+    private static String reputationLine(Faction f) {
+        Reputation r = DiplomacyManager.client().getReputation();
+        double infamy = r.infamyOf(f.getIdFaction());
+        double aggression = r.aggressionOf(f.getIdFaction());
+        if (infamy < 0.05 && aggression < 0.05) {
+            return null;
+        }
+        return Lng.str("Reputation: %s broken treaties, %s fights started (fading)",
+                String.format(java.util.Locale.ENGLISH, "%.1f", infamy), String.format(java.util.Locale.ENGLISH, "%.1f", aggression));
     }
 
     /**

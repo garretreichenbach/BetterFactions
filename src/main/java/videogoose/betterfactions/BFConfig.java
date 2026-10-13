@@ -21,6 +21,7 @@ public final class BFConfig {
 	private static SimpleConfigInt encounterTimeoutMinutes;
 	private static SimpleConfigInt civicSwapCost;
 	private static SimpleConfigInt civicSwapCooldownDays;
+	private static SimpleConfigInt reputationHalfLifeDays;
 
 	private BFConfig() {
 	}
@@ -51,7 +52,14 @@ public final class BFConfig {
 				"Faction points it costs to replace a civic a faction holds. Filling an empty slot is free. 0 makes swaps free.");
 		civicSwapCooldownDays = new SimpleConfigInt(config, "civic_swap_cooldown_days", 7,
 				"Days after swapping a civic before the faction may swap one again. 0 means no wait.");
+		reputationHalfLifeDays = new SimpleConfigInt(config, "reputation_half_life_days", 14,
+				"Days for half of a faction's galaxy-wide reputation for broken treaties and started fights to fade. 0 never fades.");
 		config.readWriteFields();
+	}
+
+	public static int reputationHalfLifeDays() {
+		Integer v = reputationHalfLifeDays != null ? reputationHalfLifeDays.getValue() : null;
+		return v == null ? 14 : Math.max(0, v);
 	}
 
 	public static int maxSoftBattles() {

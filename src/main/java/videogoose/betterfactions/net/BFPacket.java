@@ -44,7 +44,9 @@ public final class BFPacket extends Packet {
 		// server -> client: fleets whose flagship is radar jamming, hidden on the map
 		JAMMED_FLEETS,
 		// client -> server: put a civic in a slot; server -> client: civics, the whole store on join or one faction's change
-		CIVICS_PICK, CIVICS
+		CIVICS_PICK, CIVICS,
+		// server -> client: every faction's galaxy-wide reputation
+		REPUTATION
 	}
 
 	private Kind kind;

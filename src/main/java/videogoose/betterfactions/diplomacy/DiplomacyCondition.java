@@ -158,6 +158,10 @@ public class DiplomacyCondition extends DiplomacyConditionGroup {
                 return Lng.str("they do not deal with your kind");
             case WEARINESS:
                 return Lng.str("they have not lost enough to you to want out");
+            case REPUTATION:
+                return Lng.str("word is you break your treaties");
+            case AGGRESSION:
+                return Lng.str("you have not shown enough teeth for them");
             default:
                 return Lng.str("they are not satisfied");
         }
@@ -210,6 +214,10 @@ public class DiplomacyCondition extends DiplomacyConditionGroup {
                 return ent.isOfKind(argumentText);
             case WEARINESS:
                 return ent.getWeariness() >= argumentValue;
+            case REPUTATION:
+                return -ent.getInfamy() >= argumentValue;
+            case AGGRESSION:
+                return ent.getAggression() >= argumentValue;
             case ACTION_COUNTER:
                 return ent.getActionCount(argumentAction) >= argumentValue;
             case ACTION_PERSISTED:
@@ -286,6 +294,8 @@ public class DiplomacyCondition extends DiplomacyConditionGroup {
         SHARES_FRIEND("How many of our friends they are also allied with, equal or bigger than X", false, false, true),
         IS_FACTION_TYPE("They are of this kind. Argument: PLAYER, NPC or PIRATE", false, false, false, true),
         WEARINESS("How badly our recent battles against them have gone: 0 is no recent losses, 1 is the worst losing streak there is. Equal or bigger than X", false, false, true),
+        REPUTATION("Their galaxy-wide record of keeping treaties, with anyone: 0 is clean, -1 is one recently broken treaty, fading over time. Equal or bigger than X", false, false, true),
+        AGGRESSION("How many fights they have started lately, with anyone: 1 is one declared war or four unprovoked attacks, fading over time. Equal or bigger than X", false, false, true),
         ;
 
         public final String desc;

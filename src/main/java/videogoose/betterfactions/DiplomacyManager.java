@@ -51,6 +51,7 @@ import videogoose.betterfactions.gui.CivicChooser;
 import videogoose.betterfactions.fleet.FleetIntercepts;
 import videogoose.betterfactions.repair.ShipyardRepairs;
 import videogoose.betterfactions.diplomacy.CombatRatings;
+import videogoose.betterfactions.diplomacy.Reputation;
 import videogoose.betterfactions.diplomacy.NpcRatingBackfill;
 import videogoose.betterfactions.diplomacy.DiplomacyAction;
 import videogoose.betterfactions.diplomacy.DiplomacyEntity;
@@ -125,6 +126,7 @@ public final class DiplomacyManager extends Observable {
 	private long lastIntelSharingSync;
 	private DiplomacyProposal queryResult;
 	private final CombatRatings combatRatings = new CombatRatings();
+	private final Reputation reputation = new Reputation();
 	private long lastMilitarySweep;
 	/** A rated entity was deleted since the totals last went out. */
 	private boolean militaryDirty;
@@ -253,6 +255,10 @@ public final class DiplomacyManager extends Observable {
 
 	public CombatRatings getCombatRatings() {
 		return combatRatings;
+	}
+
+	public Reputation getReputation() {
+		return reputation;
 	}
 
 	public FactionDiplomacy diplomacyOf(Faction f) {
@@ -493,6 +499,10 @@ public final class DiplomacyManager extends Observable {
 				combatRatings.fromTotalsTag(tag);
 				changed();
 			}
+			case REPUTATION -> {
+				reputation.fromTag(tag);
+				changed();
+			}
 			case EMBLEM_DATA -> {
 				Tag[] t = tag.getStruct();
 				FactionEmblemCache.received(GameClientState.instance, t[0].getString(), (byte[]) t[1].getValue());
@@ -537,6 +547,7 @@ public final class DiplomacyManager extends Observable {
 		if (militaryDirty) {
 			publishMilitary(false);
 		}
+		decayReputation(wall);
 		checkFederationVotes();
 
 		if (!needsSnapshot.isEmpty()) {
@@ -589,6 +600,7 @@ public final class DiplomacyManager extends Observable {
 			relationShipOffers.values().removeIf(o -> o.a == f.getIdFaction() || o.b == f.getIdFaction());
 		}
 		combatRatings.removeFaction(f.getIdFaction());
+		reputation.removeFaction(f.getIdFaction());
 		changed();
 	}
 
@@ -667,6 +679,7 @@ public final class DiplomacyManager extends Observable {
 				new Tag(Tag.Type.STRUCT, null, emb),
 				ledgerTag,
 				forClient ? combatRatings.totalsTag() : combatRatings.toTag(),
+				reputation.toTag(),
 				FinishTag.INST});
 	}
 
@@ -694,6 +707,10 @@ public final class DiplomacyManager extends Observable {
 			} else {
 				combatRatings.fromTotalsTag(t[6]);
 			}
+		}
+		//and saves from before reputation end after the ratings
+		if (t.length > 8 && t[7].getType() != Tag.Type.FINISH) {
+			reputation.fromTag(t[7]);
 		}
 		if (withLedgers) {
 			Tag[] l = t[5].getStruct();
@@ -1004,6 +1021,20 @@ public final class DiplomacyManager extends Observable {
         }
     }
 
+    private long lastReputationDecay;
+
+    /** Server: once a sweep, fade every faction's reputation and send what moved. */
+    private void decayReputation(long now) {
+        if (now - lastReputationDecay < MILITARY_SWEEP_MS) {
+            return;
+        }
+        lastReputationDecay = now;
+        if (reputation.decay(now, BFConfig.reputationHalfLifeDays())) {
+            broadcast(Kind.REPUTATION, reputation.toTag());
+            changed();
+        }
+    }
+
     private void publishMilitary(boolean changed) {
         militaryDirty = false;
         if (combatRatings.recomputeTotals() | changed) {
@@ -1132,6 +1163,14 @@ public final class DiplomacyManager extends Observable {
      * @param subject what the action was about when its type alone is ambiguous - a treaty id
      */
     public void diplomacyAction(DiplomacyAction.DiplActionType type, int toFaction, long otherDbId, String subject) {
+        //what everyone else hears about: the doer is the other side of the victim's ledger entry
+        if (onServer && otherDbId > 0 && otherDbId < Integer.MAX_VALUE && getFaction((int) otherDbId) != null) {
+            if (type == DiplomacyAction.DiplActionType.TREATY_BROKEN) {
+                reputation.brokeTreaty((int) otherDbId);
+            } else if (type == DiplomacyAction.DiplActionType.DECLARATION_OF_WAR) {
+                reputation.declaredWar((int) otherDbId);
+            }
+        }
         Faction faction = getFaction(toFaction);
         //used to be NPC-only, which left the ledger every faction now keeps empty for player ones
 		if (faction != null) {
@@ -2548,6 +2587,10 @@ public final class DiplomacyManager extends Observable {
             //a declared war called its pacts in when it was declared; counting its fighting again
             //would also call the aggressor's partners against anyone who answered that call
             return;
+        }
+        if (victim != FactionManager.PIRATES_ID) {
+            //nobody thinks less of a faction for shooting pirates
+            reputation.attacked(aggressor, victim, System.currentTimeMillis());
         }
         callToArms(victim, aggressor);
     }

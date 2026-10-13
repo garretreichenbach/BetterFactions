@@ -1,9 +1,9 @@
 <Diplomacy>
     <!--Diplomacy configuration. There are actions and states. States will add a constant effect on points as long as its active. Actions add/remove over time as long as the action is active. Actions get reset if repeated. Reactions can exist both for actions (checked and executed when that action happens) or general, which are executed on action/status turn.-->
-    <!--Status Types: IN_WAR, IN_WAR_WITH_ENEMY, POWER, PIRATE, ALLIANCE, ALLIANCE_WITH_ENEMY, NON_AGGRESSION, ALLIANCE_WITH_FRIENDS, IN_WAR_WITH_FRIENDS, FACTION_MEMBER_AT_WAR_WITH_US, FACTION_MEMBER_WE_DONT_LIKE, TRUST-->
+    <!--Status Types: IN_WAR, IN_WAR_WITH_ENEMY, POWER, PIRATE, ALLIANCE, ALLIANCE_WITH_ENEMY, NON_AGGRESSION, ALLIANCE_WITH_FRIENDS, IN_WAR_WITH_FRIENDS, FACTION_MEMBER_AT_WAR_WITH_US, FACTION_MEMBER_WE_DONT_LIKE, TRUST, INFAMY, AGGRESSION-->
     <!--Action Types: ATTACK, ATTACK_ENEMY, MINING, TERRITORY, PEACE_OFFER, DECLARATION_OF_WAR, ALLIANCE_REQUEST, ALLIANCE_CANCEL, TRADING_WITH_US, TRADING_WITH_ENEMY, ALLIANCE_WITH_ENEMY, TREATY_PROPOSED, TREATY_SIGNED, TREATY_REFUSED, TREATY_BROKEN, TREATY_EXPIRED-->
     <!--Reaction Types: PROPOSE_TREATY, WITHDRAW_PROPOSAL, BREAK_TREATY, SEND_POPUP_MESSAGE, SEND_FACTION_MAIL-->
-    <!--Condition Types: EXISTS_ACTION, EXISTS_STATUS, STATUS_POINTS, STATUS_PERSISTED, ACTION_PERSISTED, ACTION_COUNTER, TOTAL_POINTS, RAW_POINTS, HAS_TREATY, TREATY_COUNT, RELATIVE_STRENGTH, AT_WAR_COUNT, SHARES_ENEMY, SHARES_FRIEND, IS_FACTION_TYPE-->
+    <!--Condition Types: EXISTS_ACTION, EXISTS_STATUS, STATUS_POINTS, STATUS_PERSISTED, ACTION_PERSISTED, ACTION_COUNTER, TOTAL_POINTS, RAW_POINTS, HAS_TREATY, TREATY_COUNT, RELATIVE_STRENGTH, AT_WAR_COUNT, SHARES_ENEMY, SHARES_FRIEND, IS_FACTION_TYPE, WEARINESS, REPUTATION, AGGRESSION-->
     <Version>
         4<!--To ensure compatibility on updates, the Diplomacy config will reset to a new default, should the version differ with what the game considers to be the latest diplomacy config format version--></Version>
     <ActionTimeouts>

@@ -12,7 +12,6 @@ import org.schema.game.client.controller.manager.ingame.faction.FactionDialogNew
 import org.schema.game.client.controller.manager.ingame.faction.FactionPersonalEnemyDialog;
 import org.schema.game.client.data.GameClientState;
 import org.schema.game.client.view.gui.faction.FactionColorPickerDialog;
-import videogoose.betterfactions.emblem.GUIFactionEmblem;
 import org.schema.game.client.view.mainmenu.FileChooserDialog;
 import org.schema.game.client.view.mainmenu.gui.FileChooserStats;
 import videogoose.betterfactions.emblem.FactionEmblem;
@@ -129,9 +128,9 @@ public class FactionSettingsContent extends GUIAnchor {
             add(list, row(Lng.str("Emblem"),
                     Lng.str("A PNG up to %s kb, shown beside your name wherever another faction is reading about you.",
                             FactionEmblem.MAX_UPLOAD_BYTES / 1024),
-                    emblemed(button(Lng.str("CHANGE"), GUITextButton.ColorPalette.OK,
+                    button(Lng.str("CHANGE"), GUITextButton.ColorPalette.OK,
                             () -> getOwnPlayer().getFactionController().hasRelationshipPermission(),
-                            this::chooseEmblem))));
+                            this::chooseEmblem)));
             add(list, row(Lng.str("Remove emblem"),
                     Lng.str("Go back to having none. An administrator can also remove it, and your faction is told when one does."),
                     button(Lng.str("REMOVE"), GUITextButton.ColorPalette.HOSTILE,
@@ -355,21 +354,6 @@ public class FactionSettingsContent extends GUIAnchor {
                 }
             }
         }).activate();
-    }
-
-    /**
-     * A control with the faction's current emblem beside it, for the same reason the colour row has a
-     * swatch: otherwise the row says an emblem exists and makes you open a dialog to find out which one.
-     * Draws nothing at all when there is none.
-     */
-    private GUIAnchor emblemed(GUIElement control) {
-        GUIFactionEmblem emblem = new GUIFactionEmblem(getState(), 22, this::getOwnFaction);
-        emblem.setPos(0, 0, 0);
-        control.setPos(30, 0, 0);
-        GUIAnchor box = new GUIAnchor(getState(), 30 + control.getWidth(), 22);
-        box.attach(emblem);
-        box.attach(control);
-        return box;
     }
 
     private GUIAnchor section(Object title, Vector4f color) {
