@@ -88,6 +88,14 @@ public final class BFStore {
 		write("fleet-mass", u.toTag());
 	}
 
+	public static void load(FactionPointMods m) {
+		read("point-mods", m::fromTag);
+	}
+
+	public static void save(FactionPointMods m) {
+		write("point-mods", m.toTag());
+	}
+
 	public static void load(Senate s) {
 		read("senate", s::fromTag);
 	}

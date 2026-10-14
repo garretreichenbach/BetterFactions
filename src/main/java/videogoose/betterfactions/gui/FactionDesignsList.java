@@ -110,11 +110,14 @@ public class FactionDesignsList extends ScrollableTableList<FactionDesignsList.S
 		GUIAnchor c = new GUIAnchor(getState(), 100, 32) {
 			@Override
 			public void draw() {
-				setWidth(parent.getWidth());
+				setWidth(parent.getWidth() - 28);
 				super.draw();
 			}
 		};
-		GUITextButton set = new GUITextButton(getState(), 130, 24, GUITextButton.ColorPalette.OK, Lng.str("SET BLUEPRINT"), new GUICallback() {
+		GUIHorizontalButtonTablePane buttons = new GUIHorizontalButtonTablePane(getState(), 2, 1, c);
+		buttons.onInit();
+		buttons.setPos(0, 4, 0);
+		buttons.addButton(0, 0, Lng.str("SET BLUEPRINT"), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new GUICallback() {
 			@Override
 			public boolean isOccluded() {
 				return !isActive();
@@ -126,10 +129,8 @@ public class FactionDesignsList extends ScrollableTableList<FactionDesignsList.S
 					RepairDialogs.pickBlueprint(getState(), s.uid(), s.name());
 				}
 			}
-		});
-		set.setPos(4, 4, 0);
-		c.attach(set);
-		GUITextButton repair = new GUITextButton(getState(), 130, 24, GUITextButton.ColorPalette.OK, Lng.str("REPAIR SHIP"), new GUICallback() {
+		}, null);
+		buttons.addButton(1, 0, Lng.str("REPAIR SHIP"), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new GUICallback() {
 			@Override
 			public boolean isOccluded() {
 				return !isActive();
@@ -145,9 +146,8 @@ public class FactionDesignsList extends ScrollableTableList<FactionDesignsList.S
 					}
 				}
 			}
-		});
-		repair.setPos(140, 4, 0);
-		c.attach(repair);
+		}, null);
+		c.attach(buttons);
 		return c;
 	}
 

@@ -43,6 +43,8 @@ A vote stays open for 24 hours and closes early once the outcome is certain. Sev
 
 A federation war signs a war from each bound member to the target. After that it is each member's own war.
 
+**EMBARGO** closes trade with a faction from every bound member, as if each had done it alone, and **LIFT EMBARGO** (shown while any member has one) reopens it. Both follow the same voting and binding rules as war. A member lifts only an embargo it imposed itself, and can still lift its own at any time.
+
 **MAKE PEACE** appears while any member is at war. It sends a white peace offer to the enemy from every bound member at war with it. The enemy answers each offer in its diplomacy inbox, so it can make peace with some members and keep fighting others. A member can still make its own peace at any time.
 
 ## Leaving

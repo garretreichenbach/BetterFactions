@@ -88,7 +88,16 @@ public class DiplomacyAction {
          * In the claimant's own ledger of the target: a casus belli bought with faction points, which
          * holds once it has been prepared. See {@link DiplomacyEntity#claimReadyIn}.
          */
-        FABRICATED_CLAIM(en -> Lng.str("We hold a claim on them"));
+        FABRICATED_CLAIM(en -> Lng.str("We hold a claim on them")),
+        /** They declared a trade embargo on us; see {@code TreatyTypeRegistry.EMBARGO}. */
+        EMBARGO(en -> Lng.str("Closed trade with us")),
+        /**
+         * Traded with a faction under an embargo, held by the embargoer and by NPCs that think well of it;
+         * see {@code DiplomacyManager#tradedBetween}.
+         */
+        TRADED_WITH_SANCTIONED(en -> Lng.str("Traded with a faction under embargo")),
+        /** They put tariffs on us; see {@code TreatyTypeRegistry.TARIFF}. */
+        TARIFF(en -> Lng.str("Put tariffs on us"));
 
         private final Translatable description;
 

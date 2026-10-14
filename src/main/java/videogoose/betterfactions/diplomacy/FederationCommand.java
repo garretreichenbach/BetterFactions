@@ -54,6 +54,10 @@ public class FederationCommand {
         DECLARE_WAR,
         /** Chair, or a vote: offer {@link #target} white peace from every member at war with it. */
         MAKE_PEACE,
+        /** Chair, or a vote: every bound member closes trade with {@link #target}. */
+        EMBARGO,
+        /** Chair, or a vote: every bound member lifts its own embargo on {@link #target}. */
+        LIFT_EMBARGO,
     }
 
     public Kind kind = Kind.CREATE;

@@ -38,6 +38,9 @@ public final class FactionCivics {
     public int senateHours;
     /** Senate: a vote that passes waits for the founder to assent or veto, until its time runs out. */
     public boolean senateVeto;
+    /** Senate: what the faction calls it; empty for the default. */
+    public String senateName = "";
+    public static final int MAX_SENATE_NAME = 32;
 
     public boolean isSwap(int slot) {
         return slot == DOCTRINE ? doctrine != null : slot < civics.size();
@@ -223,6 +226,7 @@ public final class FactionCivics {
                 new Tag(Tag.Type.INT, null, senateSeats),
                 new Tag(Tag.Type.INT, null, senateHours),
                 new Tag(Tag.Type.BYTE, null, (byte) (senateVeto ? 1 : 0)),
+                new Tag(Tag.Type.STRING, null, senateName),
                 FinishTag.INST});
     }
 
@@ -264,7 +268,19 @@ public final class FactionCivics {
             c.senateHours = t[7].getInt();
         }
         c.senateVeto = t.length > 8 && t[8].getType() == Tag.Type.BYTE && t[8].getByte() != 0;
+        c.senateName = t.length > 9 && t[9].getType() == Tag.Type.STRING ? t[9].getString() : "";
         return c;
+    }
+
+    /** The Senate's name as shown: its own, or "Senate". */
+    public String senateName() {
+        return senateName.isEmpty() ? Lng.str("Senate") : senateName;
+    }
+
+    /** A name as sent, made valid: trimmed and capped; empty for the default. */
+    public static String cleanSenateName(String name) {
+        name = name == null ? "" : name.strip();
+        return name.length() > MAX_SENATE_NAME ? name.substring(0, MAX_SENATE_NAME).strip() : name;
     }
 
     /** Whether a member of this rank index sits in the Senate. */

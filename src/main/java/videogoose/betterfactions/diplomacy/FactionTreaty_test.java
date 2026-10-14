@@ -263,6 +263,9 @@ public final class FactionTreaty_test {
         assert videogoose.betterfactions.DiplomacyManager.tradePrice(100, 10, false) == 110;
         assert videogoose.betterfactions.DiplomacyManager.tradePrice(1, 10, true) == 1;
         assert videogoose.betterfactions.DiplomacyManager.tradePrice(100, 0, true) == 100;
+        //tariffs are the trade price the other way round (DiplomacyManager#shopPrice): dearer to buy, less for a sale
+        assert videogoose.betterfactions.DiplomacyManager.tradePrice(100, 20, !true) == 120;
+        assert videogoose.betterfactions.DiplomacyManager.tradePrice(100, 20, !false) == 80;
         assert videogoose.betterfactions.DiplomacyManager.tradePrice(Integer.MAX_VALUE, 50, false) == Integer.MAX_VALUE;
     }
 

@@ -1,14 +1,10 @@
 package videogoose.betterfactions.gui;
 
-import videogoose.betterfactions.Perms;
 import videogoose.betterfactions.DiplomacyManager;
 import org.schema.common.util.StringTools;
-import org.schema.game.client.controller.PlayerOkCancelInput;
 import org.schema.game.client.data.GameClientState;
 import org.schema.game.common.data.player.faction.Faction;
-import org.schema.game.common.data.player.faction.FactionPermission;
 import org.schema.game.common.data.player.faction.FactionRelation;
-import videogoose.betterfactions.diplomacy.DiplomacyProposal;
 import videogoose.betterfactions.diplomacy.FactionTreaty;
 import videogoose.betterfactions.diplomacy.SettlementTerm;
 import videogoose.betterfactions.diplomacy.TreatyType;
@@ -16,7 +12,6 @@ import videogoose.betterfactions.diplomacy.TreatyTypeRegistry;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
 import org.schema.schine.graphicsengine.forms.gui.*;
-import org.schema.schine.graphicsengine.forms.gui.GUITextButton.ColorPalette;
 import org.schema.schine.graphicsengine.forms.gui.newgui.*;
 import org.schema.schine.input.InputState;
 
@@ -103,24 +98,7 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
      * Whether the viewer's role lets them end an agreement of this type.
      */
     private boolean mayBreak(FactionTreaty t) {
-        Faction own = client().getFaction();
-        if (own == null) {
-            return false;
-        }
-        FactionPermission p = own.getMembersUID().get(client().getPlayerName());
-        if (p == null) {
-            return false;
-        }
-        //mirrors the server's gate: hostility needs the relations permission, everything else also
-        //accepts the treaty permission. The server is still the gate; this only hides a button that
-        //would be refused.
-        TreatyType type = t.getType();
-        if (type != null && type.getKind() == TreatyType.Kind.DEMAND && t.to == own.getIdFaction()) {
-            //the vassal or tributary is released, it does not walk out
-            return false;
-        }
-        boolean hostility = type == null || type.getImplies() == org.schema.game.common.data.player.faction.FactionRelation.RType.ENEMY;
-        return p.hasRelationshipPermission(own) || (!hostility && Perms.has(own, p, Perms.TREATIES));
+        return DiplomacyActionsDialog.mayBreak(client(), client().getFaction(), t);
     }
 
     @Override
@@ -130,8 +108,8 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
         addFixedWidthColumn(Lng.str("Held For"), 120, (o1, o2) -> Long.compare(o2.signedAt, o1.signedAt));
         addFixedWidthColumn(Lng.str("Term"), 120, Comparator.comparingLong(o -> o.expiresAt));
 
-        //the two things you can actually do on this screen live on the list's own button row rather
-        //than in a box of their own, which is what leaves the opinion list its height
+        //what you can do here lives on the list's own button rows rather than in a box of their own,
+        //which is what leaves the opinion list its height: proposals and actions, then inbox and history
         addButton(new GUICallback() {
             @Override
             public boolean isOccluded() {
@@ -152,9 +130,24 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
         }, new Object() {
             @Override
             public String toString() {
-                return Lng.str("ACTIONS");
+                //everything here is offered and answered; what is done unasked is under ACTIONS
+                return Lng.str("PROPOSALS");
             }
         }, GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, ControllerElement.FilterRowStyle.LEFT, ControllerElement.FilterPos.BOTTOM);
+
+        addButton(new GUICallback() {
+            @Override
+            public boolean isOccluded() {
+                return !isActive();
+            }
+
+            @Override
+            public void callback(GUIElement callingGuiElement, MouseEvent event) {
+                if (event.pressedLeftMouse() && other != null && client().getFaction() != null) {
+                    new DiplomacyActionsDialog(client(), client().getFaction(), other).activate();
+                }
+            }
+        }, Lng.str("ACTIONS"), GUIHorizontalArea.HButtonType.BUTTON_RED_MEDIUM, ControllerElement.FilterRowStyle.RIGHT, ControllerElement.FilterPos.BOTTOM);
 
         addButton(new GUICallback() {
             @Override
@@ -175,7 +168,7 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
                 //anywhere saying an offer was waiting
                 return Lng.str("INBOX (%s)", ProposalInboxPanel.pendingCount(client()));
             }
-        }, GUIHorizontalArea.HButtonType.BUTTON_GREY_MEDIUM, ControllerElement.FilterRowStyle.RIGHT, ControllerElement.FilterPos.BOTTOM);
+        }, GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, ControllerElement.FilterRowStyle.LEFT, ControllerElement.FilterPos.BOTTOM);
 
         addButton(new GUICallback() {
             @Override
@@ -189,7 +182,7 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
                     new DiplomacyHistoryDialog(client(), sideId(), other).activate();
                 }
             }
-        }, Lng.str("HISTORY"), GUIHorizontalArea.HButtonType.BUTTON_GREY_MEDIUM, ControllerElement.FilterRowStyle.FULL, ControllerElement.FilterPos.BOTTOM);
+        }, Lng.str("HISTORY"), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, ControllerElement.FilterRowStyle.RIGHT, ControllerElement.FilterPos.BOTTOM);
 
         activeSortColumnIndex = 0;
     }
@@ -286,7 +279,7 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
         GUIAnchor c = new GUIAnchor(getState(), 100, buttonsY + 29) {
             @Override
             public void draw() {
-                setWidth(parent.getWidth());
+                setWidth(parent.getWidth() - 28);
                 super.draw();
             }
         };
@@ -312,120 +305,60 @@ public class DiplomacyTreatyList extends ScrollableTableList<FactionTreaty> {
         clause.setPos(4, 2, 0);
         scroll.setContent(clause);
 
-        GUITextButton breakButton = new GUITextButton(getState(), 120, 24, ColorPalette.CANCEL, Lng.str("BREAK"),
-                new GUICallback() {
-                    @Override
-                    public boolean isOccluded() {
-                        return !isActive();
-                    }
-
-                    @Override
-                    public void callback(GUIElement callingGuiElement, MouseEvent event) {
-                        if (!event.pressedLeftMouse()) {
-                            return;
-                        }
-                        Faction own = client().getFaction();
-                        if (DiplomacyProposeDialog.inDebt(own)) {
-                            client().getController().popupAlertTextMessage(Lng.str("%s is in debt (%s faction points) and cannot break a treaty until it is paid off.",
-                                    own.getName(), (int) own.factionPoints), 0);
-                            return;
-                        }
-                        PlayerOkCancelInput confirm = new PlayerOkCancelInput("DIPLOMACY_BREAK", getState(), 440, 230,
-                                Lng.str("Break %s", name(t)),
-                                videogoose.betterfactions.BFConfig.breakTreatyCost() > 0
-                                        ? Lng.str("Really end this agreement with %s?\nThey will be told, and it will cost you standing and %s faction points.",
-                                        other != null ? other.getName() : "", videogoose.betterfactions.BFConfig.breakTreatyCost())
-                                        : Lng.str("Really end this agreement with %s?\nThey will be told, and it will cost you standing.",
-                                        other != null ? other.getName() : "")) {
-                            @Override
-                            public void pressedOK() {
-                                DiplomacyManager.client().sendTreatyProposal(client().getPlayerName(),
-                                        ownFactionId(), t.other(ownFactionId()), t.typeId, "",
-                                        DiplomacyProposal.Action.REVOKE);
-                                deactivate();
-                            }
-
-                            @Override
-                            public void onDeactivate() {
-                            }
-                        };
-                        confirm.activate();
-                    }
-                }) {
-            @Override
-            public void draw() {
-                if (showBreak(t)) {
-                    setColorPalette(DiplomacyProposeDialog.inDebt(client().getFaction()) ? ColorPalette.TRANSPARENT : ColorPalette.CANCEL);
-                    super.draw();
-                }
-            }
-        };
-
-        GUITextButton renameButton = new GUITextButton(getState(), 120, 24, ColorPalette.OK, Lng.str("RENAME"),
-                new GUICallback() {
-                    @Override
-                    public boolean isOccluded() {
-                        return !isActive();
-                    }
-
-                    @Override
-                    public void callback(GUIElement callingGuiElement, MouseEvent event) {
-                        if (!event.pressedLeftMouse() || other == null) {
-                            return;
-                        }
-                        Faction own = client().getFaction();
-                        if (own == null) {
-                            return;
-                        }
+        //view battles only on a war; the others grey out while they do not apply
+        GUIHorizontalButtonTablePane buttons = new GUIHorizontalButtonTablePane(getState(), war ? 3 : 2, 1, c);
+        buttons.onInit();
+        buttons.setPos(0, buttonsY, 0);
+        buttons.addButton(0, 0, Lng.str("BREAK"), GUIHorizontalArea.HButtonType.BUTTON_RED_MEDIUM,
+                press(() -> showBreak(t), () -> DiplomacyActionsDialog.confirmBreak(client(), client().getFaction(), other, t)),
+                activeWhile(() -> showBreak(t)));
+        buttons.addButton(1, 0, Lng.str("RENAME"), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM,
+                press(() -> showRename(t) && other != null && client().getFaction() != null,
                         //a rename is the same agreement offered again under a new name, so it is the
                         //propose dialog and the other side has to agree to it
-                        DiplomacyProposeDialog.rename(client(), own, other, t).activate();
-                    }
-                }) {
-            @Override
-            public void draw() {
-                if (showRename(t)) {
-                    //slides left into the break button's place when that one is hidden
-                    getPos().x = showBreak(t) ? 130 : 4;
-                    super.draw();
-                }
-            }
-        };
-
-        GUITextButton battlesButton = new GUITextButton(getState(), 120, 24, ColorPalette.NEUTRAL, Lng.str("VIEW BATTLES"),
-                new GUICallback() {
-                    @Override
-                    public boolean isOccluded() {
-                        return !isActive();
-                    }
-
-                    @Override
-                    public void callback(GUIElement callingGuiElement, MouseEvent event) {
-                        if (event.pressedLeftMouse()) {
-                            new WarBattlesDialog(client(), t).activate();
-                        }
-                    }
-                }) {
-            @Override
-            public void draw() {
-                if (TreatyTypeRegistry.WAR.equals(t.typeId)) {
-                    getPos().x = 4 + ((showBreak(t) ? 1 : 0) + (showRename(t) ? 1 : 0)) * 126;
-                    super.draw();
-                }
-            }
-        };
+                        () -> DiplomacyProposeDialog.rename(client(), client().getFaction(), other, t).activate()),
+                activeWhile(() -> showRename(t)));
+        if (war) {
+            buttons.addButton(2, 0, Lng.str("VIEW BATTLES"), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM,
+                    press(() -> true, () -> new WarBattlesDialog(client(), t).activate()), null);
+        }
 
         c.attach(scroll);
         if (war) {
             c.attach(warProgress(t, c, textH));
         }
-        c.attach(breakButton);
-        c.attach(renameButton);
-        c.attach(battlesButton);
-        breakButton.setPos(4, buttonsY, 0);
-        renameButton.setPos(130, buttonsY, 0);
-        battlesButton.setPos(256, buttonsY, 0);
+        c.attach(buttons);
         return c;
+    }
+
+    private GUICallback press(java.util.function.BooleanSupplier allowed, Runnable onPress) {
+        return new GUICallback() {
+            @Override
+            public boolean isOccluded() {
+                return !isActive();
+            }
+
+            @Override
+            public void callback(GUIElement callingGuiElement, MouseEvent event) {
+                if (event.pressedLeftMouse() && allowed.getAsBoolean()) {
+                    onPress.run();
+                }
+            }
+        };
+    }
+
+    private static GUIActivationCallback activeWhile(java.util.function.BooleanSupplier allowed) {
+        return new GUIActivationCallback() {
+            @Override
+            public boolean isVisible(InputState state) {
+                return true;
+            }
+
+            @Override
+            public boolean isActive(InputState state) {
+                return allowed.getAsBoolean();
+            }
+        };
     }
 
     private static final int PROGRESS_HEIGHT = 22;

@@ -14,6 +14,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import videogoose.betterfactions.BFConfig;
+import videogoose.betterfactions.DiplomacyManager;
+import videogoose.betterfactions.FactionPointMods;
 import videogoose.betterfactions.civics.CivicRegistry;
 import videogoose.betterfactions.civics.Civics;
 import videogoose.betterfactions.civics.SpiceDealer;
@@ -24,8 +26,8 @@ import java.util.Map;
 
 /**
  * Charges Neighbourhood Spice Dealer upkeep after the engine's own, before its deficit check, so a
- * faction the extra pushes negative loses systems the same way. The extra is booked under the base
- * rate so the engine's points dialog and {@code FactionStrength} add it up.
+ * faction the extra pushes negative loses systems the same way. The extra is recorded in
+ * {@link FactionPointMods} for the points screen and {@code FactionStrength}.
  *
  * <p>Dealers' systems come from their last upkeep turn: a dealer later in this turn's order counts with
  * last turn's claims.</p>
@@ -35,8 +37,6 @@ public abstract class SpiceDealerUpkeepMixin {
 
 	@Shadow
 	public float factionPoints;
-	@Shadow
-	public float lastPointsSpendOnBaseRate;
 	@Shadow
 	private List<Vector3i> lastSystems;
 
@@ -61,6 +61,7 @@ public abstract class SpiceDealerUpkeepMixin {
 
 	@Inject(method = "handleFactionPointExpensesServer", at = @At("TAIL"))
 	private void betterFactions$spiceDealer(FactionManager man, Object2IntOpenHashMap<Vector3i> galaxyMapCounts, CallbackInfo ci) {
+		DiplomacyManager.of(true).getPointMods().set(getIdFaction(), FactionPointMods.Line.SPICE_DEALER, 0);
 		int percent = BFConfig.spiceDealerPercent();
 		List<Integer> dealerIds = Civics.server().factionsWith(CivicRegistry.SPICE_DEALER);
 		if (percent <= 0 || dealerIds.isEmpty() || lastSystems.isEmpty()) {
@@ -88,6 +89,6 @@ public abstract class SpiceDealerUpkeepMixin {
 		}
 		float extra = SpiceDealer.extra(lastSystems, upkeep, SpiceDealer.dealerMap(bySystems), getIdFaction(), percent);
 		factionPoints -= extra;
-		lastPointsSpendOnBaseRate += extra;
+		DiplomacyManager.of(true).getPointMods().set(getIdFaction(), FactionPointMods.Line.SPICE_DEALER, -extra);
 	}
 }

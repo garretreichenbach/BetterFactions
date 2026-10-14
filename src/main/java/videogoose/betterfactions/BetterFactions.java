@@ -12,6 +12,8 @@ import api.event.EventResult;
 import api.event.lifecycle.ServerInitializeListener;
 import api.event.lifecycle.ServerUpdateListener;
 import api.event.player.PlayerJoinWorldListener;
+import api.event.player.BuyTradeListener;
+import api.event.player.SellTradeListener;
 import api.event.player.ShopPriceListener;
 import org.schema.common.util.StringTools;
 import org.schema.schine.common.language.Lng;
@@ -113,6 +115,7 @@ public final class BetterFactions extends StarMod {
 			BFStore.save(FleetIntercepts.get());
 			BFStore.save(Wrecks.get());
 			BFStore.save(FleetUpkeep.get());
+			BFStore.save(DiplomacyManager.server().getPointMods());
 		}
 	}
 
@@ -166,6 +169,7 @@ public final class BetterFactions extends StarMod {
 			BFStore.load(Wrecks.get());
 			FleetUpkeep.reset();
 			BFStore.load(FleetUpkeep.get());
+			BFStore.load(DiplomacyManager.server().getPointMods());
 		}, this);
 
 		WorldSaveListener.TYPE.register(new WorldSaveListener() {
@@ -181,6 +185,7 @@ public final class BetterFactions extends StarMod {
 					BFStore.save(FleetIntercepts.get());
 					BFStore.save(Wrecks.get());
 					BFStore.save(FleetUpkeep.get());
+					BFStore.save(DiplomacyManager.server().getPointMods());
 				}
 			}
 		}, this);
@@ -226,14 +231,25 @@ public final class BetterFactions extends StarMod {
 			return EventResult.CONTINUE;
 		}, this);
 
-		//a trade agreement's whole effect: better prices at the partner's shops, server side only
+		//better prices at a trade partner's shops, worse at one that put tariffs on you; server side only
 		ShopPriceListener.TYPE.register((player, shop, type, price, playerBuys) -> {
+			//ponytail: priced, not completed - a trade that then falls through still counts against the
+			//trader; hook the buy itself if that turns out to matter
+			DiplomacyManager.server().tradedBetween(shop.getFactionId(), player.getFactionId());
 			int adjusted = DiplomacyManager.server().shopPrice(shop.getFactionId(), player.getFactionId(), price, playerBuys);
 			if (adjusted != price) {
-				player.sendServerMessagePlayerInfo(Lng.astr("Trade agreement: %s credits per unit instead of %s.", StringTools.formatSeperated(adjusted), StringTools.formatSeperated(price)));
+				//a trade agreement's discount, tariffs, or both
+				player.sendServerMessagePlayerInfo(Lng.astr("Diplomatic terms: %s credits per unit instead of %s.", StringTools.formatSeperated(adjusted), StringTools.formatSeperated(price)));
 			}
 			return adjusted;
 		}, this);
+
+		//a trade embargo stops trade routes between the two as well as their shops (ShopEmbargoMixin), and
+		//a route that does run is held against whoever traded with an embargoed faction
+		BuyTradeListener.TYPE.register((order, buyer, seller, active, isServer) ->
+				tradeRoute(isServer, buyer.getFactionId(), seller.getFactionId()), this);
+		SellTradeListener.TYPE.register((order, seller, buyer, active, isServer) ->
+				tradeRoute(isServer, seller.getFactionId(), buyer.getFactionId()), this);
 
 		FactionPanelCreateListener.TYPE.register(FactionPanelTabs::addTabs, this);
 
@@ -253,5 +269,15 @@ public final class BetterFactions extends StarMod {
 	@Override
 	public void logInfo(String message) {
 		super.logInfo("[BetterFactions] " + message);
+	}
+
+	/** Whether a trade route between the two may run; one that does counts for opinion pressure. */
+	private static EventResult tradeRoute(boolean isServer, int a, int b) {
+		DiplomacyManager dm = DiplomacyManager.of(isServer);
+		if (dm.refusesTrade(a, b) || dm.refusesTrade(b, a)) {
+			return EventResult.CANCEL;
+		}
+		dm.tradedBetween(a, b);
+		return EventResult.CONTINUE;
 	}
 }

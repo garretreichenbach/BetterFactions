@@ -8,7 +8,9 @@ import org.schema.game.common.data.player.faction.FactionRole;
 import org.schema.game.common.data.player.faction.FactionRoles;
 import org.schema.schine.common.language.Lng;
 import org.schema.schine.graphicsengine.core.MouseEvent;
+import org.schema.schine.graphicsengine.forms.font.FontLibrary;
 import org.schema.schine.graphicsengine.forms.gui.*;
+import org.schema.schine.graphicsengine.forms.gui.newgui.GUIActivatableTextBar;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUICheckBoxTextPair;
 import videogoose.betterfactions.BFConfig;
 import videogoose.betterfactions.civics.Civics;
@@ -17,7 +19,7 @@ import videogoose.betterfactions.civics.FactionCivics;
 import static videogoose.betterfactions.gui.InstitutionsContent.*;
 
 /**
- * Senate rules: who sits (every active member, or chosen ranks) and how long a vote stays open. Saved
+ * Senate rules: its name, who sits (every active member, or chosen ranks) and how long a vote stays open. Saved
  * on OK; the server checks the rank and caps the hours again.
  */
 public final class SenateRulesDialog extends PlayerGameOkCancelInput {
@@ -32,34 +34,52 @@ public final class SenateRulesDialog extends PlayerGameOkCancelInput {
     private boolean veto;
     /** Remembered so switching to every member and back keeps the ranks that were ticked. */
     private int chosen;
+    private GUIActivatableTextBar name;
 
     public SenateRulesDialog(GameClientState state, Faction own) {
-        super("SENATE_RULES_V2", state, 620, 640, Lng.str("Senate rules"), "");
+        this(state, own, Civics.client().of(own.getIdFaction()));
+    }
+
+    private SenateRulesDialog(GameClientState state, Faction own, FactionCivics c) {
+        super("SENATE_RULES_V2", state, 620, 640, Lng.str("%s rules", c.senateName()), "");
         this.own = own;
-        FactionCivics c = Civics.client().of(own.getIdFaction());
         seats = c.senateSeats;
         hours = c.senateHours;
         veto = c.senateVeto;
         chosen = seats != 0 ? seats : 1 << FactionRoles.INDEX_ADMIN_ROLE;
         getInputPanel().setOkButtonText(Lng.str("SAVE RULES"));
         getInputPanel().onInit();
-        build(getInputPanel().getContent());
+        build(getInputPanel().getContent(), c.senateName);
     }
 
-    private void build(GUIAnchor box) {
+    private void build(GUIAnchor box, String current) {
+        GUITextOverlay nameLabel = text(getState(), 16, TEXT, Lng.str("NAME"));
+        nameLabel.setPos(4, 4, 0);
+        box.attach(nameLabel);
+        //a fixed-size box: the bar sizes itself to what it depends on, and would fill the dialog otherwise
+        GUIAnchor nameBox = new GUIAnchor(getState(), 300, 30);
+        nameBox.setPos(4, 24, 0);
+        name = new GUIActivatableTextBar(getState(), FontLibrary.FontSize.MEDIUM, FactionCivics.MAX_SENATE_NAME, 1,
+                Lng.str("Senate"), nameBox, DiplomacyProposeDialog.TEXT, t -> t);
+        name.onInit();
+        name.setText(current);
+        nameBox.attach(name);
+        box.attach(nameBox);
+
+        int top = 60;
         GUITextOverlay who = text(getState(), 16, TEXT, Lng.str("WHO SITS"));
-        who.setPos(4, 4, 0);
+        who.setPos(4, top + 4, 0);
         box.attach(who);
         GUITextButton all = toggle(150, Lng.str("ALL MEMBERS"), () -> seats == 0, () -> seats = 0);
         GUITextButton ranks = toggle(150, Lng.str("CHOSEN RANKS"), () -> seats != 0, () -> seats = chosen);
-        all.setPos(4, 26, 0);
-        ranks.setPos(162, 26, 0);
+        all.setPos(4, top + 26, 0);
+        ranks.setPos(162, top + 26, 0);
         box.attach(all);
         box.attach(ranks);
 
         //top rank down, as the ladder reads everywhere else
         FactionRole[] roles = own.getRoles().getRoles();
-        int y = 60;
+        int y = top + 60;
         for (int i = FactionRoles.MAX_ROLES - 1; i >= FactionRoles.MAX_ROLES - own.getRoles().getCount(); i--) {
             int rank = i;
             boolean founder = rank == FactionRoles.INDEX_ADMIN_ROLE;
@@ -208,6 +228,6 @@ public final class SenateRulesDialog extends PlayerGameOkCancelInput {
     @Override
     public void pressedOK() {
         deactivate();
-        Civics.requestSenateRules(seats, hours, veto);
+        Civics.requestSenateRules(seats, hours, veto, FactionCivics.cleanSenateName(name.getText()));
     }
 }

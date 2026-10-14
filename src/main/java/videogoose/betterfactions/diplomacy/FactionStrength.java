@@ -45,14 +45,16 @@ public final class FactionStrength {
     }
 
     /**
-     * Faction points earned per period minus those owed on territory: what the faction has spare.
+     * Faction points earned per period minus those owed on territory, plus or minus the mod's own lines
+     * (fleet upkeep, station income, tribute...): what the faction has spare.
      * The balance is the wrong number - it grows for as long as a faction stays solvent, and
      * territory drains it, so it rates hoarders above empires.
      */
     public static float pointSurplus(Faction f) {
         return (f.lastPointsFromOnline + f.lastPointsFromOffline)
                 - (f.lastPointsSpendOnBaseRate + f.lastPointsSpendOnCenterDistance
-                + f.lastPointsSpendOnDistanceToHome + org.schema.game.common.data.player.faction.config.FactionPointSpendingConfig.BASIC_FLAT_COST);
+                + f.lastPointsSpendOnDistanceToHome + org.schema.game.common.data.player.faction.config.FactionPointSpendingConfig.BASIC_FLAT_COST)
+                + videogoose.betterfactions.DiplomacyManager.of(f.isOnServer()).getPointMods().net(f.getIdFaction());
     }
 
     private FactionStrength() {

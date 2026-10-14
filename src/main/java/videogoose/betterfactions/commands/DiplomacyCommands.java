@@ -80,6 +80,14 @@ public final class DiplomacyCommands {
 		StarLoader.registerCommand(mod, new Command("faction_npc_yield", "<npcFactionId> [on|off]",
 				"DEBUG: makes an NPC faction accept every demand made of it (treaties like vassalage, and terms it gives). NPC factions only; resets on restart.", DiplomacyCommands::npcYield,
 				CommandArg.integer("npcFactionId", "-10000000"), CommandArg.string("onOff", "on").optional()));
+		StarLoader.registerCommand(mod, new Command("yesman", "[on|off]",
+				"DEBUG: every NPC faction accepts every treaty and proposal offered to it. Rule checks (permissions, valid terms) still apply. No argument flips it. Resets on restart.",
+				ctx -> {
+					String[] raw = ctx.rawArgs();
+					DiplomacyManager dm = DiplomacyManager.server();
+					dm.debugYesman = raw.length == 0 ? !dm.debugYesman : raw[0].equalsIgnoreCase("on");
+					ctx.reply(dm.debugYesman ? "[SUCCESS] NPC factions now accept every offer (debug)" : "[SUCCESS] NPC factions judge offers normally again");
+				}, CommandArg.string("onOff", "on").optional()));
 	}
 
 	private static FactionManager fm() {

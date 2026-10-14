@@ -24,6 +24,11 @@ public final class FleetUpkeep_test {
         FleetUpkeep back = new FleetUpkeep();
         back.fromTag(u.toTag());
         assert back.upkeep(fleet, 10_000) == 6;
+        assert FleetUpkeep.stationIncome(10_000, 2, 10_000) == 2 : "base at min mass";
+        assert Math.abs(FleetUpkeep.stationIncome(1_000_000, 2, 10_000) - 6) < 1e-4 : "+base per tenfold";
+        assert FleetUpkeep.stationIncome(9_999, 2, 10_000) == 0 : "too small";
+        assert FleetUpkeep.stationIncome(0, 2, 0) == 0 : "unseen";
+        assert FleetUpkeep.stationIncome(50_000, 0, 10_000) == 0 : "off";
         System.out.println("FleetUpkeep_test: OK");
     }
 }

@@ -30,9 +30,11 @@ public final class TreatyType {
     private final boolean needsAcceptance;
     private final boolean breakable;
     private final String[] nameTemplates;
+    private final int importance;
 
-    TreatyType(String id, String registeredBy, String displayName, boolean symmetric, FactionRelation.RType implies, boolean needsAcceptance, boolean breakable, String[] nameTemplates) {
+    TreatyType(String id, String registeredBy, String displayName, boolean symmetric, FactionRelation.RType implies, boolean needsAcceptance, boolean breakable, String[] nameTemplates, int importance) {
         this.nameTemplates = nameTemplates;
+        this.importance = importance;
         this.id = id;
         this.registeredBy = registeredBy;
         this.displayName = displayName;
@@ -145,6 +147,14 @@ public final class TreatyType {
     }
 
     /**
+     * A measure one side takes against another without asking, that sets no relation: an embargo or
+     * tariffs. Only the side that took it can lift it, and lifting it is free and breaks nobody's word.
+     */
+    public boolean isSanction() {
+        return getKind() == Kind.DECLARATION && implies == null;
+    }
+
+    /**
      * Whether a signatory may walk away from it unilaterally.
      */
     public boolean isBreakable() {
@@ -154,6 +164,14 @@ public final class TreatyType {
     @Override
     public String toString() {
         return id;
+    }
+
+    /**
+     * How much signing one changes between the two, against other types: a deal that signs several is
+     * called after the weightiest, so an alliance with trade on the side is an alliance.
+     */
+    public int getImportance() {
+        return importance;
     }
 
     @Override
@@ -177,6 +195,7 @@ public final class TreatyType {
         private boolean needsAcceptance = true;
         private boolean breakable = true;
         private String[] nameTemplates = new String[0];
+        private int importance;
 
         public Builder(String name) {
             this.name = name;
@@ -218,8 +237,17 @@ public final class TreatyType {
             return this;
         }
 
+        /**
+         * See {@link TreatyType#getImportance}. The vanilla types run from 10 (trade, intel) to 60
+         * (vassalage); a type that leaves it at 0 never names a deal it shares with one of those.
+         */
+        public Builder importance(int v) {
+            importance = v;
+            return this;
+        }
+
         TreatyType build(String namespace) {
-            return new TreatyType(namespace + ":" + name, namespace, displayName, symmetric, implies, needsAcceptance, breakable, nameTemplates);
+            return new TreatyType(namespace + ":" + name, namespace, displayName, symmetric, implies, needsAcceptance, breakable, nameTemplates, importance);
         }
 
         String getName() {

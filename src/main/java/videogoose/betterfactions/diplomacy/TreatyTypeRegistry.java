@@ -34,6 +34,10 @@ public final class TreatyTypeRegistry {
     public static final String VASSALAGE = VANILLA + ":vassalage";
     public static final String TRIBUTARY = VANILLA + ":tributary";
     public static final String FEDERATION = VANILLA + ":federation";
+    /** Closed trade: declared by one side, lifted only by it, and blocking trade between the two either way. */
+    public static final String EMBARGO = VANILLA + ":embargo";
+    /** Tariffs: the declarer's shops charge the other side's members more, and pay them less. */
+    public static final String TARIFF = VANILLA + ":tariff";
 
     private static final Map<String, TreatyType> TYPES = new LinkedHashMap<>();
 
@@ -67,28 +71,34 @@ public final class TreatyTypeRegistry {
                 .names("The {from}-{to} War", "The {toHome} Campaign",
                         "The War for {ceded}", "The {ceded} War"));
         register(VANILLA, new TreatyType.Builder("non_aggression")
-                .displayName("Non-Aggression Pact").implies(FactionRelation.RType.NEUTRAL)
+                .displayName("Non-Aggression Pact").implies(FactionRelation.RType.NEUTRAL).importance(20)
                 .names("The {fromHome} Accord", "The Truce of {toHome}", "The {fromHome} Non-Aggression Pact",
                         "The {ceded} Concession", "The Concession of {ceded}"));
         register(VANILLA, new TreatyType.Builder("defensive_pact")
-                .displayName("Defensive Pact").implies(FactionRelation.RType.FRIEND)
+                .displayName("Defensive Pact").implies(FactionRelation.RType.FRIEND).importance(30)
                 .names("The {fromHome} Pact", "The Shield of {toHome}", "The {from}-{to} Defensive Pact"));
         register(VANILLA, new TreatyType.Builder("alliance")
-                .displayName("Alliance").implies(FactionRelation.RType.FRIEND)
+                .displayName("Alliance").implies(FactionRelation.RType.FRIEND).importance(50)
                 .names("The {from}-{to} Alliance", "The Grand Alliance of {fromHome}", "The {fromHome} Concord"));
         register(VANILLA, new TreatyType.Builder("trade_agreement")
-                .displayName("Trade Agreement")
+                .displayName("Trade Agreement").importance(10)
                 .names("The {fromHome} Trade Compact", "The {from}-{to} Trade Agreement", "The {toHome} Charter"));
         register(VANILLA, new TreatyType.Builder("intel_sharing")
-                .displayName("Intel Sharing")
+                .displayName("Intel Sharing").importance(10)
                 .names("The {fromHome} Understanding", "The {from}-{to} Intelligence Accord"));
         register(VANILLA, new TreatyType.Builder("vassalage")
-                .displayName("Vassalage").asymmetric().implies(FactionRelation.RType.FRIEND)
+                .displayName("Vassalage").asymmetric().implies(FactionRelation.RType.FRIEND).importance(60)
                 .names("The {to} Submission", "The Vassalage of {to}", "The {ceded} Settlement"));
         register(VANILLA, new TreatyType.Builder("tributary")
-                .displayName("Tributary").asymmetric().implies(FactionRelation.RType.NEUTRAL)
+                .displayName("Tributary").asymmetric().implies(FactionRelation.RType.NEUTRAL).importance(40)
                 .names("The {to} Tribute", "The {to} Indemnity", "The Tribute of {toHome}",
                         "The {ceded} Concession"));
+        register(VANILLA, new TreatyType.Builder("embargo")
+                .displayName("Trade Embargo").asymmetric().unilateral()
+                .names("The {from} Embargo", "The Closing of {toHome}", "The {fromHome} Blockade"));
+        register(VANILLA, new TreatyType.Builder("tariff")
+                .displayName("Tariffs").asymmetric().unilateral()
+                .names("The {from} Tariffs", "The {fromHome} Duties", "The {toHome} Levy"));
         register(VANILLA, new TreatyType.Builder("federation")
                 .displayName("Federation").implies(FactionRelation.RType.FRIEND).unilateral().unbreakable());
     }

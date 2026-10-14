@@ -75,7 +75,11 @@ public class ProposalInboxPanel extends GUIInputPanel implements Observer {
         if (offer.name != null && !offer.name.isEmpty()) {
             return offer.name;
         }
-        //a deal's treaties carry their own names; the first one it signs heads it
+        //a deal's name rides its treaties, the weightiest first - the same pick the server signs under
+        SettlementTerm head = SettlementTerm.headline(offer.terms);
+        if (head != null && !head.name.isEmpty()) {
+            return head.name;
+        }
         for (SettlementTerm t : offer.terms) {
             if (t.kind == SettlementTerm.Kind.SIGN_TREATY && !t.name.isEmpty()) {
                 return t.name;
@@ -95,9 +99,9 @@ public class ProposalInboxPanel extends GUIInputPanel implements Observer {
             if (!DiplomacyManager.client().isSettlement(offer)) {
                 return Lng.str("Peace Offer");
             }
-            //a deal goes by the first treaty it signs
-            String signed = DiplomacyManager.firstSigned(offer);
-            TreatyType type = signed != null ? TreatyTypeRegistry.get(signed) : null;
+            //a deal goes by the weightiest treaty it signs
+            SettlementTerm head = SettlementTerm.headline(offer.terms);
+            TreatyType type = head != null ? TreatyTypeRegistry.get(head.typeId) : null;
             return type != null ? type.getDisplayName() : Lng.str("Settlement");
         }
         TreatyType type = TreatyTypeRegistry.get(offer.typeId);

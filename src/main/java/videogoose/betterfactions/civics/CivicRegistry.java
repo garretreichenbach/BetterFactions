@@ -14,7 +14,6 @@ public final class CivicRegistry {
     public static final String NAMESPACE = "betterfactions";
 
     public static final String HOLY_LEADER = NAMESPACE + ":holy_leader";
-    public static final String SHADOW_COUNCIL = NAMESPACE + ":shadow_council";
     public static final String CORPORATE_CHAINS = NAMESPACE + ":corporate_chains";
     public static final String WARRIOR_CODE = NAMESPACE + ":warrior_code";
     public static final String OATHKEEPERS = NAMESPACE + ":oathkeepers";
@@ -46,8 +45,6 @@ public final class CivicRegistry {
     private static void registerOwn() {
         register(NAMESPACE, new CivicType.Builder("holy_leader").displayName("Holy Leader").impliesGovernment("Holy Empire").requires("religious")
                 .description("Ruled by a self-declared god. The leader's kills of enemy players earn faction points; the leader's death costs them."));
-        register(NAMESPACE, new CivicType.Builder("shadow_council").displayName("Shadow Council")
-                .description("A council in the shadows issues directives. Fulfil them for faction points; fail or refuse them and pay."));
         register(NAMESPACE, new CivicType.Builder("corporate_chains").displayName("Corporate Chains")
                 .description("Trade through our shops and our trade agreements earn faction points."));
         register(NAMESPACE, new CivicType.Builder("warrior_code").displayName("Warrior Code")

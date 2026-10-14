@@ -10,7 +10,8 @@ import org.schema.schine.graphicsengine.forms.gui.GUIAnchor;
 import org.schema.schine.graphicsengine.forms.gui.GUICallback;
 import org.schema.schine.graphicsengine.forms.gui.GUIElement;
 import org.schema.schine.graphicsengine.forms.gui.GUIElementList;
-import org.schema.schine.graphicsengine.forms.gui.GUITextButton;
+import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea;
+import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalButtonTablePane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUITextOverlayTable;
 import org.schema.schine.graphicsengine.forms.gui.newgui.ScrollableTableList;
 import org.schema.schine.common.language.Lng;
@@ -211,24 +212,19 @@ public class BattleAdminList extends ScrollableTableList<BattleAdminList.Row> {
 		mainList.deleteObservers();
 		mainList.addObserver(this);
 		for (Row r : collection) {
-			GUIAnchor actions = new GUIAnchor(getState(), 10, 24);
-			GUITextButton pause = button(new Object() {
+			GUIAnchor actions = new GUIAnchor(getState(), 256, 24);
+			GUIHorizontalButtonTablePane buttons = new GUIHorizontalButtonTablePane(getState(), 4, 1, actions);
+			buttons.onInit();
+			buttons.addButton(0, 0, new Object() {
 				@Override
 				public String toString() {
 					return r.paused ? "RESUME" : "PAUSE";
 				}
-			}, GUITextButton.ColorPalette.NEUTRAL, 70, () -> command(BattleTracker.CMD_PAUSE, r));
-			GUITextButton end = button("END", GUITextButton.ColorPalette.CANCEL, 50, () -> confirmEnd(r));
-			GUITextButton go = button("GO TO", GUITextButton.ColorPalette.OK, 60, () -> command(BattleTracker.CMD_TELEPORT, r));
-			GUITextButton watch = button("WATCH", GUITextButton.ColorPalette.OK, 60, () -> command(BattleTracker.CMD_WATCH, r));
-			pause.setPos(0, 0, 0);
-			end.setPos(74, 0, 0);
-			go.setPos(128, 0, 0);
-			watch.setPos(192, 0, 0);
-			actions.attach(pause);
-			actions.attach(end);
-			actions.attach(go);
-			actions.attach(watch);
+			}, GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, press(() -> command(BattleTracker.CMD_PAUSE, r)), null);
+			buttons.addButton(1, 0, "END", GUIHorizontalArea.HButtonType.BUTTON_RED_MEDIUM, press(() -> confirmEnd(r)), null);
+			buttons.addButton(2, 0, "GO TO", GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, press(() -> command(BattleTracker.CMD_TELEPORT, r)), null);
+			buttons.addButton(3, 0, "WATCH", GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, press(() -> command(BattleTracker.CMD_WATCH, r)), null);
+			actions.attach(buttons);
 
 			BattleRow row = new BattleRow(getState(), r,
 					cell(() -> r.pos), cell(() -> r.status), cell(() -> r.load), cell(() -> String.valueOf(r.entities)),
@@ -253,8 +249,8 @@ public class BattleAdminList extends ScrollableTableList<BattleAdminList.Row> {
 		return c;
 	}
 
-	private GUITextButton button(Object label, GUITextButton.ColorPalette palette, int width, Runnable onPress) {
-		return new GUITextButton(getState(), width, 22, palette, label, new GUICallback() {
+	private GUICallback press(Runnable onPress) {
+		return new GUICallback() {
 			@Override
 			public void callback(GUIElement callingGuiElement, MouseEvent event) {
 				if (event.pressedLeftMouse()) {
@@ -266,7 +262,7 @@ public class BattleAdminList extends ScrollableTableList<BattleAdminList.Row> {
 			public boolean isOccluded() {
 				return false;
 			}
-		});
+		};
 	}
 
 	private class BattleRow extends ScrollableTableList<Row>.Row {
@@ -274,6 +270,20 @@ public class BattleAdminList extends ScrollableTableList<BattleAdminList.Row> {
 			super(state, r, elements);
 			highlightSelect = true;
 			highlightSelectSimple = true;
+		}
+
+		private SelectionMark mark;
+
+		@Override
+		public void onInit() {
+			super.onInit();
+			mark = new SelectionMark(this);
+		}
+
+		@Override
+		public void draw() {
+			mark.update(isSimpleSelected());
+			super.draw();
 		}
 	}
 }

@@ -153,6 +153,7 @@ public final class DiplomacyManager extends Observable {
 	private DiplomacyProposal queryResult;
 	private final CombatRatings combatRatings = new CombatRatings();
 	private final Reputation reputation = new Reputation();
+	private final FactionPointMods pointMods = new FactionPointMods();
 	private long lastMilitarySweep;
 	/** A rated entity was deleted since the totals last went out. */
 	private boolean militaryDirty;
@@ -284,6 +285,10 @@ public final class DiplomacyManager extends Observable {
 
 	public Reputation getReputation() {
 		return reputation;
+	}
+
+	public FactionPointMods getPointMods() {
+		return pointMods;
 	}
 
 	public FactionDiplomacy diplomacyOf(Faction f) {
@@ -539,6 +544,10 @@ public final class DiplomacyManager extends Observable {
 				reputation.fromTag(tag);
 				changed();
 			}
+			case POINT_MODS -> {
+				pointMods.fromTag(tag);
+				changed();
+			}
 			case EMBLEM_DATA -> {
 				Tag[] t = tag.getStruct();
 				FactionEmblemCache.received(GameClientState.instance, t[0].getString(), (byte[]) t[1].getValue());
@@ -600,6 +609,7 @@ public final class DiplomacyManager extends Observable {
 				BFPacket.toPlayer(p, Kind.SNAPSHOT, snapshot);
 				sendSecretHistoryTo(p);
 				BFPacket.toPlayer(p, Kind.CIVICS, Civics.server().toTag());
+				BFPacket.toPlayer(p, Kind.POINT_MODS, pointMods.toTag());
 				Senate.server().sendTo(p);
 				sendAllFederationsTo(p);
 				for (Faction f : fm().getFactionCollection()) {
@@ -629,6 +639,7 @@ public final class DiplomacyManager extends Observable {
 		removeTreatiesOf(f.getIdFaction());
 		removeFederationsOf(f.getIdFaction());
 		emblems.remove(f.getIdFaction());
+		pointMods.remove(f.getIdFaction());
 		synchronized (ledgers) {
 			ledgers.remove(f.getIdFaction());
 			for (FactionDiplomacy d : ledgers.values()) {
@@ -812,18 +823,8 @@ public final class DiplomacyManager extends Observable {
 		if (!isSettlement(p)) {
 			return offerName(p.typeId);
 		}
-		String signed = firstSigned(p);
-		return signed != null ? offerName(signed) : Lng.str("a settlement");
-	}
-
-	/** The first treaty a deal signs, which is what it is called by; null for one that signs none. */
-	public static String firstSigned(DiplomacyProposal p) {
-		for (SettlementTerm t : p.terms) {
-			if (t.kind == SettlementTerm.Kind.SIGN_TREATY) {
-				return t.typeId;
-			}
-		}
-		return null;
+		SettlementTerm head = SettlementTerm.headline(p.terms);
+		return head != null ? offerName(head.typeId) : Lng.str("a settlement");
 	}
 
 	/**
@@ -1124,6 +1125,9 @@ public final class DiplomacyManager extends Observable {
             if (sc.getFactionId() != 0 && sc.getDbId() > 0 && (sc instanceof Ship || sc instanceof SpaceStation) && sc.isFullyLoaded()) {
                 combatRatings.put(sc.getDbId(), sc.getFactionId(), CombatRatings.rate(sc));
                 loaded.add(sc.getDbId());
+                if (sc instanceof SpaceStation) {
+                    FleetUpkeep.get().sawMass(sc.getUniqueIdentifier(), sc.getMassWithoutDockIncludingStation()); //for station income
+                }
             }
         }
         //once per world, after the loaded pass so anything loaded keeps its real rating; by the first
@@ -1437,15 +1441,110 @@ public final class DiplomacyManager extends Observable {
     }
 
     /**
+     * Whether trade is closed between the two, whichever of them closed it: neither side's shops serve
+     * the other's members, and no trade route runs between them.
+     */
+    public boolean tradeClosed(int a, int b) {
+        return a != 0 && b != 0 && a != b && hasTreaty(a, b, TreatyTypeRegistry.EMBARGO);
+    }
+
+    /**
+     * Whether {@code seller}'s shops and trade routes turn {@code customer} away: trade is closed between
+     * them, or - the secondary embargo - {@code customer} stands by a faction {@code seller} has embargoed,
+     * through an alliance, a defensive pact or a federation. Only the embargoer refuses the allies; they
+     * did not close anything themselves.
+     */
+    public boolean refusesTrade(int seller, int customer) {
+        if (tradeClosed(seller, customer)) {
+            return true;
+        }
+        if (seller == 0 || customer == 0 || seller == customer) {
+            return false;
+        }
+        for (FactionTreaty e : embargoes()) {
+            if (e.from == seller && e.to != customer && standsBy(customer, e.to)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean standsBy(int a, int b) {
+        FactionTreatySet set = getTreaties(a, b);
+        return set.has(TreatyTypeRegistry.ALLIANCE) || set.has(TreatyTypeRegistry.DEFENSIVE_PACT)
+                || set.has(TreatyTypeRegistry.FEDERATION);
+    }
+
+    /**
+     * Every embargo in force. ponytail: a scan of every pair's treaties, which are counted in the
+     * hundreds at most; index embargoes by declarer if a shop screen ever shows up in a profile.
+     */
+    private List<FactionTreaty> embargoes() {
+        List<FactionTreaty> out = new ObjectArrayList<FactionTreaty>();
+        synchronized (treaties) {
+            for (FactionTreatySet set : treaties.values()) {
+                FactionTreaty e = set.get(TreatyTypeRegistry.EMBARGO);
+                if (e != null) {
+                    out.add(e);
+                }
+            }
+        }
+        return out;
+    }
+
+    /**
+     * How well an NPC has to think of an embargoer before it holds trade with the embargoed side against
+     * the trader: well short of what an alliance is worth (1000), well above indifference.
+     */
+    private static final int SANCTION_SYMPATHY = 500;
+
+    /**
+     * Opinion pressure, for a trade between {@code a} and {@code b} that went ahead: whichever of them
+     * traded with a faction somebody else has embargoed is resented for it by the embargoer, and by
+     * every NPC that thinks well of the embargoer.
+     */
+    public void tradedBetween(int a, int b) {
+        if (!onServer || a == 0 || b == 0 || a == b) {
+            return;
+        }
+        for (FactionTreaty e : embargoes()) {
+            if (e.to == b && e.from != a) {
+                resentTrade(e.from, a);
+            } else if (e.to == a && e.from != b) {
+                resentTrade(e.from, b);
+            }
+        }
+    }
+
+    private void resentTrade(int embargoer, int trader) {
+        diplomacyAction(DiplomacyAction.DiplActionType.TRADED_WITH_SANCTIONED, embargoer, trader);
+        for (Faction n : fm().getFactionCollection()) {
+            int id = n.getIdFaction();
+            if (n.isNPC() && id != embargoer && id != trader
+                    && diplomacyOf(n).getEntity(embargoer).getPoints() >= SANCTION_SYMPATHY) {
+                diplomacyAction(DiplomacyAction.DiplActionType.TRADED_WITH_SANCTIONED, id, trader);
+            }
+        }
+    }
+
+    /**
      * What a trade agreement is worth at the counter: the unit price a member of {@code buyerFaction}
      * pays at (or is paid by) a shop of {@code shopFaction}. Unchanged without an agreement.
      */
     public int shopPrice(int shopFaction, int buyerFaction, int price, boolean playerBuys) {
-        if (shopFaction == 0 || buyerFaction == 0 || shopFaction == buyerFaction
-                || !hasTreaty(shopFaction, buyerFaction, TreatyTypeRegistry.TRADE_AGREEMENT)) {
+        if (shopFaction == 0 || buyerFaction == 0 || shopFaction == buyerFaction) {
             return price;
         }
-        return tradePrice(price, BFConfig.tradeDiscountPercent(), playerBuys);
+        FactionTreatySet set = getTreaties(shopFaction, buyerFaction);
+        if (set.has(TreatyTypeRegistry.TRADE_AGREEMENT)) {
+            price = tradePrice(price, BFConfig.tradeDiscountPercent(), playerBuys);
+        }
+        FactionTreaty tariffs = set.get(TreatyTypeRegistry.TARIFF);
+        if (tariffs != null && tariffs.from == shopFaction) {
+            //the trade price the other way round: dearer to buy, cheaper to sell
+            price = tradePrice(price, BFConfig.tariffPercent(), !playerBuys);
+        }
+        return price;
     }
 
     public static int tradePrice(int price, int percent, boolean playerBuys) {
@@ -1601,6 +1700,11 @@ public final class DiplomacyManager extends Observable {
                     refuseFederation(sender, Lng.astr("Your rank cannot take your\nfaction to war."));
                     return;
                 }
+                if ((v.kind == Federation.FederationVote.Kind.EMBARGO || v.kind == Federation.FederationVote.Kind.LIFT_EMBARGO)
+                        && !mayNegotiate(own, sender.getName(), TreatyTypeRegistry.EMBARGO)) {
+                    refuseFederation(sender, Lng.astr("Your rank cannot close or\nreopen trade for your faction."));
+                    return;
+                }
                 v.ballots.put(me, c.value != 0 ? (byte) 1 : (byte) 0);
                 resolveVotes(mine, System.currentTimeMillis());
                 sendFederation(mine);
@@ -1713,6 +1817,30 @@ public final class DiplomacyManager extends Observable {
                 sendFederation(mine);
                 break;
             }
+            case EMBARGO:
+            case LIFT_EMBARGO: {
+                boolean lift = c.kind == FederationCommand.Kind.LIFT_EMBARGO;
+                if (!mayNegotiate(own, sender.getName(), TreatyTypeRegistry.EMBARGO)) {
+                    refuseFederation(sender, Lng.astr("Your rank cannot close or\nreopen trade for your faction."));
+                    return;
+                }
+                if (getFaction(c.target) == null || mine.isMember(c.target)) {
+                    refuseFederation(sender, Lng.astr("The federation cannot\nembargo that faction."));
+                    return;
+                }
+                if (mine.hasCharterFlag(Federation.CHARTER_VOTE_WAR)) {
+                    openVote(mine, sender, lift ? Federation.FederationVote.Kind.LIFT_EMBARGO : Federation.FederationVote.Kind.EMBARGO,
+                            c.target, me, 0, "");
+                    return;
+                }
+                if (!leads) {
+                    refuseFederation(sender, Lng.astr("Only the federation's chair can\ndecide its trade."));
+                    return;
+                }
+                federationEmbargo(mine, c.target, null, lift);
+                sendFederation(mine);
+                break;
+            }
             case MAKE_PEACE: {
                 if (!mayNegotiate(own, sender.getName(), null)) {
                     refuseFederation(sender, Lng.astr("Your rank cannot make peace\nfor your faction."));
@@ -1788,6 +1916,8 @@ public final class DiplomacyManager extends Observable {
             case EXPEL -> Lng.str("Expel %s", who);
             case WAR -> Lng.str("Declare war on %s", who);
             case PEACE -> Lng.str("Make peace with %s", who);
+            case EMBARGO -> Lng.str("Close trade with %s", who);
+            case LIFT_EMBARGO -> Lng.str("Reopen trade with %s", who);
             case CHARTER -> Lng.str("Amend the charter");
         };
     }
@@ -1843,9 +1973,40 @@ public final class DiplomacyManager extends Observable {
                 }
                 case WAR -> declareFederationWar(f, v.subject, v);
                 case PEACE -> offerFederationPeace(f, v.subject, v);
+                case EMBARGO -> federationEmbargo(f, v.subject, v, false);
+                case LIFT_EMBARGO -> federationEmbargo(f, v.subject, v, true);
                 case CHARTER -> setCharter(f, v.text, v.value);
             }
         }
+    }
+
+    /**
+     * Closes the bloc's trade with {@code target}, or reopens it: every member the decision binds
+     * declares its own embargo, or lifts the one it holds, so each can still change its own mind later.
+     *
+     * @param v the vote that carried it, or null for the chair's own call, which binds everyone
+     */
+    private void federationEmbargo(Federation f, int target, Federation.FederationVote v, boolean lift) {
+        Faction t = getFaction(target);
+        if (t == null || f.isMember(target)) {
+            return;
+        }
+        for (int i = 0; i < f.members.size(); i++) {
+            int m = f.members.getInt(i);
+            FactionTreaty held = getTreaties(m, target).get(TreatyTypeRegistry.EMBARGO);
+            if ((v != null && !f.binds(v, m)) || (lift ? held == null || held.from != m : held != null)) {
+                continue;
+            }
+            DiplomacyProposal p = new DiplomacyProposal();
+            p.set(getFactionName(m), m, target, TreatyTypeRegistry.EMBARGO, FactionRelation.RType.NEUTRAL.code,
+                    Lng.str("By decision of %s", f.name), lift ? DiplomacyProposal.Action.REVOKE : DiplomacyProposal.Action.PROPOSE);
+            p.serverAuthored = true;
+            synchronized (relationOffersToAdd) {
+                relationOffersToAdd.add(p);
+            }
+        }
+        federationNews(f, lift ? Lng.str("The federation reopened trade with %s.", t.getName())
+                : Lng.str("The federation closed trade with %s.", t.getName()));
     }
 
     /**
@@ -2639,7 +2800,17 @@ public final class DiplomacyManager extends Observable {
      * Server, once per engine income turn: every tributary pays its overlord a share of what it
      * earned that turn. Never more than it holds, so tribute alone cannot put a faction in debt.
      */
-    public void payTribute() {
+    /**
+     * Server: the end of the engine's income turn, every faction's gain and expenses settled. Pays
+     * tribute, then sends everyone the turn's mod point lines.
+     */
+    public void onPointTurn() {
+        payTribute();
+        broadcast(Kind.POINT_MODS, pointMods.toTag());
+    }
+
+    private void payTribute() {
+        pointMods.clear(FactionPointMods.Line.TRIBUTE);
         int percent = BFConfig.tributePercent();
         if (percent <= 0) {
             return;
@@ -2666,6 +2837,8 @@ public final class DiplomacyManager extends Observable {
             }
             payer.factionPoints -= amount;
             lord.factionPoints += amount;
+            pointMods.add(t.to, FactionPointMods.Line.TRIBUTE, -amount);
+            pointMods.add(t.from, FactionPointMods.Line.TRIBUTE, amount);
             payer.sendFactionPointUpdate(((GameServerState) state()).getGameState());
             lord.sendFactionPointUpdate(((GameServerState) state()).getGameState());
         }
@@ -2781,6 +2954,10 @@ public final class DiplomacyManager extends Observable {
                 if (t.giver == proposer.getIdFaction()) {
                     return Lng.str("War goals can only be demands on %s.", getFactionName(p.b));
                 }
+                TreatyType goal = t.kind == SettlementTerm.Kind.SIGN_TREATY ? TreatyTypeRegistry.get(t.typeId) : null;
+                if (goal != null && goal.isSymmetric()) {
+                    return Lng.str("%s is no war goal: both sides would sign it.", goal.getDisplayName());
+                }
             }
         }
         //a war without a casus belli is allowed; it costs more and is remembered, see #unjustWar
@@ -2816,6 +2993,17 @@ public final class DiplomacyManager extends Observable {
                     //re-signing is how it is renamed or renewed, and the other way round it would be reversed
                     return Lng.str("Only %s can renew the %s.", getFactionName(held.from), type.getDisplayName());
                 }
+            }
+            if (t.kind == SettlementTerm.Kind.BREAK_TREATY) {
+                TreatyType type = TreatyTypeRegistry.get(t.typeId);
+                FactionTreaty held = getTreaties(t.giver, t.breakWith(offer.a, offer.b)).get(t.typeId);
+                if (type != null && type.isSanction() && held != null && held.from != t.giver) {
+                    return Lng.str("Only %s can lift the %s.", getFactionName(held.from), type.getDisplayName());
+                }
+            }
+            if (t.kind == SettlementTerm.Kind.SIGN_TREATY && TreatyTypeRegistry.TRADE_AGREEMENT.equals(t.typeId)
+                    && tradeClosed(offer.a, offer.b)) {
+                return Lng.str("Trade is closed between %s and %s.", getFactionName(offer.a), getFactionName(offer.b));
             }
             if (t.kind == SettlementTerm.Kind.SIGN_TREATY && TreatyTypeRegistry.VASSALAGE.equals(t.typeId)) {
                 int lord = overlordOf(t.giver);
@@ -2854,6 +3042,10 @@ public final class DiplomacyManager extends Observable {
      * main agreement, so a peace that clears forcing treaties cannot clear an alliance a term just signed.
      */
     private void applyTerms(DiplomacyProposal offer) {
+        //it is one agreement, so every treaty it signs goes by one name: the one asked for, else one
+        //made for the weightiest treaty in it - an alliance with trade on the side is an alliance
+        SettlementTerm head = SettlementTerm.headline(offer.terms);
+        String dealName = head == null ? "" : dealName(offer, head);
         for (SettlementTerm t : offer.terms) {
             int receiver = t.receiver(offer.a, offer.b);
             switch (t.kind) {
@@ -2882,7 +3074,7 @@ public final class DiplomacyManager extends Observable {
                 }
                 case SIGN_TREATY:
                     //receiver first: a demand reads "a demands of b", and the giver is the one bound
-                    signTreatyServer(receiver, t.giver, t.typeId, t.expiresAt, offer.getMessage(), t.name, offer.terms);
+                    signTreatyServer(receiver, t.giver, t.typeId, t.expiresAt, offer.getMessage(), dealName, offer.terms);
                     break;
                 case CEDE_SYSTEM:
                     cedeSystem(t.giver, receiver, t.system);
@@ -2925,6 +3117,9 @@ public final class DiplomacyManager extends Observable {
      * Debug only, never saved: NPC factions an admin set to accept every demand made of them.
      */
     private final IntOpenHashSet debugYielding = new IntOpenHashSet();
+
+    /** Debug only, never saved: every NPC faction accepts every offer; see {@code /yesman}. */
+    public boolean debugYesman;
 
     /**
      * Admin debug toggle; see {@code /faction_npc_yield}. Only NPC factions take it.
@@ -2990,7 +3185,7 @@ public final class DiplomacyManager extends Observable {
      * {@link SettlementPricing}. Fills {@code unmet} with why not.
      */
     private NpcVerdict judgeAsNPC(DiplomacyProposal offer, Faction npc, List<String> unmet) {
-        if (debugYielding.contains(npc.getIdFaction()) && isDemandOn(offer, npc.getIdFaction())) {
+        if (debugYesman || debugYielding.contains(npc.getIdFaction()) && isDemandOn(offer, npc.getIdFaction())) {
             return new NpcVerdict(true, null);
         }
         DiplomacyEntity e = diplomacyOf(npc).getEntity(offer.a);
@@ -3229,6 +3424,21 @@ public final class DiplomacyManager extends Observable {
             clearImplyingTreaties(offer.a, offer.b);
         }
 
+        if (type != null && type.isSanction()) {
+            if (TreatyTypeRegistry.EMBARGO.equals(type.getId())) {
+                //closing trade ends any agreement to trade, as walking out of it would
+                TreatyType trade = TreatyTypeRegistry.get(TreatyTypeRegistry.TRADE_AGREEMENT);
+                if (trade != null && hasTreaty(offer.a, offer.b, trade.getId())) {
+                    breakTreatyInForce(offer.a, offer.b, trade);
+                }
+                diplomacyAction(DiplomacyAction.DiplActionType.EMBARGO, offer.b, offer.a);
+            } else if (TreatyTypeRegistry.TARIFF.equals(type.getId())) {
+                diplomacyAction(DiplomacyAction.DiplActionType.TARIFF, offer.b, offer.a);
+            }
+            //not a signature: nobody agreed to it, and a signature is a truce in an NPC's eyes
+            return;
+        }
+
         //both directions: the ledger entry is "what they did to us", so each side records it. White
         //peace is recorded too (no subject): it is the truce an NPC's war reaction waits out
         String signed = type != null ? type.getId() : null;
@@ -3269,6 +3479,27 @@ public final class DiplomacyManager extends Observable {
 	 * system: a faction does not concede its capital, so naming a concession after one would be a
 	 * lie the players would read on every row.</p>
 	 */
+	/**
+	 * The name a deal signs its treaties under: whatever name one of them was given, the headline's
+	 * first, else one generated for the headline the way it is bound - receiver first, like a demand.
+	 */
+	private String dealName(DiplomacyProposal offer, SettlementTerm head) {
+		String asked = TreatyNames.sanitize(head.name);
+		for (SettlementTerm t : offer.terms) {
+			if (asked == null && t.kind == SettlementTerm.Kind.SIGN_TREATY) {
+				asked = TreatyNames.sanitize(t.name);
+			}
+		}
+		if (asked != null) {
+			return asked;
+		}
+		DiplomacyProposal headline = new DiplomacyProposal();
+		headline.a = head.receiver(offer.a, offer.b);
+		headline.b = head.giver;
+		headline.terms.addAll(offer.terms);
+		return nameFor(headline, TreatyTypeRegistry.get(head.typeId), System.currentTimeMillis());
+	}
+
 	private String nameFor(DiplomacyProposal offer, TreatyType type, long signedAt) {
 		String asked = TreatyNames.sanitize(offer.name);
 		if (asked != null) {
@@ -3320,19 +3551,47 @@ public final class DiplomacyManager extends Observable {
 		return systemName((GameServerState) state(), f.getHomeSector());
 	}
 
-	/** Server: the name of the star system {@code sector} is in, or null. Never loads a sector. */
+	/** Server: "Name (x, y, z)" for the star system {@code sector} is in, or null for a void. Never loads a sector. */
 	public static String systemName(GameServerState state, Vector3i sector) {
+		Vector3i system = VoidSystem.getContainingSystem(sector, new Vector3i());
+		String name = starName(state.getUniverse().getGalaxyFromSystemPos(system), system);
+		return name == null ? null : name + " " + system;
+	}
+
+	/**
+	 * Either side: "Name (x, y, z)", or "Void (x, y, z)" where it has no star. Galaxy names come from
+	 * the seed, so a client knows them without ever having been there.
+	 *
+	 * <p>ponytail: a client only names systems in its current galaxy; elsewhere it shows coordinates.</p>
+	 */
+	public static String systemLabel(Vector3i system) {
+		Galaxy galaxy = null;
 		try {
-			Vector3i system = VoidSystem.getContainingSystem(sector, new Vector3i());
-			Galaxy galaxy = state.getUniverse().getGalaxyFromSystemPos(system);
-			if (galaxy == null) {
+			galaxy = GameServerState.instance != null
+					? GameServerState.instance.getUniverse().getGalaxyFromSystemPos(system)
+					: GameClientState.instance != null ? GameClientState.instance.getCurrentGalaxy() : null;
+		} catch (Exception ignored) {
+			//no galaxy yet: coordinates will do
+		}
+		String name = starName(galaxy, system);
+		return (name != null ? name : Lng.str("Void")) + " " + system.toString();
+	}
+
+	/** The star's name, or null for a void, an unknown galaxy or anything about the galaxy being unusable. */
+	private static String starName(Galaxy galaxy, Vector3i system) {
+		if (galaxy == null) {
+			return null;
+		}
+		try {
+			//the galaxy's name table is indexed in galaxy-local coordinates, not absolute ones
+			Vector3i local = Galaxy.getLocalCoordinatesFromSystem(system, new Vector3i());
+			if (galaxy.isVoid(local)) {
 				return null;
 			}
-			//the galaxy's name table is indexed in galaxy-local coordinates, not absolute ones
-			String name = galaxy.getName(Galaxy.getLocalCoordinatesFromSystem(system, new Vector3i()));
+			String name = galaxy.getName(local);
 			return name == null || name.isEmpty() ? null : name;
 		} catch (Exception e) {
-			System.err.println("[BetterFactions] could not name the system of " + sector + ": " + e);
+			System.err.println("[BetterFactions] could not name system " + system + ": " + e);
 			return null;
 		}
 	}
@@ -3628,7 +3887,8 @@ public final class DiplomacyManager extends Observable {
             return fk.action == DiplomacyProposal.Action.PROPOSE && isSettlement(fk) ? BFConfig.proposeTreatyCost() : 0;
         }
         if (fk.action == DiplomacyProposal.Action.REVOKE) {
-            return hasTreaty(fk.a, fk.b, type.getId()) ? BFConfig.breakTreatyCost() : 0;
+            //reopening trade is undoing your own sanction, not breaking your word
+            return hasTreaty(fk.a, fk.b, type.getId()) && !type.isSanction() ? BFConfig.breakTreatyCost() : 0;
         }
         if (fk.action != DiplomacyProposal.Action.PROPOSE) {
             return 0;
@@ -3669,7 +3929,17 @@ public final class DiplomacyManager extends Observable {
             denyDiplomacy(fk.getInitiator(), Lng.astr("Only %s can release you from the %s.\nNegotiate it as a term instead.", to.getName(), type.getDisplayName()));
             return false;
         }
-		if (inForce) {
+		if (inForce && type.isSanction()) {
+			FactionTreaty held = getTreaties(from.getIdFaction(), to.getIdFaction()).get(type.getId());
+			if (held.from != from.getIdFaction()) {
+				denyDiplomacy(fk.getInitiator(), Lng.astr("Only %s can lift the %s.\nNegotiate it as a term instead.", to.getName(), type.getDisplayName()));
+				return false;
+			}
+			if (onServer) {
+				history(from.getIdFaction(), to.getIdFaction(), Lng.str("%s lifted its %s on %s.", from.getName(), type.getDisplayName(), to.getName()));
+			}
+			removeTreaty(from.getIdFaction(), to.getIdFaction(), type.getId());
+		} else if (inForce) {
 			breakTreatyInForce(from.getIdFaction(), to.getIdFaction(), type);
 		} else if (fk.rel == FactionRelation.RType.FRIEND.code && getRelation(from.getIdFaction(), to.getIdFaction()) == FactionRelation.RType.FRIEND
 				&& getTreaties(from.getIdFaction(), to.getIdFaction()).getDerivedRelation() == null) {
@@ -3721,8 +3991,9 @@ public final class DiplomacyManager extends Observable {
      * The news post, faction mail and opinion hit a proposal generates when it is first made.
      */
     private void announceProposal(DiplomacyProposal fk, Faction from, Faction to, TreatyType type) {
-        //a deal goes by the first treaty it signs
-        String typeId = type != null ? type.getId() : firstSigned(fk);
+        //a deal goes by the weightiest treaty it signs
+        SettlementTerm head = type == null ? SettlementTerm.headline(fk.terms) : null;
+        String typeId = type != null ? type.getId() : head != null ? head.typeId : null;
         String said = fk.getMessage() == null || fk.getMessage().isBlank() ? "" : " \"" + fk.getMessage().trim() + "\"";
         history(from.getIdFaction(), to.getIdFaction(), type == null
                 ? Lng.str("%s offered %s to %s.%s", from.getName(), offerName(fk), to.getName(), said)

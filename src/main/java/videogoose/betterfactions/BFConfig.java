@@ -11,6 +11,7 @@ public final class BFConfig {
 
 	private static SimpleConfigBool customEmblems;
 	private static SimpleConfigInt tradeDiscount;
+	private static SimpleConfigInt tariff;
 	private static SimpleConfigInt tributePercent;
 	private static SimpleConfigInt maxSoftBattles;
 	private static SimpleConfigInt softAiTickDivisor;
@@ -36,6 +37,8 @@ public final class BFConfig {
 	private static SimpleConfigInt wreckLifetimeHours;
 	private static SimpleConfigInt fleetUpkeepMassPerPoint;
 	private static SimpleConfigInt institutionUpkeep;
+	private static SimpleConfigInt stationIncome;
+	private static SimpleConfigInt stationIncomeMinMass;
 	private static SimpleConfigInt senateVoteHours;
 	private static SimpleConfigInt senateMaxVoteHours;
 
@@ -48,6 +51,8 @@ public final class BFConfig {
 				"If true, factions may upload their own emblem image. Off by default: turn it on only if you are willing to moderate what players upload (admins can remove one with /faction_emblem_clear).");
 		tradeDiscount = new SimpleConfigInt(config, "trade_agreement_shop_discount_percent", 10,
 				"Percent off buying from, and extra when selling to, a shop whose faction has a trade agreement with yours. 0 turns it off.");
+		tariff = new SimpleConfigInt(config, "tariff_percent", 20,
+				"Percent extra when buying from, and less when selling to, a shop whose faction has put tariffs on yours. 0 turns tariffs' price effect off.");
 		tributePercent = new SimpleConfigInt(config, "tributary_income_percent", 25,
 				"Percent of a tributary's faction point income paid to its overlord each income period. 0 turns tribute off.");
 		maxSoftBattles = new SimpleConfigInt(config, "max_soft_loaded_battles", 2,
@@ -98,6 +103,10 @@ public final class BFConfig {
 				"Player factions pay one faction point of upkeep each income period for every this much mass in their members' fleets (docked ships count with what they are docked to). With the vanilla config a 100k mass fleet costs about what one claimed system does. 0 turns fleet upkeep off.");
 		institutionUpkeep = new SimpleConfigInt(config, "institution_upkeep_points", 10,
 				"Faction points of upkeep each income period for a faction's first institution; the second adds twice this, the third three times, and so on. 0 makes institutions free.");
+		stationIncome = new SimpleConfigInt(config, "station_income_points", 2,
+				"Faction points each station a player faction owns earns each income period, at station_income_min_mass. Each tenfold mass past that adds this much again (10x the mass earns twice, 100x three times). 0 turns station income off.");
+		stationIncomeMinMass = new SimpleConfigInt(config, "station_income_min_mass", 10000,
+				"Mass a station needs to earn station income at all. A station never seen loaded since this arrived earns nothing until it is.");
 		senateVoteHours = new SimpleConfigInt(config, "senate_vote_hours", 24,
 				"Hours a Senate vote stays open. It carries early once more than half the faction's active members are for it; at the close, more for than against carries.");
 		senateMaxVoteHours = new SimpleConfigInt(config, "senate_vote_max_hours", 72,
@@ -113,6 +122,16 @@ public final class BFConfig {
 	public static int reputationHalfLifeDays() {
 		Integer v = reputationHalfLifeDays != null ? reputationHalfLifeDays.getValue() : null;
 		return v == null ? 14 : Math.max(0, v);
+	}
+
+	public static int stationIncome() {
+		Integer v = stationIncome != null ? stationIncome.getValue() : null;
+		return v == null ? 0 : Math.max(0, v);
+	}
+
+	public static int stationIncomeMinMass() {
+		Integer v = stationIncomeMinMass != null ? stationIncomeMinMass.getValue() : null;
+		return v == null ? 10000 : Math.max(0, v);
 	}
 
 	public static int institutionUpkeep() {
@@ -241,6 +260,11 @@ public final class BFConfig {
 
 	public static int tradeDiscountPercent() {
 		Integer v = tradeDiscount != null ? tradeDiscount.getValue() : null;
+		return v == null ? 0 : Math.max(0, Math.min(100, v));
+	}
+
+	public static int tariffPercent() {
+		Integer v = tariff != null ? tariff.getValue() : null;
 		return v == null ? 0 : Math.max(0, Math.min(100, v));
 	}
 

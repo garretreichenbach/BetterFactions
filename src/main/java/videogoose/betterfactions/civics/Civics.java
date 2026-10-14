@@ -203,22 +203,36 @@ public final class Civics {
         int hours = t[1].getInt() <= 0 ? 0 : Math.min(t[1].getInt(), BFConfig.senateMaxVoteHours());
         Tag update;
         boolean veto;
+        String oldName;
+        String name;
+        boolean rules;
         synchronized (this) {
             FactionCivics c = byFaction.computeIfAbsent(f.getIdFaction(), k -> new FactionCivics());
             veto = t.length > 2 && t[2].getType() == Tag.Type.BYTE ? t[2].getByte() != 0 : c.senateVeto;
-            if (c.senateSeats == seats && c.senateHours == hours && c.senateVeto == veto) {
+            String sent = t.length > 3 && t[3].getType() == Tag.Type.STRING ? FactionCivics.cleanSenateName(t[3].getString()) : c.senateName;
+            oldName = c.senateName();
+            rules = c.senateSeats != seats || c.senateHours != hours || c.senateVeto != veto;
+            if (!rules && c.senateName.equals(sent)) {
                 return;
             }
             c.senateSeats = seats;
             c.senateHours = hours;
             c.senateVeto = veto;
+            c.senateName = sent;
+            name = c.senateName();
             version++;
             update = entries(Map.of(f.getIdFaction(), c));
         }
-        governanceNews(f, p.getName(), Lng.str("The Senate's rules are changed"),
-                Lng.str("%s set who sits to %s, votes to stay open %s hours, and the leader's veto %s.", p.getName(),
-                        seats == 0 ? Lng.str("every active member") : Lng.str("chosen ranks"),
-                        hours > 0 ? hours : BFConfig.senateVoteHours(), veto ? Lng.str("on") : Lng.str("off")));
+        if (!name.equals(oldName)) {
+            governanceNews(f, p.getName(), Lng.str("The %s is renamed", oldName),
+                    Lng.str("%s renamed the %s to the %s.", p.getName(), oldName, name));
+        }
+        if (rules) {
+            governanceNews(f, p.getName(), Lng.str("The %s's rules are changed", name),
+                    Lng.str("%s set who sits to %s, votes to stay open %s hours, and the leader's veto %s.", p.getName(),
+                            seats == 0 ? Lng.str("every active member") : Lng.str("chosen ranks"),
+                            hours > 0 ? hours : BFConfig.senateVoteHours(), veto ? Lng.str("on") : Lng.str("off")));
+        }
         broadcast(update);
         //open votes are counted under the new seats at their next ballot or their close
         Senate.server().send(f);
@@ -231,10 +245,10 @@ public final class Civics {
     }
 
     /** Client: asks to change the Senate's rules. */
-    public static void requestSenateRules(int seats, int hours, boolean veto) {
+    public static void requestSenateRules(int seats, int hours, boolean veto, String name) {
         BFPacket.toServer(BFPacket.Kind.SENATE_RULES, new Tag(Tag.Type.STRUCT, null, new Tag[]{
                 new Tag(Tag.Type.INT, null, seats), new Tag(Tag.Type.INT, null, hours),
-                new Tag(Tag.Type.BYTE, null, (byte) (veto ? 1 : 0)), FinishTag.INST}));
+                new Tag(Tag.Type.BYTE, null, (byte) (veto ? 1 : 0)), new Tag(Tag.Type.STRING, null, name), FinishTag.INST}));
     }
 
     /** Client: asks to adopt or drop an institution. */

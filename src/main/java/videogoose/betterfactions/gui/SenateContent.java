@@ -191,8 +191,8 @@ public class SenateContent extends GUIAnchor {
         Faction own = getState().getFaction();
         int n = own == null ? 1 : Senate.seats(own);
         videogoose.betterfactions.civics.FactionCivics rules = videogoose.betterfactions.civics.Civics.client().of(own == null ? 0 : own.getIdFaction());
-        return Lng.str("THE SENATE\n%s senators, %s to carry early.\n\nVotes stay open %s hours. A vote carries the moment a majority of senators is for it. At the close, the side with more ballots wins; a tie is lost.\n\n%s Any member may propose from the Diplomacy tab, with a justification for the senators to read.",
-                n, n / 2 + 1, rules.voteHours(BFConfig.senateVoteHours(), BFConfig.senateMaxVoteHours()),
+        return Lng.str("THE %s\n%s senators, %s to carry early.\n\nVotes stay open %s hours. A vote carries the moment a majority of senators is for it. At the close, the side with more ballots wins; a tie is lost.\n\n%s Any member may propose from the Diplomacy tab, with a justification for the senators to read.",
+                rules.senateName().toUpperCase(java.util.Locale.ROOT), n, n / 2 + 1, rules.voteHours(BFConfig.senateVoteHours(), BFConfig.senateMaxVoteHours()),
                 rules.senateSeats == 0 ? Lng.str("Every active member sits.") : Lng.str("Only chosen ranks sit; a proposer outside the Senate casts no ballot."));
     }
 }

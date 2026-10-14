@@ -24,6 +24,7 @@
 		"TableAccessor",
 		"TimerAccessor",
 		"TributeTurnMixin",
+		"FactionPointStatsMixin",
 		"WatchCcdMixin",
 		"ShipyardDockingMixin",
 		"ShipyardQueueButtonMixin",
@@ -42,7 +43,10 @@
 		"SpiceDealerUpkeepMixin",
 		"WreckOverheatMixin",
 		"TurretKnockedOffMixin",
-		"FleetUpkeepMixin"
+		"FleetUpkeepMixin",
+		"ShopEmbargoMixin",
+		"MemberRowButtonsMixin",
+		"NewsRowButtonsMixin"
 	],
 	"client": [],
 	"server": []

@@ -359,9 +359,30 @@ A `FactionTreaty` is `{typeId, from, to, signedAt, expiresAt, name, clause}`, st
 `FactionTreatySet`. Direction lives in `from`/`to`, so asymmetric types (vassalage, tributary) keep it.
 
 `TreatyType` is registry data, not an enum. Builder flags: `asymmetric()`, `unilateral()` (no acceptance),
-`unbreakable()`, `implies(RType)`, `names(templates...)`. The **kind** is derived from the flags: unilateral is a
-declaration, symmetric and agreed is a pact, asymmetric and agreed is a demand. The built-in types are seeded in
-`TreatyTypeRegistry` under the `starmade:` namespace.
+`unbreakable()`, `implies(RType)`, `names(templates...)`, `importance(int)`. The **kind** is derived from the flags:
+unilateral is a declaration, symmetric and agreed is a pact, asymmetric and agreed is a demand. The built-in types are
+seeded in `TreatyTypeRegistry` under the `starmade:` namespace.
+
+**Sanctions** are declarations with no implied relation (`TreatyType.isSanction()`): `starmade:embargo` and
+`starmade:tariff`. Declaring one records its own ledger action on the target (`EMBARGO` -200, `TARIFF` -75) instead of
+`TREATY_SIGNED`, which an NPC would read as a truce. Only `from` can revoke one, free and not a broken treaty;
+the target can ask for it as a `BREAK_TREATY` deal term given by `from` (`settlementBlocker` refuses any other giver).
+Both are taken and lifted from the Actions dialog (`DiplomacyActionsDialog`).
+
+- **Embargo.** `DiplomacyManager.tradeClosed(a, b)` is true either way round. `refusesTrade(seller, customer)` adds
+  the secondary embargo: the embargoer also refuses anyone with an alliance, defensive pact or federation treaty
+  with the side it embargoed (the allies refuse nobody). `ShopEmbargoMixin` makes `ShoppingAddOn.hasPermission`
+  answer it (the gate for the client's shop screen and the server's buy and sell alike), and `BuyTradeListener` /
+  `SellTradeListener` cancel trade orders it refuses either way. A trade agreement between the pair is broken on
+  declaring it and refused while it holds.
+- **Opinion pressure.** `tradedBetween(a, b)` runs on every shop price lookup and every trade order that goes ahead:
+  whichever side traded with a faction somebody else has embargoed gets `TRADED_WITH_SANCTIONED` (-2 a time, to
+  -300) from the embargoer and from every NPC whose opinion of the embargoer is at least 500.
+- **Tariffs.** `shopPrice` applies `tariff_percent` (default 20) at the declarer's shops to the target's members, after
+  any trade agreement discount: buying costs more, selling pays less.
+
+**Importance** ranks types for naming a deal that signs several (see Proposals). Vanilla: vassalage 60, alliance 50,
+tributary 40, defensive pact 30, non-aggression 20, trade agreement and intel sharing 10. Unset is 0.
 
 **Derived relation.** `FactionTreatySet.getDerivedRelation()`: any ENEMY-implying treaty wins, then FRIEND
 beats NEUTRAL, and no relation-implying treaty returns `null` so the engine's own relation byte stands. Signing
@@ -369,8 +390,19 @@ also writes the legacy relation via `setRelationServer`, so engine code that rea
 
 ## Proposals
 
-`DiplomacyProposal` actions: `PROPOSE`, `REVOKE`, `ACCEPT`, `DECLINE`, `COUNTER`, `QUERY`, `QUERY_RESULT`. A
-null type id is white peace.
+`DiplomacyProposal` actions: `PROPOSE`, `REVOKE`, `ACCEPT`, `DECLINE`, `COUNTER`, `QUERY`, `QUERY_RESULT`.
+
+**A deal is its terms.** Only things that are not agreed keep a type id on the proposal: a declaration (war, with
+its goals as terms), a `REVOKE`, a call to arms (`against != 0`) and a federation invite. Every agreement is a list
+of `SettlementTerm`s; a treaty is a `SIGN_TREATY` term whose `giver` is the side it binds (for a pact, either side;
+the dialog uses the target), carrying its own `expiresAt` and `name`. With no type id, a proposal between factions at
+war is peace and otherwise a settlement (`DiplomacyManager.isSettlement`); a settlement needs at least one term.
+Because the giver is explicit, either side can sign a one-sided treaty.
+
+`DiplomacyProposal.foldTreatyIntoTerms` turns the old shape (an agreed type id on the proposal) into a leading
+`SIGN_TREATY` term binding `b`, with the proposal's expiry and name. It runs on every incoming proposal, on offers
+loaded from a save, and in `asCounterProposal` after the pair is turned around, so NPC reactions, older clients and
+old saves all arrive as terms.
 
 Server flow (`DiplomacyManager.handleRelationShipOffers`):
 
@@ -383,9 +415,22 @@ Server flow (`DiplomacyManager.handleRelationShipOffers`):
 5. Answers are permission-checked against the offer's target before the offer is consumed. `COUNTER` declines
    and proposes back the other way.
 
-Signing a type the pair already holds replaces it; that is how renames and renewals work. Names come from the
-proposal if `TreatyNames.sanitize` accepts them, else from the type's templates (`{from}`, `{to}`,
-`{fromHome}`, `{toHome}`, `{ceded}`, `{type}`; a template whose token has no value is skipped).
+On acceptance `applyTerms` applies every term; each `SIGN_TREATY` goes through `signTreatyServer`, so it gets the
+treaty record, news, relation change and ledger actions of a treaty signed on its own, with its term's expiry and
+the deal's message as its clause. A settlement has no proposal-level effect of its own; peace clears the treaties
+forcing the pair apart. A settlement costs `proposeTreatyCost` like any offer, needs only `Perms.TREATIES` (the
+treaties in it are each checked), and is blocked by debt; peace is free and open to a faction in debt.
+
+Signing a type the pair already holds replaces it; that is how renames and renewals work. A one-sided treaty can only
+be re-signed the way round it already stands ("Only X can renew"), checked per term in `settlementBlocker`.
+
+**Naming.** A deal is one agreement, so every treaty it signs gets the same name. The deal is called after its
+**headline**: `SettlementTerm.headline(terms)`, the `SIGN_TREATY` of the highest-importance type (first on a tie).
+The name is the headline's `name` if `TreatyNames.sanitize` accepts it, else any other treaty term's name, else one
+generated from the headline type's templates with the headline's receiver as `{from}` and giver as `{to}`
+(`{from}`, `{to}`, `{fromHome}`, `{toHome}`, `{ceded}`, `{type}`; a template whose token has no value is skipped).
+News, history and the inbox also go by the headline: an alliance with a trade agreement on the side is offered,
+announced and listed as an alliance. A declaration still takes its name from the proposal.
 
 Expired treaties are removed on the server tick. Intel sharing re-merges both maps every 60 s.
 
@@ -448,8 +493,11 @@ Cached per name, cleared on server init. Format:
 - Unknown action, status, reaction or treaty names skip that entry, not the file.
 - A missing `<Reactions>` block means no reactions; a missing `<Acceptance>` keeps the built-in rules.
 - `<Settlement><PeaceValue>500</PeaceValue><TreatyValue>1000</TreatyValue></Settlement>` prices settlement terms
-  (`SettlementPricing`). Each term is worth its faction points, or `TreatyValue` per treaty signed or broken (5x for a
-  vassalage or tributary, and never for the NPC to submit). Peace is worth `PeaceValue·2^lead` to an NPC whose peace
+  (`SettlementPricing`). Each term is worth its faction points, or `TreatyValue` per one-sided treaty signed or any
+  treaty broken (5x for a vassalage or tributary, and never for the NPC to submit). A pact is worth nothing either
+  way: both sides take on the same thing, so whether the NPC wants it is its `<Accept>` rule's call, and it is never
+  priced in points. For a settlement, the rule check is every pact in it (`acceptsPacts`); one-sided treaties are
+  left to the pricing. Peace is worth `PeaceValue·2^lead` to an NPC whose peace
   rule accepts (it gives up to that), and costs `PeaceValue·2^-lead` when the rule refuses (it wants paying), where
   `lead` is the other side's strength advantage in doublings, clamped to ±4. Other agreements are not for sale. Short
   of the price, an NPC counters a player with the terms it would sign: what it gives talked down or dropped, then any
@@ -470,7 +518,9 @@ weighting, binding, chair rotation days). Commands are `FederationCommand`s over
 `Perms.FEDERATION_VOTE`, and the chair-or-vote rule per command lives in `DiplomacyManager`. Membership writes a
 `starmade:federation` treaty with every other member; a federation war signs a `starmade:war` treaty from each
 bound member, and a federation peace files a server-authored white peace offer from each bound member at
-war with the target (war and peace share `CHARTER_VOTE_WAR`). Votes and ballots are only sent to members.
+war with the target (war and peace share `CHARTER_VOTE_WAR`). `EMBARGO` / `LIFT_EMBARGO` commands and votes, also
+under `CHARTER_VOTE_WAR` and its binding rule, file a server-authored embargo (or its revocation) from each bound
+member; a member only lifts one it declared itself. Votes and ballots are only sent to members.
 
 ## Emblems
 
@@ -502,11 +552,12 @@ Treaty types:
 ```java
 TreatyTypeRegistry.register("mymod", new TreatyType.Builder("research_pact")
         .displayName("Research Pact")
+        .importance(15)
         .names("The {from}-{to} Accord"));
 ```
 
 A registered type appears in the propose dialog, inbox and treaty list with no GUI change, and can be named
-in preset `<Treaty>` / `<Accept>` elements. Server-side helpers: `DiplomacyManager.server().signTreatyServer`,
+in preset `<Treaty>` / `<Accept>` elements. Without `importance`, it only names a deal that signs no ranked type. Server-side helpers: `DiplomacyManager.server().signTreatyServer`,
 `breakTreatyServer`, `hasTreaty`, `getTreaties`, `getFederationOf`.
 
 ## Guides

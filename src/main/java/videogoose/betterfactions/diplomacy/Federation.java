@@ -324,6 +324,15 @@ public class Federation {
              */
             PEACE,
             /**
+             * Close trade with {@link #subject} from every member it binds. Under the war charter flag:
+             * sanctions are a step short of war, decided the same way.
+             */
+            EMBARGO,
+            /**
+             * Lift the members' embargoes on {@link #subject}.
+             */
+            LIFT_EMBARGO,
+            /**
              * Replace the charter with {@link #text} and {@link #value}. Has no subject.
              */
             CHARTER,

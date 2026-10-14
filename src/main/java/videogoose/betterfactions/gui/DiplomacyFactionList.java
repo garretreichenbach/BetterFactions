@@ -308,6 +308,20 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
             setAllwaysOneSelected(true);
         }
 
+        private SelectionMark mark;
+
+        @Override
+        public void onInit() {
+            super.onInit();
+            mark = new SelectionMark(this);
+        }
+
+        @Override
+        public void draw() {
+            mark.update(isSimpleSelected());
+            super.draw();
+        }
+
         @Override
         protected void clickedOnRow() {
             panel.onSelectFaction(f);

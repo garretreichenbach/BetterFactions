@@ -43,10 +43,10 @@ import java.util.List;
 public final class TreatyNames {
 
     /**
-     * Long enough for "The Kepler Reaches Non-Aggression Accord", short enough to render in a list
-     * row without eating the columns beside it.
+     * Long enough for "The Kepler Reaches (12, -3, 45) Non-Aggression Accord", short enough to render
+     * in a list row without eating the columns beside it.
      */
-    public static final int MAX_LENGTH = 48;
+    public static final int MAX_LENGTH = 64;
 
     /**
      * Tokens that disqualify a template when nothing fills them, rather than falling back.

@@ -60,6 +60,18 @@ public final class FleetUpkeep {
     }
 
     /**
+     * Points a station earns a turn: {@code base} at {@code minMass}, another {@code base} for each tenfold
+     * mass past it. Below {@code minMass}, or never seen loaded, it earns nothing, so a field of tiny
+     * stations is not a farm.
+     */
+    public static float stationIncome(double mass, int base, int minMass) {
+        if (base <= 0 || mass <= 0 || mass < minMass) {
+            return 0;
+        }
+        return (float) (base * (1 + Math.log10(mass / Math.max(1, minMass))));
+    }
+
+    /**
      * Server: UIDs of the fleet ships of every member of a player faction, cached fleets preferred as
      * fresher. Docked members are left out: their mass rides on their root.
      */

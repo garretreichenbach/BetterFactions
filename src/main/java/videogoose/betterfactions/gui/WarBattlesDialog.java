@@ -12,6 +12,8 @@ import org.schema.schine.graphicsengine.forms.gui.*;
 import org.schema.schine.input.InputState;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIContentPane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUIDialogWindow;
+import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalArea;
+import org.schema.schine.graphicsengine.forms.gui.newgui.GUIHorizontalButtonTablePane;
 import org.schema.schine.graphicsengine.forms.gui.newgui.GUITextOverlayTable;
 import org.schema.schine.graphicsengine.forms.gui.newgui.ScrollableTableList;
 import org.schema.schine.resource.tag.Tag;
@@ -176,7 +178,18 @@ public class WarBattlesDialog extends PlayerInput {
 			mainList.deleteObservers();
 			mainList.addObserver(this);
 			for (Live l : collection) {
-				GUITextButton nav = new GUITextButton(getState(), 90, 24, GUITextButton.ColorPalette.OK, Lng.str("NAV TO"), new GUICallback() {
+				//clicking the row opens it, like a report's below
+				GUIAnchor actions = new GUIAnchor(getState(), 100, 30) {
+					@Override
+					public void draw() {
+						setWidth(LiveList.this.getWidth() - 28);
+						super.draw();
+					}
+				};
+				GUIHorizontalButtonTablePane buttons = new GUIHorizontalButtonTablePane(getState(), 1, 1, actions);
+				buttons.onInit();
+				buttons.setPos(0, 3, 0);
+				buttons.addButton(0, 0, Lng.str("NAV TO"), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new GUICallback() {
 					@Override
 					public boolean isOccluded() {
 						return !isActive();
@@ -188,11 +201,8 @@ public class WarBattlesDialog extends PlayerInput {
 							((GameClientState) getState()).getController().getClientGameData().setWaypoint(l.pos);
 						}
 					}
-				});
-				//clicking the row opens it, like a report's below
-				GUIAnchor actions = new GUIAnchor(getState(), 100, 30);
-				nav.setPos(4, 3, 0);
-				actions.attach(nav);
+				}, null);
+				actions.attach(buttons);
 				Row r = new Row(getState(), l, cell(() -> l.pos.toStringPure() + (l.more > 0 ? " +" + l.more : "")), cell(() -> l.sides), cell(() -> l.age),
 						cell(() -> String.valueOf(l.lost)), cell(() -> String.valueOf(l.killed))) {
 					{

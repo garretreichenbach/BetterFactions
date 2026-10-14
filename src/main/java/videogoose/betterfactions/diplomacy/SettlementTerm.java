@@ -137,6 +137,23 @@ public final class SettlementTerm {
         }
     }
 
+    /**
+     * The treaty a deal is called after: the most important one it signs, the first of those on a tie,
+     * or null when it signs none. See {@link TreatyType#getImportance}.
+     */
+    public static SettlementTerm headline(List<SettlementTerm> terms) {
+        SettlementTerm best = null;
+        int bestImportance = Integer.MIN_VALUE;
+        for (SettlementTerm t : terms) {
+            TreatyType type = t.kind == Kind.SIGN_TREATY ? TreatyTypeRegistry.get(t.typeId) : null;
+            if (type != null && type.getImportance() > bestImportance) {
+                best = t;
+                bestImportance = type.getImportance();
+            }
+        }
+        return best;
+    }
+
     /** First problem in the list, or null when every term stands on its own. */
     public static String problem(List<SettlementTerm> terms, int a, int b) {
         for (SettlementTerm t : terms) {
@@ -162,7 +179,7 @@ public final class SettlementTerm {
             case BREAK_TREATY:
                 return who + " breaks its " + typeName + " with " + nameOf.apply(breakWith(a, b));
             case CEDE_SYSTEM:
-                return who + " cedes system " + system + " to " + nameOf.apply(receiver(a, b));
+                return who + " cedes " + videogoose.betterfactions.DiplomacyManager.systemLabel(system) + " to " + nameOf.apply(receiver(a, b));
             default:
                 return String.valueOf(kind);
         }

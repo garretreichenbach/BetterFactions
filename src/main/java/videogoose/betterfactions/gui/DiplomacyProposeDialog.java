@@ -42,7 +42,7 @@ public class DiplomacyProposeDialog extends PlayerInput {
      * The name and the note are read when OK is pressed and nothing reacts to them as they are typed,
      * so one shared do-nothing callback serves every field in the dialog.
      */
-    private static final TextCallback TEXT = new TextCallback() {
+    static final TextCallback TEXT = new TextCallback() {
         @Override
         public String[] getCommandPrefixes() {
             return null;
@@ -93,10 +93,16 @@ public class DiplomacyProposeDialog extends PlayerInput {
      * Signing a type already in force replaces it, so nothing else is needed to make it work.
      */
     private final FactionTreaty renaming;
+    /**
+     * The declaration this dialog makes, when it was opened from the Actions dialog to declare one,
+     * else null: a proposal, which at war is peace. Fixed for the dialog's life - what you are doing is
+     * chosen before it opens, so the dialog only asks for what goes with it (war goals, here).
+     */
+    private final String declaring;
 
     /**
-     * A declaration picked from the Action list, or null for a deal - which, at war, is peace. A deal's
-     * treaties are not picked here but in the columns, as terms like anything else.
+     * {@link #declaring}, or null for a deal - which, at war, is peace. A deal's treaties are not picked
+     * here but in the columns, as terms like anything else.
      */
     private String typeId;
     private long termMs;
@@ -128,16 +134,18 @@ public class DiplomacyProposeDialog extends PlayerInput {
      * @param counterTo the offer being answered with different terms, or null for a fresh proposal
      */
     public DiplomacyProposeDialog(GameClientState state, Faction from, Faction to, DiplomacyProposal counterTo) {
-        this(state, from, to, counterTo, null);
+        this(state, from, to, counterTo, null, null);
     }
 
     private DiplomacyProposeDialog(GameClientState state, Faction from, Faction to,
-                                   DiplomacyProposal counterTo, FactionTreaty renaming) {
+                                   DiplomacyProposal counterTo, FactionTreaty renaming, String declaring) {
         super(state);
         this.from = from;
         this.to = to;
         this.counterTo = counterTo;
         this.renaming = renaming;
+        this.declaring = declaring;
+        typeId = declaring;
         if (renaming != null) {
             //signed the way round it already stands: a one-sided treaty binds whoever it binds now
             TreatyType type = TreatyTypeRegistry.get(renaming.typeId);
@@ -160,7 +168,14 @@ public class DiplomacyProposeDialog extends PlayerInput {
      */
     public static DiplomacyProposeDialog rename(GameClientState state, Faction from, Faction to,
                                                 FactionTreaty treaty) {
-        return new DiplomacyProposeDialog(state, from, to, null, treaty);
+        return new DiplomacyProposeDialog(state, from, to, null, treaty, null);
+    }
+
+    /**
+     * Declares {@code typeId} on {@code to}: the war goals and whether a casus belli covers them.
+     */
+    public static DiplomacyProposeDialog declare(GameClientState state, Faction from, Faction to, String typeId) {
+        return new DiplomacyProposeDialog(state, from, to, null, null, typeId);
     }
 
     /**
@@ -184,6 +199,9 @@ public class DiplomacyProposeDialog extends PlayerInput {
 
     /** Why this dialog may not send, or null. A counter is an answer and peace is always open, so debt stops neither. */
     private String sendBlock() {
+        if (atWar() && typeId == null && !mayDeclareWar(getState(), from)) {
+            return Lng.str("Ending a war takes the right to set relations.");
+        }
         if (counterTo == null && !(atWar() && typeId == null) && inDebt(from)) {
             return Lng.str("%s is in debt (%s faction points). You can answer offers, but cannot start new dealings until it is paid off.",
                     from.getName(), (int) from.factionPoints);
@@ -216,20 +234,20 @@ public class DiplomacyProposeDialog extends PlayerInput {
 
     /**
      * The deal with the Term and Name fields applied: the term to every treaty it signs, the name to the
-     * first. Not at war, where a peace's treaties are war goals and have to stay exactly the goals.
+     * headline one, which the whole deal is signed under. Not at war, where a peace's treaties are war
+     * goals and have to stay exactly the goals.
      */
     private List<SettlementTerm> withTreatyDetails(List<SettlementTerm> in, long expiresAt, String name) {
         if (atWar() || declaringWar()) {
             return in;
         }
         List<SettlementTerm> out = new ObjectArrayList<SettlementTerm>();
-        boolean named = false;
+        SettlementTerm head = SettlementTerm.headline(in);
         for (SettlementTerm t : in) {
             if (t.kind == SettlementTerm.Kind.SIGN_TREATY) {
                 //left blank, a field keeps what the treaty already had - in a counter, what was offered
                 t = SettlementTerm.signTreaty(t.giver, t.typeId, expiresAt > 0 ? expiresAt : t.expiresAt,
-                        named || name == null || name.isBlank() ? t.name : name);
-                named = true;
+                        t != head || name == null || name.isBlank() ? t.name : name);
             }
             out.add(t);
         }
@@ -272,42 +290,47 @@ public class DiplomacyProposeDialog extends PlayerInput {
         return Lng.str("%s days", hours / 24);
     }
 
-    private static String pointerToTypeId(Object pointer) {
-        String s = pointer == null ? "" : pointer.toString();
-        return s.isEmpty() ? null : s;
+    /** What this dialog is for, which is decided before it opens rather than picked inside it. */
+    private String title() {
+        if (declaring != null) {
+            TreatyType t = TreatyTypeRegistry.get(declaring);
+            return Lng.str("Declare %s on %s", t != null ? displayName(t) : declaring, to.getName());
+        }
+        if (counterTo != null) {
+            return Lng.str("Counter-offer to %s", to.getName());
+        }
+        if (renaming != null) {
+            return Lng.str("Rename %s", renaming.getDisplayName());
+        }
+        return atWar() ? Lng.str("Peace with %s", to.getName()) : Lng.str("Proposal to %s", to.getName());
     }
 
-    private boolean mayDeclareWar() {
-        FactionPermission p = from.getMembersUID().get(getState().getPlayerName());
+    static boolean mayDeclareWar(GameClientState state, Faction from) {
+        FactionPermission p = from.getMembersUID().get(state.getPlayerName());
         return p != null && p.hasRelationshipPermission(from);
-    }
-
-    /**
-     * How an entry reads in the dropdown: the verb first, so nothing in the list claims to be a
-     * treaty when it is not one. You propose an alliance, you demand vassalage, and you declare war -
-     * the engine stores all three the same way, but the player is not doing the same thing.
-     */
-    private String offerLabel(TreatyType t) {
-        return t.getVerb() + ": " + displayName(t);
     }
 
     /**
      * The type's name, or what it amounts to between these two: a vassal's war on its lord is an
      * independence war.
      */
-    private String displayName(TreatyType t) {
+    static String displayName(Faction from, Faction to, TreatyType t) {
         return t.getImplies() == FactionRelation.RType.ENEMY
                 && DiplomacyManager.client().isIndependenceWar(from.getIdFaction(), to.getIdFaction())
                 ? Lng.str("Independence War") : t.getDisplayName();
     }
 
+    private String displayName(TreatyType t) {
+        return displayName(from, to, t);
+    }
+
     /**
-     * What can be declared on this faction right now. Agreements are not here: they go in the columns,
-     * as something one side signs or, for a pact, both.
+     * What {@code from} can declare on {@code to} right now, for the Actions dialog. Agreements are not
+     * here: they are proposals, built in this dialog's columns.
      */
-    private List<TreatyType> proposable() {
+    static List<TreatyType> declarable(GameClientState state, Faction from, Faction to) {
         List<TreatyType> out = new ObjectArrayList<TreatyType>();
-        if (atWar() || renaming != null || counterTo != null) {
+        if (state.getFactionManager().getRelation(from.getIdFaction(), to.getIdFaction()) == FactionRelation.RType.ENEMY) {
             //at war the only thing on the table is how it ends; the server refuses anything else
             return out;
         }
@@ -317,18 +340,14 @@ public class DiplomacyProposeDialog extends PlayerInput {
                 //federation is synthesised from membership rather than signed, so there is nothing to offer
                 continue;
             }
-            if (t.getImplies() == FactionRelation.RType.ENEMY && (!mayDeclareWar()
+            if (t.getImplies() == FactionRelation.RType.ENEMY && (!mayDeclareWar(state, from)
                     || DiplomacyManager.client().getTreaties(from.getIdFaction(), to.getIdFaction()).getDerivedRelation() != null)) {
                 //an alliance, pact, vassalage or federation has to be broken before a war can start
                 continue;
             }
             out.add(t);
         }
-        //agreements between equals, then what is demanded of somebody, then what is simply declared
-        out.sort((o1, o2) -> {
-            int byKind = o1.getKind().ordinal() - o2.getKind().ordinal();
-            return byKind != 0 ? byKind : o1.getDisplayName().compareToIgnoreCase(o2.getDisplayName());
-        });
+        out.sort((o1, o2) -> o1.getDisplayName().compareToIgnoreCase(o2.getDisplayName()));
         return out;
     }
 
@@ -373,11 +392,17 @@ public class DiplomacyProposeDialog extends PlayerInput {
         int them = to.getIdFaction();
         List<SettlementTerm> out = new ObjectArrayList<SettlementTerm>();
         DiplomacyManager dm = DiplomacyManager.client();
+        boolean war = declaringWar();
         //treaties first: they are what a deal is mostly about
         for (TreatyType t : TreatyTypeRegistry.all()) {
+            if (TreatyTypeRegistry.TRADE_AGREEMENT.equals(t.getId()) && dm.tradeClosed(us, them)) {
+                //nobody trades under an embargo; the server refuses it too
+                continue;
+            }
             SettlementTerm sign = SettlementTerm.signTreaty(them, t.getId());
             //a mutual one is listed once, as given by them, and shown in both columns
-            if (sign.problem(us, them) == null && t.needsAcceptance()
+            //a pact both sign is no war goal: nobody fights to be allied
+            if (sign.problem(us, them) == null && t.needsAcceptance() && !(war && t.isSymmetric())
                     && (!dm.hasTreaty(us, them, t.getId()) || renaming != null && t.getId().equals(renaming.typeId))) {
                 out.add(sign);
                 if (!t.isSymmetric()) {
@@ -403,6 +428,10 @@ public class DiplomacyProposeDialog extends PlayerInput {
                     continue;
                 }
                 for (FactionTreaty held : dm.getTreaties(giver, o).getTreaties()) {
+                    if (held.getType() != null && held.getType().isSanction() && held.from != giver) {
+                        //only the side that took it can give it up
+                        continue;
+                    }
                     SettlementTerm drop = SettlementTerm.breakTreaty(giver, held.typeId, o == us || o == them ? 0 : o);
                     if (drop.problem(us, them) == null && !out.contains(drop)) {
                         out.add(drop);
@@ -584,10 +613,7 @@ public class DiplomacyProposeDialog extends PlayerInput {
             //the id carries the size: a window remembers what it was last resized to against its
             //own id, and that saved size beats whatever is passed here. Changing the size means
             //changing the id, or the panel keeps the geometry it had before the fields were added.
-            super("DIPLOMACY_PROPOSE_PANEL_V5", state, 720, 720, DiplomacyProposeDialog.this,
-                    counterTo != null
-                            ? Lng.str("Counter-offer to %s", to.getName())
-                            : Lng.str("Diplomacy with %s", to.getName()), "");
+            super("DIPLOMACY_PROPOSE_PANEL_V6", state, 720, 654, DiplomacyProposeDialog.this, title(), "");
         }
 
         @Override
@@ -603,35 +629,16 @@ public class DiplomacyProposeDialog extends PlayerInput {
         public void onInit() {
             super.onInit();
 
-            List<TreatyType> types = proposable();
-            List<GUIElement> typeEntries = new ObjectArrayList<GUIElement>();
-            if (atWar() && mayDeclareWar()) {
-                //white peace only makes sense while there is a war to end
-                typeEntries.add(entry(getClientState(), "", Lng.str("Propose: Peace (end the war)")));
-            } else if (!atWar()) {
-                //what is signed is picked in the columns below
-                typeEntries.add(entry(getClientState(), "", counterTo != null ? Lng.str("Counter-offer")
-                        : renaming != null ? Lng.str("Rename") : Lng.str("Propose a deal")));
-            }
-            for (TreatyType t : types) {
-                typeEntries.add(entry(getClientState(), t.getId(), offerLabel(t)));
-            }
-            if (typeEntries.isEmpty()) {
-                //at war without the standing to end it
-                typeEntries.add(entry(getClientState(), "", Lng.str("Nothing left to propose")));
-            }
-            //user pointer "" stands for white peace, because a null pointer would be indistinguishable
-            //from an entry that was never given one
-            typeId = pointerToTypeId(typeEntries.getFirst().getUserPointer());
-
             //attached first, so an expanded dropdown draws over them rather than under
-            nameField = field(236, 24, TreatyNames.MAX_LENGTH, 1,
+            nameField = field(170, 24, TreatyNames.MAX_LENGTH, 1,
                     Lng.str("Named for you if left blank"));
             if (renaming != null) {
                 nameField.setText(renaming.getDisplayName());
             }
-            messageField = field(292, 56, 140, 5,
+            messageField = field(226, 56, 140, 5,
                     Lng.str("A note to send with it (optional)"));
+            //characters per line, not pixels: roughly what fits the 680px box at MEDIUM
+            messageField.setLineWrap(76);
 
             GUITextOverlay preview = new GUITextOverlay(FULL, 60, FontLibrary.FontSize.MEDIUM.getFont(), getClientState());
             preview.autoWrapOn = getContent();
@@ -641,7 +648,7 @@ public class DiplomacyProposeDialog extends PlayerInput {
                     return previewText();
                 }
             });
-            preview.setPos(6, 150, 0);
+            preview.setPos(6, 84, 0);
 
             List<GUIElement> termEntries = new ObjectArrayList<GUIElement>();
             for (long ms : TERMS) {
@@ -659,26 +666,21 @@ public class DiplomacyProposeDialog extends PlayerInput {
                     }
                 }
             };
-            termList.setPos(6, 112, 0);
+            termList.setPos(6, 46, 0);
 
-            GUIDropDownList typeList = new GUIDropDownList(getClientState(), FULL, 24, 180,
-                    element -> {
-                        typeId = pointerToTypeId(element.getContent().getUserPointer());
-                        if (declaringWar()) {
-                            //war goals are demands only; concessions and pacts picked for a deal don't carry over
-                            terms.removeIf(t -> inColumn(t, from.getIdFaction()));
-                        }
-                        refillTermPicker();
-                        ask();
-                    }, typeEntries);
-            typeList.setPos(6, 46, 0);
-
-            //not "Treaty": the list holds demands and declarations too, and calling those treaties
-            //is what made a war declaration read as an agreement
-            GUITextOverlay typeLabel = label(Lng.str("Action"), 26);
-            GUITextOverlay termLabel = label(Lng.str("Term"), 92);
-            GUITextOverlay nameLabel = label(Lng.str("Name"), 216);
-            GUITextOverlay messageLabel = label(Lng.str("Message"), 272);
+            //a war takes no term, so its label goes with the list
+            GUITextOverlay termLabel = new GUITextOverlay(200, 16, FontLibrary.FontSize.MEDIUM.getFont(), getClientState()) {
+                @Override
+                public void draw() {
+                    if (!declaringWar()) {
+                        super.draw();
+                    }
+                }
+            };
+            termLabel.setTextSimple(Lng.str("Term"));
+            termLabel.setPos(6, 26, 0);
+            GUITextOverlay nameLabel = label(Lng.str("Name"), 150);
+            GUITextOverlay messageLabel = label(Lng.str("Message"), 206);
             //two sides of the table, below the message box's character counter: what we give, what we ask for
             GUIAnchor offerCol = column(6, true);
             GUIAnchor demandCol = column(6 + COL + 10, false);
@@ -686,7 +688,6 @@ public class DiplomacyProposeDialog extends PlayerInput {
 
             //attached bottom-up: a dropdown draws its expansion over whatever was attached before it,
             //so the one that opens downward over the other has to go last
-            getContent().attach(typeLabel);
             getContent().attach(termLabel);
             getContent().attach(nameLabel);
             getContent().attach(messageLabel);
@@ -694,7 +695,6 @@ public class DiplomacyProposeDialog extends PlayerInput {
             getContent().attach(offerCol);
             getContent().attach(demandCol);
             getContent().attach(termList);
-            getContent().attach(typeList);
 
             ask();
         }
@@ -713,7 +713,7 @@ public class DiplomacyProposeDialog extends PlayerInput {
                     }
                 }
             };
-            col.setPos(x, 380, 0);
+            col.setPos(x, 314, 0);
 
             GUITextOverlay header = new GUITextOverlay(COL, 16, FontLibrary.FontSize.MEDIUM.getFont(), getClientState());
             header.setTextSimple(new Object() {
@@ -735,6 +735,8 @@ public class DiplomacyProposeDialog extends PlayerInput {
                     List<SettlementTerm> mine = terms.stream().filter(t -> inColumn(t, giver)).toList();
                     if (!mine.equals(shown)) {
                         shown = mine;
+                        //the table changed, so the pickers drop what is now on it and regain what came off
+                        refillTermPicker();
                         for (Object c : List.copyOf(getChilds())) {
                             detach((org.schema.schine.graphicsengine.forms.AbstractSceneNode) c);
                         }
@@ -780,7 +782,7 @@ public class DiplomacyProposeDialog extends PlayerInput {
                 goals.setPos(70, 52, 0);
                 col.attach(goals);
             }
-            if (ours && atWar() && mayDeclareWar()) {
+            if (ours && atWar() && mayDeclareWar(getClientState(), from)) {
                 GUITextButton whitePeace = new GUITextButton(getClientState(), 100, 24, GUITextButton.ColorPalette.OK,
                         Lng.str("White Peace"), DiplomacyProposeDialog.this);
                 whitePeace.setUserPointer("WHITE_PEACE");
@@ -808,6 +810,9 @@ public class DiplomacyProposeDialog extends PlayerInput {
                 picker.add(new GUIListElement(prompt, prompt, getClientState()));
             }
             for (SettlementTerm t : termChoices()) {
+                if (terms.contains(t)) {
+                    continue; //already on the table
+                }
                 for (GUIDropDownList picker : mutual(t) ? new GUIDropDownList[]{offerPicker, demandPicker}
                         : new GUIDropDownList[]{t.giver == from.getIdFaction() ? offerPicker : demandPicker}) {
                     GUIElement e = entry(getClientState(), t, describe(t), COL - 20);

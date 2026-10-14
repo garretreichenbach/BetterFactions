@@ -44,6 +44,9 @@ public final class Senate_test {
         assert !rb.senateVeto;
         r.senateVeto = true;
         assert FactionCivics.fromTag(r.toTag()).senateVeto : "the veto survives a save";
+        r.senateName = FactionCivics.cleanSenateName("  Grand Assembly  ");
+        assert FactionCivics.fromTag(r.toTag()).senateName.equals("Grand Assembly") : "the name survives a save, trimmed";
+        assert FactionCivics.cleanSenateName("x".repeat(50)).length() == FactionCivics.MAX_SENATE_NAME;
         rb.senateHours = 500;
         assert rb.voteHours(24, 72) == 72 : "capped by the server";
 

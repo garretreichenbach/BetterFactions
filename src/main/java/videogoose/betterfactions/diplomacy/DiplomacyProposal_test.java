@@ -40,6 +40,7 @@ public final class DiplomacyProposal_test {
         counterKeepsItsName();
         termsSurviveWireAndTag();
         treatyFoldsIntoTerms();
+        dealIsCalledAfterItsWeightiestTreaty();
         counterKeepsWhoPays();
         termsAreCheckedOnTheirOwn();
         System.out.println("DiplomacyProposal_test: OK");
@@ -217,14 +218,15 @@ public final class DiplomacyProposal_test {
     }
 
     /**
-     * A counter-offer is a proposal of its own, so the name it asks for has to come with it.
+     * A counter-offer is a proposal of its own, so the name it asks for has to come with it - on the
+     * treaty it names, now that a deal's treaties are its terms.
      */
     private static void counterKeepsItsName() {
         DiplomacyProposal counter = new DiplomacyProposal();
         counter.set("Target", 11, 22, RType.FRIEND.code, "how about this", false);
         counter.name = "The Better Accord";
         DiplomacyProposal back = counter.asCounterProposal();
-        assert "The Better Accord".equals(back.name) : back.name;
+        assert back.terms.size() == 1 && "The Better Accord".equals(back.terms.getFirst().name) : back.terms;
         assert back.a == 22 && back.b == 11 : "the counter is asked the other way round";
     }
 
@@ -236,6 +238,21 @@ public final class DiplomacyProposal_test {
         p.terms.add(SettlementTerm.signTreaty(4, TreatyTypeRegistry.ALLIANCE, 123456789L, "Accord of Ends"));
         p.terms.add(SettlementTerm.breakTreaty(3, TreatyTypeRegistry.DEFENSIVE_PACT, 9));
         return p;
+    }
+
+    /**
+     * An alliance with trade on the side is an alliance: the deal is named after its most important
+     * treaty wherever it sits in the list, and points or territory never name it.
+     */
+    private static void dealIsCalledAfterItsWeightiestTreaty() {
+        SettlementTerm trade = SettlementTerm.signTreaty(4, TreatyTypeRegistry.TRADE_AGREEMENT);
+        SettlementTerm alliance = SettlementTerm.signTreaty(4, TreatyTypeRegistry.ALLIANCE);
+        assert SettlementTerm.headline(List.of(SettlementTerm.points(3, 100), trade, alliance)) == alliance;
+        assert SettlementTerm.headline(List.of(alliance, trade)) == alliance;
+        //a tie goes to the first, so the order the proposer put them in decides
+        SettlementTerm intel = SettlementTerm.signTreaty(4, TreatyTypeRegistry.INTEL_SHARING);
+        assert SettlementTerm.headline(List.of(intel, trade)) == intel;
+        assert SettlementTerm.headline(List.of(SettlementTerm.points(3, 100))) == null;
     }
 
     /**
@@ -263,6 +280,21 @@ public final class DiplomacyProposal_test {
         war.set("Someone", 3, 4, TreatyTypeRegistry.WAR, RType.ENEMY.code, "", DiplomacyProposal.Action.PROPOSE);
         war.foldTreatyIntoTerms();
         assert TreatyTypeRegistry.WAR.equals(war.typeId) && war.terms.isEmpty();
+
+        //closing trade is declared too: nobody agrees to it, and it sets no relation
+        TreatyType embargoType = TreatyTypeRegistry.get(TreatyTypeRegistry.EMBARGO);
+        assert embargoType.getKind() == TreatyType.Kind.DECLARATION && embargoType.getImplies() == null;
+        DiplomacyProposal embargo = new DiplomacyProposal();
+        embargo.set("Someone", 3, 4, TreatyTypeRegistry.EMBARGO, RType.NEUTRAL.code, "", DiplomacyProposal.Action.PROPOSE);
+        embargo.foldTreatyIntoTerms();
+        assert TreatyTypeRegistry.EMBARGO.equals(embargo.typeId) && embargo.terms.isEmpty() : embargo.terms;
+
+        //sanctions - lifted only by whoever took them, free and with no word broken - are exactly the
+        //declarations that set no relation: not a war, not a federation
+        assert embargoType.isSanction() && TreatyTypeRegistry.get(TreatyTypeRegistry.TARIFF).isSanction();
+        assert !TreatyTypeRegistry.get(TreatyTypeRegistry.WAR).isSanction();
+        assert !TreatyTypeRegistry.get(TreatyTypeRegistry.FEDERATION).isSanction();
+        assert !TreatyTypeRegistry.get(TreatyTypeRegistry.TRADE_AGREEMENT).isSanction();
     }
 
     /**

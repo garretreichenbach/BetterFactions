@@ -52,7 +52,9 @@ public final class BFPacket extends Packet {
 		// client -> server: adopt or drop an institution; cast a Senate ballot. server -> client: the faction's open Senate votes
 		INSTITUTION_SET, SENATE_BALLOT, SENATE, SENATE_RULES, SENATE_LEADER,
 		// server -> client: one new line of the diplomatic history between two factions
-		HISTORY
+		HISTORY,
+		// server -> client: every faction's mod faction point lines from the last income turn
+		POINT_MODS
 	}
 
 	private Kind kind;

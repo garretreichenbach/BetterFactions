@@ -142,6 +142,24 @@ public class DiplomacyConfig {
                     c.lowerLimit = 0;
                     c.value = 0;
                     break;
+                case TRADED_WITH_SANCTIONED:
+                    //each trade adds a little; a steady trading partner of the embargoed side ends up resented
+                    c.upperLimit = -300;
+                    c.lowerLimit = 0;
+                    c.value = -2;
+                    break;
+                case TARIFF:
+                    //a slight more than a blow: they can still trade, it just costs them
+                    c.upperLimit = -75;
+                    c.lowerLimit = 0;
+                    c.value = -75;
+                    break;
+                case EMBARGO:
+                    //shutting someone out of your markets is an insult, if a smaller one than a broken word
+                    c.upperLimit = -200;
+                    c.lowerLimit = 0;
+                    c.value = -200;
+                    break;
                 case TREATY_BROKEN:
                     //the exception: going back on an agreement is the one treaty event that should
                     //cost something no matter which treaty it was

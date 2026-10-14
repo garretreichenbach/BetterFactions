@@ -196,17 +196,8 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
                 system.z * VoidSystem.SYSTEM_SIZE + VoidSystem.SYSTEM_SIZE_HALF);
     }
 
-    /**
-     * The name of a system, if this client has the galaxy data for it. It usually does not for somewhere
-     * nobody has been, which is why the coordinates are always shown too.
-     */
     private String systemName(Vector3i system) {
-        VoidSystem s = client().getController().getClientChannel().getGalaxyManagerClient()
-                .getSystemOnClient(centreSector(system));
-        if (s == null || s.getName() == null || s.getName().isEmpty()) {
-            return system.toStringPure();
-        }
-        return Lng.str("%s %s", s.getName(), system.toStringPure());
+        return DiplomacyManager.systemLabel(system);
     }
 
     /** A fleet's ships in their own right: one docked in a carrier rides along and is not counted again. */
@@ -534,7 +525,7 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
         GUIAnchor c = new GUIAnchor(getState(), 100, routed ? 76 : 56) {
             @Override
             public void draw() {
-                setWidth(parent.getWidth());
+                setWidth(parent.getWidth() - 28);
                 super.draw();
             }
         };
@@ -565,8 +556,10 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
         });
         where.setPos(4, 2, 0);
 
-        GUITextButton navButton = new GUITextButton(getState(), 90, 24, GUITextButton.ColorPalette.OK,
-                Lng.str("NAV TO"), new GUICallback() {
+        GUIHorizontalButtonTablePane buttons = new GUIHorizontalButtonTablePane(getState(), h.isFleet() ? 2 : 1, 1, c);
+        buttons.onInit();
+        buttons.setPos(0, routed ? 48 : 28, 0);
+        buttons.addButton(0, 0, Lng.str("NAV TO"), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new GUICallback() {
             @Override
             public boolean isOccluded() {
                 return !isActive();
@@ -578,14 +571,9 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
                     client().getController().getClientGameData().setWaypoint(target(h));
                 }
             }
-        });
-        navButton.setPos(4, routed ? 48 : 28, 0);
-
-        c.attach(where);
-        c.attach(navButton);
+        }, null);
         if (h.isFleet()) {
-            GUITextButton repair = new GUITextButton(getState(), 130, 24, GUITextButton.ColorPalette.NEUTRAL,
-                    Lng.str("SHIPYARD REPAIR"), new GUICallback() {
+            buttons.addButton(1, 0, Lng.str("SHIPYARD REPAIR"), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new GUICallback() {
                 @Override
                 public boolean isOccluded() {
                     return !isActive();
@@ -597,10 +585,11 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
                         RepairDialogs.orderRepair(client(), h.fleet);
                     }
                 }
-            });
-            repair.setPos(100, routed ? 48 : 28, 0);
-            c.attach(repair);
+            }, null);
         }
+
+        c.attach(where);
+        c.attach(buttons);
         return c;
     }
 

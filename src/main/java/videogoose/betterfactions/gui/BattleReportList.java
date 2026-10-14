@@ -139,16 +139,19 @@ public class BattleReportList extends ScrollableTableList<BattleReports.Report> 
 		body.onInit();
 		body.updateTextSize();
 		int textHeight = Math.max(16, body.getTextHeight()) + 8;
-		GUIAnchor c = new GUIAnchor(getState(), 100, textHeight + 30) {
+		GUIAnchor c = new GUIAnchor(getState(), 100, textHeight + 28) {
 			@Override
 			public void draw() {
-				setWidth(parent.getWidth());
+				setWidth(parent.getWidth() - 28);
 				super.draw();
 			}
 		};
 		body.setPos(4, 2, 0);
 
-		GUITextButton nav = new GUITextButton(getState(), 90, 24, GUITextButton.ColorPalette.OK, Lng.str("NAV TO"), new GUICallback() {
+		GUIHorizontalButtonTablePane buttons = new GUIHorizontalButtonTablePane(getState(), 2, 1, c);
+		buttons.onInit();
+		buttons.setPos(0, textHeight + 1, 0);
+		buttons.addButton(0, 0, Lng.str("NAV TO"), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new GUICallback() {
 			@Override
 			public boolean isOccluded() {
 				return !isActive();
@@ -160,9 +163,8 @@ public class BattleReportList extends ScrollableTableList<BattleReports.Report> 
 					getState().getController().getClientGameData().setWaypoint(rep.pos());
 				}
 			}
-		});
-		nav.setPos(4, textHeight, 0);
-		GUITextButton full = new GUITextButton(getState(), 110, 24, GUITextButton.ColorPalette.NEUTRAL, Lng.str("FULL REPORT"), new GUICallback() {
+		}, null);
+		buttons.addButton(1, 0, Lng.str("FULL REPORT"), GUIHorizontalArea.HButtonType.BUTTON_BLUE_MEDIUM, new GUICallback() {
 			@Override
 			public boolean isOccluded() {
 				return !isActive();
@@ -174,11 +176,9 @@ public class BattleReportList extends ScrollableTableList<BattleReports.Report> 
 					new BattleReportDialog(getState(), rep).activate();
 				}
 			}
-		});
-		full.setPos(100, textHeight, 0);
+		}, null);
 		c.attach(body);
-		c.attach(nav);
-		c.attach(full);
+		c.attach(buttons);
 		return c;
 	}
 

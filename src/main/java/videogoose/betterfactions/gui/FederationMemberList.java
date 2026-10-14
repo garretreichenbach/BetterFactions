@@ -34,6 +34,8 @@ import java.util.function.Supplier;
 public class FederationMemberList extends ScrollableTableList<FederationMemberList.Seat> {
 
     private final Supplier<Federation> federation;
+    private Column actionsColumn;
+    private boolean actionsShown = true;
 
     public FederationMemberList(InputState state, GUIElement p, Supplier<Federation> federation) {
         super(state, 100, 100, p);
@@ -67,11 +69,14 @@ public class FederationMemberList extends ScrollableTableList<FederationMemberLi
         public final int factionId;
         public final boolean invited;
         public final boolean leads;
+        /** Whether the action column is up; flipping it must rebuild every row to match. */
+        final boolean acts;
 
-        Seat(int factionId, boolean invited, boolean leads) {
+        Seat(int factionId, boolean invited, boolean leads, boolean acts) {
             this.factionId = factionId;
             this.invited = invited;
             this.leads = leads;
+            this.acts = acts;
         }
 
         @Override
@@ -83,12 +88,12 @@ public class FederationMemberList extends ScrollableTableList<FederationMemberLi
                 return false;
             }
             Seat s = (Seat) o;
-            return factionId == s.factionId && invited == s.invited && leads == s.leads;
+            return factionId == s.factionId && invited == s.invited && leads == s.leads && acts == s.acts;
         }
 
         @Override
         public int hashCode() {
-            return factionId * 31 + (invited ? 2 : 0) + (leads ? 1 : 0);
+            return factionId * 31 + (acts ? 4 : 0) + (invited ? 2 : 0) + (leads ? 1 : 0);
         }
     }
 
@@ -114,12 +119,22 @@ public class FederationMemberList extends ScrollableTableList<FederationMemberLi
         addColumn(Lng.str("Faction"), 3.0f, (o1, o2) -> nameOf(o1).compareToIgnoreCase(nameOf(o2)));
         addFixedWidthColumn(Lng.str("Role"), 56, (o1, o2) -> roleOf(o1).compareToIgnoreCase(roleOf(o2)));
         addFixedWidthColumn(Lng.str("Power"), 48, (o1, o2) -> Long.compare(powerOf(o2), powerOf(o1)));
-        addFixedWidthColumn(Lng.str(""), 108, (o1, o2) -> 0);
+        actionsColumn = addFixedWidthColumn(Lng.str("Actions"), 108, (o1, o2) -> 0);
         activeSortColumnIndex = 1;
     }
 
     @Override
     protected Collection<Seat> getElementList() {
+        //handleDirty runs this right before the rows are rebuilt, so the column and the rows change together
+        boolean acts = anyActions();
+        if (acts != actionsShown) {
+            actionsShown = acts;
+            if (acts) {
+                columns.add(actionsColumn);
+            } else {
+                columns.remove(actionsColumn);
+            }
+        }
         Federation f = federation.get();
         if (f == null) {
             return Collections.emptyList();
@@ -127,12 +142,44 @@ public class FederationMemberList extends ScrollableTableList<FederationMemberLi
         ObjectArrayList<Seat> out = new ObjectArrayList<Seat>();
         for (int i = 0; i < f.members.size(); i++) {
             int id = f.members.getInt(i);
-            out.add(new Seat(id, false, f.leader == id));
+            out.add(new Seat(id, false, f.leader == id, acts));
         }
         for (int i = 0; i < f.invites.size(); i++) {
-            out.add(new Seat(f.invites.getInt(i), true, false));
+            out.add(new Seat(f.invites.getInt(i), true, false, acts));
         }
         return out;
+    }
+
+    /** Whether any row would draw a button - mirrors the shown-conditions in updateListEntries. */
+    private boolean anyActions() {
+        Federation f = federation.get();
+        if (f == null || !mayAct()) {
+            return false;
+        }
+        boolean lead = leads();
+        if (lead && !f.invites.isEmpty()) {
+            return true;
+        }
+        if (!lead && !f.hasCharterFlag(Federation.CHARTER_VOTE_EXPULSION)) {
+            return false;
+        }
+        int own = ownFactionId();
+        for (int i = 0; i < f.members.size(); i++) {
+            int id = f.members.getInt(i);
+            if (id != f.leader && id != own) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void draw() {
+        //perms, chair and charter change without a list event
+        if (anyActions() != actionsShown) {
+            flagDirty();
+        }
+        super.draw();
     }
 
     /**
@@ -174,6 +221,12 @@ public class FederationMemberList extends ScrollableTableList<FederationMemberLi
                 }
             }));
 
+            if (!s.acts) {
+                SeatRow r = new SeatRow(getState(), s, nameRow, roleRow, powerRow);
+                r.onInit();
+                mainList.addWithoutUpdate(r);
+                continue;
+            }
             GUIAnchor actions = new GUIAnchor(getState(), 10, 24);
             if (s.invited) {
                 GUITextButton cancel = button(Lng.str("CANCEL"), GUITextButton.ColorPalette.CANCEL, 60,
@@ -259,6 +312,20 @@ public class FederationMemberList extends ScrollableTableList<FederationMemberLi
             super(state, s, elements);
             highlightSelect = true;
             highlightSelectSimple = true;
+        }
+
+        private SelectionMark mark;
+
+        @Override
+        public void onInit() {
+            super.onInit();
+            mark = new SelectionMark(this);
+        }
+
+        @Override
+        public void draw() {
+            mark.update(isSimpleSelected());
+            super.draw();
         }
     }
 }
