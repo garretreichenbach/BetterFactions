@@ -33,6 +33,7 @@ public abstract class FleetRepairOrderMixin {
 	private void betterFactions$addRepairTile(PlayerButtonTilesInput a) {
 		RepairDialogs.addRepairTile(a, betterFactions$ordering);
 		FleetIntercepts.addTile(a, betterFactions$ordering);
+		videogoose.betterfactions.fleet.TradeFleetOrders.addTiles(a, betterFactions$ordering);
 		a.activate();
 	}
 }

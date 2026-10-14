@@ -172,6 +172,8 @@ public final class Corporations {
         public String description = "";
         /** Trading Guild shops it holds a franchise on. */
         public final List<Holding> franchises = new ArrayList<>();
+        /** Never changes, unlike its place in the list: what contracts know it by. */
+        public long id;
 
         /** Its own stations and franchises together, which share {@link #MAX_HOLDINGS}. */
         public int holdingCount() {
@@ -240,6 +242,7 @@ public final class Corporations {
                     new Tag(Tag.Type.INT, null, lastDividend),
                     new Tag(Tag.Type.STRING, null, description),
                     new Tag(Tag.Type.STRUCT, null, fr),
+                    new Tag(Tag.Type.LONG, null, id),
                     FinishTag.INST});
         }
 
@@ -278,8 +281,21 @@ public final class Corporations {
                     }
                 }
             }
+            //saved before corporations had ids: given one now
+            c.id = t.length > 14 && t[14].getType() == Tag.Type.LONG ? t[14].getLong() : 0;
+            if (c.id == 0) {
+                c.id = newId();
+            }
             return c;
         }
+    }
+
+    static long newId() {
+        long id;
+        do {
+            id = java.util.concurrent.ThreadLocalRandom.current().nextLong();
+        } while (id == 0);
+        return id;
     }
 
     public static final class State {
@@ -638,6 +654,13 @@ public final class Corporations {
         return null;
     }
 
+    /** Server: one of the faction's stations (not a planet), by uid, as it stands in the asset index; or null. */
+    public static Holding ownStation(int faction, String uid) {
+        FactionAssets assets = assets(faction);
+        FactionAssets.Asset a = assets == null ? null : station(assets, uid);
+        return a == null || a.type != SimpleTransformableSendableObject.EntityType.SPACE_STATION.dbTypeId ? null : new Holding(a.uid, a.name, a.sector);
+    }
+
     static boolean holdable(int type) {
         return type == SimpleTransformableSendableObject.EntityType.SPACE_STATION.dbTypeId || FactionAssets.isPlanet(type);
     }
@@ -826,6 +849,60 @@ public final class Corporations {
         return fp;
     }
 
+    // ---- server: for contracts
+
+    /** The corporation at {@code index} of the player's faction, if they may act for it: its CEO, or an officer. */
+    public Corp runBy(PlayerState p, Faction f, int index) {
+        boolean editor = Perms.has(f, p.getName(), FactionPermission.PermType.FACTION_EDIT_PERMISSION);
+        synchronized (this) {
+            State st = byFaction.get(f.getIdFaction());
+            Corp c = st == null || index < 0 || index >= st.corps.size() ? null : st.corps.get(index);
+            return c != null && (editor || c.ceo.equalsIgnoreCase(p.getName())) ? c : null;
+        }
+    }
+
+    private Corp byId(int faction, long id) {
+        State st = byFaction.get(faction);
+        if (st != null) {
+            for (Corp c : st.corps) {
+                if (c.id == id) {
+                    return c;
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Takes {@code amount} from a corporation's treasury. @return false, taking nothing, if it cannot cover it */
+    public boolean debit(int faction, long id, long amount) {
+        synchronized (this) {
+            Corp c = byId(faction, id);
+            if (c == null || amount < 0 || c.treasury < amount) {
+                return false;
+            }
+            c.treasury -= amount;
+            version++;
+            earned.add(faction);
+        }
+        return true;
+    }
+
+    /** Pays into a corporation's treasury; {@code revenue}: as earnings, which count toward its dividend. Lost if it is gone. */
+    public void credit(int faction, long id, long amount, boolean revenue) {
+        synchronized (this) {
+            Corp c = byId(faction, id);
+            if (c == null || amount <= 0) {
+                return;
+            }
+            c.treasury += amount;
+            if (revenue) {
+                c.revenue += amount;
+            }
+            version++;
+            earned.add(faction);
+        }
+    }
+
     // ---- server: what members do
 
     public void action(PlayerState p, Tag tag) {
@@ -871,6 +948,7 @@ public final class Corporations {
                         return;
                     }
                     Corp n = new Corp();
+                    n.id = newId();
                     n.type = Type.values()[value];
                     n.npcCeo = CouncilLore.name(CouncilLore.Flavour.BOARD);
                     n.name = CouncilLore.name(CouncilLore.Flavour.BOARD).split(" ")[0] + " " + n.type.suffix();
@@ -887,6 +965,7 @@ public final class Corporations {
                         return;
                     }
                     st.corps.remove(c);
+                    after.add(() -> Contracts.server().onCorporationGone(id, c.id));
                     after.add(() -> Civics.governanceNews(f, p.getName(), Lng.str("%s is dissolved", c.name),
                             Lng.str("%s dissolved %s. Its stations are the faction's own again.", p.getName(), c.name)));
                 }
@@ -1152,6 +1231,7 @@ public final class Corporations {
             byFaction.remove(faction);
             version++;
         }
+        Contracts.server().onFactionGone(faction);
         Faction f = GameServerState.instance.getFactionManager().getFaction(faction);
         if (f != null) {
             send(f);

@@ -17,6 +17,7 @@ import org.schema.schine.input.InputState;
 import videogoose.betterfactions.BFConfig;
 import videogoose.betterfactions.civics.CivicRegistry;
 import videogoose.betterfactions.civics.Civics;
+import videogoose.betterfactions.civics.Contracts;
 import videogoose.betterfactions.civics.Corporations;
 
 import javax.vecmath.Vector4f;
@@ -36,8 +37,9 @@ public class CorporationsContent extends GUIAnchor {
     private static final int LIST_W = 300;
     private static final int CARD_H = 74;
     private static final int DETAIL_X = LIST_W + 20;
-    private static final int DETAIL_W = 640;
-    private static final int WIDTH = DETAIL_X + DETAIL_W + 10;
+    private static final int MIN_DETAIL_W = 640;
+    private int detailW = MIN_DETAIL_W;
+    private int width = DETAIL_X + detailW + 10;
     private static final int HEIGHT = 660;
     private static final Vector4f RULE = new Vector4f(0.17f, 0.24f, 0.32f, 1.0f);
     private static final Vector4f GOLD = new Vector4f(0.91f, 0.82f, 0.48f, 1.0f);
@@ -47,11 +49,16 @@ public class CorporationsContent extends GUIAnchor {
     private int builtVersion = -1;
     private int builtCivics = -1;
     private int builtSelected = -1;
+    private int builtContracts = -1;
+    /** The right side shows the selected corporation's books, or the contract board as it sees it. */
+    private boolean contractsView;
+    private boolean builtView;
+    private static final int TOP = 38;
 
     public CorporationsContent(InputState state, GUIActiveInterface active) {
         super(state);
         activationInterface = active;
-        content = new GUIAnchor(state, WIDTH, HEIGHT);
+        content = new GUIAnchor(state, width, HEIGHT);
     }
 
     @Override
@@ -70,7 +77,18 @@ public class CorporationsContent extends GUIAnchor {
 
     @Override
     public void draw() {
-        if (Corporations.client().version() != builtVersion || Civics.client().version() != builtCivics || selected != builtSelected) {
+        //the detail column takes whatever width the pane has, less the scrollbar
+        int fit = Math.max(MIN_DETAIL_W, (int) getWidth() - DETAIL_X - 34);
+        if (fit != detailW) {
+            detailW = fit;
+            width = DETAIL_X + detailW + 10;
+            content.setWidth(width);
+            builtVersion = -1;
+        }
+        if (Corporations.client().version() != builtVersion || Civics.client().version() != builtCivics || selected != builtSelected
+                || Contracts.client().version() != builtContracts || contractsView != builtView) {
+            builtContracts = Contracts.client().version();
+            builtView = contractsView;
             builtVersion = Corporations.client().version();
             builtCivics = Civics.client().version();
             builtSelected = selected;
@@ -112,10 +130,22 @@ public class CorporationsContent extends GUIAnchor {
 
         if (corps.isEmpty()) {
             wrapped(DIM, Lng.str("No corporations yet. Charter one, then give it stations with shops: it takes %s%% of every sale there into its treasury, and pays part of each income turn's takings to the faction as faction points.",
-                    BFConfig.corporationCutPercent()), DETAIL_X + 16, 40, DETAIL_W - 32, 80);
+                    BFConfig.corporationCutPercent()), DETAIL_X + 16, 40, detailW - 32, 80);
             return;
         }
-        detail(own, st, corps.get(selected), editor);
+        GUITextButton overview = FactionSettingsContent.button(getState(), 140, Lng.str("OVERVIEW"),
+                contractsView ? GUITextButton.ColorPalette.NEUTRAL : GUITextButton.ColorPalette.OK, null, () -> contractsView = false);
+        overview.setPos(DETAIL_X, 4, 0);
+        content.attach(overview);
+        GUITextButton board = FactionSettingsContent.button(getState(), 140, Lng.str("CONTRACTS"),
+                contractsView ? GUITextButton.ColorPalette.OK : GUITextButton.ColorPalette.NEUTRAL, null, () -> contractsView = true);
+        board.setPos(DETAIL_X + 148, 4, 0);
+        content.attach(board);
+        if (contractsView) {
+            contracts(own, corps.get(selected), editor);
+        } else {
+            detail(own, st, corps.get(selected), editor);
+        }
     }
 
     private void card(Corporations.Corp c, int i, int x, int y) {
@@ -155,8 +185,8 @@ public class CorporationsContent extends GUIAnchor {
         boolean runs = editor || c.ceo.equalsIgnoreCase(getState().getPlayer().getName());
         boolean senate = Civics.client().holds(own.getIdFaction(), CivicRegistry.SENATE);
         int x = DETAIL_X;
-        int y = 4;
-        int w = DETAIL_W;
+        int y = TOP;
+        int w = detailW;
         GUIColoredRectangle bg = new GUIColoredRectangle(getState(), w, 266, new Vector4f(CARD));
         bg.setPos(x, y, 0);
         content.attach(bg);
@@ -227,8 +257,8 @@ public class CorporationsContent extends GUIAnchor {
 
         //HQ
         x = DETAIL_X;
-        y = 282;
-        w = DETAIL_W;
+        y = TOP + 278;
+        w = detailW;
         GUIColoredRectangle hqBg = new GUIColoredRectangle(getState(), w, 92, new Vector4f(CARD));
         hqBg.setPos(x, y, 0);
         content.attach(hqBg);
@@ -253,12 +283,12 @@ public class CorporationsContent extends GUIAnchor {
         } else {
             y = line(text(getState(), 14, DIM, Lng.str("No HQ. Seat it at one of our stations or planets; one corporate HQ fits in a sector.")), x, y, 20);
         }
-        wrapped(DIM, Lng.str("Stations it runs within 3 systems of its HQ earn 10% more. %s", c.type.hqBonus()), x, y, w, 36);
+        wrapped(DIM, Lng.str("Stations it runs within 3 systems of its HQ earn 10%% more. %s", c.type.hqBonus()), x, y, w, 36);
 
         //stations
         x = DETAIL_X;
-        y = 388;
-        w = DETAIL_W;
+        y = TOP + 384;
+        w = detailW;
         line(text(getState(), 14, DIM, Lng.str("STATIONS AND PLANETS IT RUNS  (%s of %s with franchises)", c.holdingCount(), Corporations.MAX_HOLDINGS)), x + 4, y, 0);
         GUITextButton assign = FactionSettingsContent.button(getState(), 200, Lng.str("ASSIGN A STATION OR PLANET..."),
                 GUITextButton.ColorPalette.NEUTRAL, () -> runs && c.holdingCount() < Corporations.MAX_HOLDINGS, () -> pickStation(st, at));
@@ -313,6 +343,134 @@ public class CorporationsContent extends GUIAnchor {
         dissolve.setPos(x + w - 160, y, 0);
         content.attach(dissolve);
         content.setHeight(Math.max(HEIGHT, y + 40));
+    }
+
+    /** The board as the selected corporation sees it: what it took on, what it posted, and what is open. */
+    private void contracts(Faction own, Corporations.Corp c, boolean editor) {
+        int at = selected;
+        boolean runs = editor || c.ceo.equalsIgnoreCase(getState().getPlayer().getName());
+        int me = own.getIdFaction();
+        int x = DETAIL_X;
+        int w = detailW;
+        int y = TOP;
+        List<Contracts.Contract> all = Contracts.client().all();
+        Contracts.Type takes = null;
+        for (Contracts.Type t : Contracts.Type.values()) {
+            if (t.takenBy() == c.type) {
+                takes = t;
+                break;
+            }
+        }
+        y = wrapped(DIM, takes != null ? Lng.str("%s takes %s contracts. Rewards are held from the poster's treasury and paid into %s's when the work is done.",
+                c.name, c.type == Corporations.Type.MERCENARIES ? Lng.str("bounty and escort") : takes.title().toLowerCase(java.util.Locale.ROOT), c.name)
+                : "", x + 4, y, w - 230, 40);
+        Corporations.State st = Corporations.client().of(me);
+        GUITextButton post = FactionSettingsContent.button(getState(), 200, Lng.str("POST A JOB..."), GUITextButton.ColorPalette.NEUTRAL,
+                () -> runs, () -> new ContractPostDialog(getState(), own, st, c, at).activate());
+        post.setPos(x + w - 200, TOP, 0);
+        content.attach(post);
+
+        y = section(Lng.str("TAKEN ON BY %s", c.name.toUpperCase(java.util.Locale.ROOT)), x, y);
+        boolean any = false;
+        for (Contracts.Contract k : all) {
+            if (k.takerFaction == me && k.takerCorp == c.id) {
+                y = contractRow(k, x, y, w, Lng.str("GIVE UP"), GUITextButton.ColorPalette.HOSTILE, () -> runs, () -> Contracts.request(2, at, k.id));
+                if (k.goods()) {
+                    //anyone of ours can do the legwork, standing at the station
+                    GUITextButton deliver = FactionSettingsContent.button(getState(), 100, Lng.str("DELIVER"), GUITextButton.ColorPalette.OK, null,
+                            () -> Contracts.requestGoodsMove(4, k.id));
+                    deliver.setPos(x + w - 212, y - 39, 0);
+                    content.attach(deliver);
+                    if (k.type == Contracts.Type.HAUL) {
+                        GUITextButton load = FactionSettingsContent.button(getState(), 100, Lng.str("PICK UP"), GUITextButton.ColorPalette.NEUTRAL, null,
+                                () -> Contracts.requestGoodsMove(5, k.id));
+                        load.setPos(x + w - 318, y - 39, 0);
+                        content.attach(load);
+                    }
+                }
+                any = true;
+            }
+        }
+        if (!any) {
+            y = wrapped(DIM, Lng.str("Nothing yet. Take an open contract below."), x + 4, y, w, 22);
+        }
+
+        y = section(Lng.str("POSTED BY %s", c.name.toUpperCase(java.util.Locale.ROOT)), x, y + 6);
+        any = false;
+        for (Contracts.Contract k : all) {
+            if (k.posterFaction == me && k.posterCorp == c.id) {
+                y = contractRow(k, x, y, w, k.taken() ? Lng.str("TAKEN") : Lng.str("WITHDRAW"), GUITextButton.ColorPalette.HOSTILE,
+                        () -> runs && !k.taken(), () -> Contracts.request(3, at, k.id));
+                any = true;
+            }
+        }
+        if (!any) {
+            y = wrapped(DIM, Lng.str("Nothing posted. A posted contract holds its reward from the treasury until it is met, withdrawn or lapses (less %s%%).",
+                    BFConfig.contractFeePercent()), x + 4, y, w, 40);
+        }
+
+        y = section(Lng.str("OPEN CONTRACTS"), x, y + 6);
+        any = false;
+        for (Contracts.Contract k : all) {
+            if (!k.taken() && k.posterFaction != me) {
+                boolean fits = k.type.takenBy() == c.type;
+                y = contractRow(k, x, y, w, fits ? Lng.str("TAKE") : k.type.takenBy().title().toUpperCase(java.util.Locale.ROOT),
+                        GUITextButton.ColorPalette.OK, () -> runs && fits, () -> Contracts.requestTake(at, k.id));
+                any = true;
+            }
+        }
+        if (!any) {
+            y = wrapped(DIM, Lng.str("The board is empty."), x + 4, y, w, 22);
+        }
+        content.setHeight(Math.max(HEIGHT, y + 40));
+    }
+
+    private int section(String title, int x, int y) {
+        line(text(getState(), 14, DIM, title), x + 4, y, 0);
+        return y + 22;
+    }
+
+    private int contractRow(Contracts.Contract k, int x, int y, int w, String label, GUITextButton.ColorPalette palette,
+                            java.util.function.BooleanSupplier allowed, Runnable onPress) {
+        GUIColoredRectangle row = new GUIColoredRectangle(getState(), w, 44, new Vector4f(CARD));
+        row.setPos(x, y, 0);
+        content.attach(row);
+        line(text(getState(), 14, ORANGE, k.type.title().toUpperCase(java.util.Locale.ROOT)), x + 10, y + 5, 0);
+        line(text(getState(), 14, TEXT, Contracts.describe(k)), x + 90, y + 5, 0);
+        line(text(getState(), 14, DIM, new Object() {
+            @Override
+            public String toString() {
+                String left = DiplomacyTreatyList.roughly(Math.max(0, k.deadline - System.currentTimeMillis()));
+                String held = k.type == Contracts.Type.HAUL && k.taken() ? Lng.str("  -  %s cr held, %s loaded", money(k.collateral), k.pickedUp) : "";
+                if (k.type == Contracts.Type.HAUL && k.origin != null && k.destination != null) {
+                    held += Lng.str("  -  route %s safe", videogoose.betterfactions.trade.RouteSafety.percent(
+                            videogoose.betterfactions.trade.RouteSafety.client().routeSafety(k.origin.sector, k.destination.sector)));
+                }
+                return k.taken() ? Lng.str("from %s  -  taken by %s  -  %s left%s", k.posterName, k.takerName, left, held)
+                        : Lng.str("from %s  -  %s left", k.posterName, left);
+            }
+        }), x + 90, y + 24, 0);
+        GUITextOverlay reward = text(getState(), 16, BLUE, money(k.reward) + " cr");
+        //goods rows carry their move buttons in front of the reward
+        aligned(reward, x + w - (k.goods() && k.takerFaction == getState().getPlayer().getFactionId() ? (k.type == Contracts.Type.HAUL ? 330 : 224) : 116), y + 12, 1);
+        GUITextButton b = FactionSettingsContent.button(getState(), 100, label, palette, allowed, onPress);
+        b.setPos(x + w - 106, y + 9, 0);
+        content.attach(b);
+        return y + 48;
+    }
+
+    /** Credits as typed: digits, with k, m or b for thousands, millions or billions; -1 if it is not a number. */
+    public static long parseMoney(String s) {
+        s = s == null ? "" : s.strip().replace(",", "").toLowerCase(java.util.Locale.ROOT);
+        long mult = s.endsWith("k") ? 1_000L : s.endsWith("m") ? 1_000_000L : s.endsWith("b") ? 1_000_000_000L : 1;
+        if (mult > 1) {
+            s = s.substring(0, s.length() - 1);
+        }
+        try {
+            return (long) (Double.parseDouble(s) * mult);
+        } catch (NumberFormatException e) {
+            return -1;
+        }
     }
 
     /** One of four figures across the books, in column {@code col}. */

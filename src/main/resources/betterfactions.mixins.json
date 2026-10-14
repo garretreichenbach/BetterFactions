@@ -48,6 +48,9 @@
 		"FleetUpkeepMixin",
 		"ShopEmbargoMixin",
 		"ShopSaleMixin",
+		"TradeNodeSafetyMixin",
+		"MapSafetyToggleMixin",
+		"FleetCommandReceiveMixin",
 		"MemberRowButtonsMixin",
 		"NewsRowButtonsMixin"
 	],

@@ -196,10 +196,6 @@ public class FactionSettingsContent extends GUIAnchor {
         add(list, doctrines(own));
 
         add(list, section(Lng.str("Standing orders"), HEADING));
-        add(list, row(Lng.str("Return fire automatically"),
-                Lng.str("Anyone who shoots at us becomes an enemy without a person having to declare it."),
-                toggle(() -> getOwnFaction() != null && getOwnFaction().isAutoDeclareWar(),
-                        on -> getOwnFaction().clientRequestAutoDeclareWar(getOwnPlayer(), on))));
         add(list, row(Lng.str("Treat neutrals as enemies"),
                 Lng.str("Our turrets open fire on anyone we have no agreement with."),
                 toggle(() -> getOwnFaction() != null && getOwnFaction().isAttackNeutral(),

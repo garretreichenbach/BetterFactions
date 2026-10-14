@@ -11,6 +11,7 @@ import api.config.simpleconfig.SimpleConfigString;
 public final class BFConfig {
 
 	private static SimpleConfigBool customEmblems;
+	private static SimpleConfigBool fleetJumps;
 	private static SimpleConfigInt tradeDiscount;
 	private static SimpleConfigInt tariff;
 	private static SimpleConfigInt tributePercent;
@@ -48,6 +49,10 @@ public final class BFConfig {
 	private static SimpleConfigInt corporationCreditsPerPoint;
 	private static SimpleConfigInt corporationDividendCap;
 	private static SimpleConfigInt franchiseBaseFee;
+	private static SimpleConfigInt contractFeePercent;
+	private static SimpleConfigInt ambushChancePercent;
+	private static SimpleConfigInt npcBountyKills;
+	private static SimpleConfigInt npcBountyReward;
 	private static SimpleConfigInt franchiseCutPercent;
 	private static SimpleConfigInt franchiseRoyaltyPercent;
 	private static SimpleConfigInt franchiseTrafficUnit;
@@ -59,6 +64,8 @@ public final class BFConfig {
 		SimpleConfigContainer config = new SimpleConfigContainer(mod, "config", false);
 		customEmblems = new SimpleConfigBool(config, "custom_emblems_enabled", false,
 				"If true, factions may upload their own emblem image. Off by default: turn it on only if you are willing to moderate what players upload (admins can remove one with /faction_emblem_clear).");
+		fleetJumps = new SimpleConfigBool(config, "fleet_jump_drives_enabled", true,
+				"If true, loaded fleet ships with a jump drive charge it and jump toward their fleet's move target when it is 2 or more sectors away.");
 		tradeDiscount = new SimpleConfigInt(config, "trade_agreement_shop_discount_percent", 10,
 				"Percent off buying from, and extra when selling to, a shop whose faction has a trade agreement with yours. 0 turns it off.");
 		tariff = new SimpleConfigInt(config, "tariff_percent", 20,
@@ -139,6 +146,14 @@ public final class BFConfig {
 				"Percent of a franchise's takings the Trading Guild keeps.");
 		franchiseTrafficUnit = new SimpleConfigInt(config, "franchise_traffic_unit", 50000000,
 				"Credits of recent sales at a Guild shop that add the base fee again to its franchise's price. Sales fade by a tenth a day.");
+		contractFeePercent = new SimpleConfigInt(config, "contract_posting_fee_percent", 5,
+				"Percent of a contract's reward its poster loses when it lapses unfinished. Withdrawing one nobody has taken costs nothing.");
+		npcBountyKills = new SimpleConfigInt(config, "npc_bounty_kills", 3,
+				"Ships of one NPC faction a player destroys within six hours before that faction puts a bounty on them.");
+		npcBountyReward = new SimpleConfigInt(config, "npc_bounty_reward", 5000000,
+				"Credits an NPC faction's first bounty on a player pays. Each further bounty it has standing on them adds this again.");
+		ambushChancePercent = new SimpleConfigInt(config, "ambush_chance_percent", 15,
+				"Percent chance pirates ambush a trade delivery as it enters a system that is not safe at all; safer systems less, down to none. 0 turns ambushes off.");
 		config.readWriteFields();
 	}
 
@@ -195,6 +210,26 @@ public final class BFConfig {
 	public static int franchiseTrafficUnit() {
 		Integer v = franchiseTrafficUnit != null ? franchiseTrafficUnit.getValue() : null;
 		return v == null ? 50000000 : Math.max(1, v);
+	}
+
+	public static int contractFeePercent() {
+		Integer v = contractFeePercent != null ? contractFeePercent.getValue() : null;
+		return v == null ? 5 : Math.max(0, Math.min(100, v));
+	}
+
+	public static int npcBountyKills() {
+		Integer v = npcBountyKills != null ? npcBountyKills.getValue() : null;
+		return v == null ? 3 : Math.max(1, v);
+	}
+
+	public static long npcBountyReward() {
+		Integer v = npcBountyReward != null ? npcBountyReward.getValue() : null;
+		return v == null ? 5000000L : Math.max(0, v);
+	}
+
+	public static int ambushChancePercent() {
+		Integer v = ambushChancePercent != null ? ambushChancePercent.getValue() : null;
+		return v == null ? 15 : Math.max(0, Math.min(100, v));
 	}
 
 	public static int institutionUpkeep() {
@@ -343,6 +378,10 @@ public final class BFConfig {
 
 	public static boolean customEmblemsEnabled() {
 		return customEmblems != null && customEmblems.getValue() != null && customEmblems.getValue();
+	}
+
+	public static boolean fleetJumpsEnabled() {
+		return fleetJumps == null || fleetJumps.getValue() == null || fleetJumps.getValue();
 	}
 
 	public static int tradeDiscountPercent() {

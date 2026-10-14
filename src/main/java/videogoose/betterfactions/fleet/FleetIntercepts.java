@@ -87,6 +87,13 @@ public final class FleetIntercepts {
 		return instance;
 	}
 
+	/** Server: a player gave the fleet an order of their own (FleetCommandReceiveMixin); this one is over. */
+	public void cancel(Fleet fleet) {
+		if (posts.remove(fleet.dbid) != null) {
+			FleetLabels.refresh(fleet);
+		}
+	}
+
 	public static void reset() {
 		instance = new FleetIntercepts();
 	}

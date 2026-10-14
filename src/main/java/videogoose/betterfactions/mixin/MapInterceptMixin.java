@@ -25,6 +25,7 @@ public abstract class MapInterceptMixin {
 	private void betterFactions$addIntercept(RadialMenuDialog dialog, CallbackInfoReturnable<RadialMenu> cir) {
 		if (!MapControllerManager.selectedFleets.isEmpty()) {
 			FleetIntercepts.addRadialItem(cir.getReturnValue(), (RadialMenuDialog) (Object) this, getEntryPos());
+			videogoose.betterfactions.fleet.TradeFleetOrders.addRadialItem(cir.getReturnValue(), (RadialMenuDialog) (Object) this, getEntryPos());
 		}
 	}
 }

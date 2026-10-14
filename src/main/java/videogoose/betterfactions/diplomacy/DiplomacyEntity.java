@@ -37,6 +37,13 @@ public class DiplomacyEntity implements LogInterface {
      * diplomacy could ever offset.
      */
     private static final double STRENGTH_CLAMP = 6;
+
+    /**
+     * How much stronger, in doublings ({@link #getRelativeStrength()}), a target may be before an NPC
+     * will not declare war on it even with a casus belli. 0.5 is roughly 1.4x our strength.
+     */
+    // ponytail: flat for every archetype; move into DiplomacyConfig if archetypes need different nerve
+    private static final double MAX_WAR_ODDS = 0.5;
     private static final long TRUST_HOUR_MS = 60L * 60L * 1000L;
     /**
      * What breaking one treaty costs, in hours of holding one.
@@ -908,6 +915,10 @@ public class DiplomacyEntity implements LogInterface {
             //ponytail: flat ask of one declaration's cost; peace talks price the real amount
             goals = List.of(SettlementTerm.points((int) dbId, videogoose.betterfactions.BFConfig.declareWarCost()));
             if (!hasCasusBelli(goals, null)) {
+                return false;
+            }
+            //a just cause is not a winnable one: an NPC does not pick a fight it expects to lose
+            if (getRelativeStrength() > MAX_WAR_ODDS) {
                 return false;
             }
         }

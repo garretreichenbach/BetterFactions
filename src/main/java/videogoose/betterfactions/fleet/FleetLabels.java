@@ -17,6 +17,9 @@ public final class FleetLabels {
 	/** The mod's label for the fleet, or null when no mod order has it. */
 	public static String of(Fleet f) {
 		String l = FleetIntercepts.get().labelFor(f.dbid);
+		if (l == null) {
+			l = TradeFleetOrders.get().labelFor(f.dbid);
+		}
 		return l != null ? l : ShipyardRepairs.get().labelFor(f.dbid);
 	}
 

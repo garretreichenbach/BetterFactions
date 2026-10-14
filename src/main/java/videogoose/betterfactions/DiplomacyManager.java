@@ -254,8 +254,55 @@ public final class DiplomacyManager extends Observable {
 	 * lookup and a cached field read.
 	 */
 	public FactionRelation.RType derivedRelation(int a, int b) {
-		FactionTreatySet set = treaties.get(FactionRelation.getCode(a, b));
-		return set != null ? set.getDerivedRelation() : null;
+		long code = FactionRelation.getCode(a, b);
+		FactionTreatySet set = treaties.get(code);
+		FactionRelation.RType r = set != null ? set.getDerivedRelation() : null;
+		if (r != FactionRelation.RType.FRIEND && !skirmishes.isEmpty()) {
+			//an alliance is not torn up by a stray shot; anything less fights back while it lasts
+			videogoose.betterfactions.diplomacy.Skirmish s = skirmishes.get(code);
+			//a client has no clock on it: the server sends the list again when one ends
+			if (s != null && (!onServer || s.active(System.currentTimeMillis()))) {
+				return FactionRelation.RType.ENEMY;
+			}
+		}
+		return r;
+	}
+
+	/**
+	 * Undeclared fighting by pair, see {@link #onAttacked}. Not saved; a restart ends them. Clients
+	 * hold the server's list as of its last {@link Kind#SKIRMISHES}.
+	 */
+	private final Long2ObjectOpenHashMap<videogoose.betterfactions.diplomacy.Skirmish> skirmishes = new Long2ObjectOpenHashMap<>();
+
+	/** Who fired first in an undeclared fight between the pair, or 0 when there is none or it is a war now. */
+	public int skirmishAggressor(int a, int b) {
+		long code = FactionRelation.getCode(a, b);
+		FactionTreatySet set = treaties.get(code);
+		videogoose.betterfactions.diplomacy.Skirmish s = skirmishes.get(code);
+		if (s == null || set != null && set.getDerivedRelation() == FactionRelation.RType.ENEMY) {
+			return 0;
+		}
+		return s.aggressor;
+	}
+
+	private Tag skirmishesTag() {
+		Tag[] t = new Tag[skirmishes.size() + 1];
+		int i = 0;
+		for (Long2ObjectMap.Entry<videogoose.betterfactions.diplomacy.Skirmish> e : skirmishes.long2ObjectEntrySet()) {
+			t[i++] = new Tag(Tag.Type.STRUCT, null, new Tag[]{new Tag(Tag.Type.LONG, null, e.getLongKey()),
+					new Tag(Tag.Type.INT, null, e.getValue().aggressor), new Tag(Tag.Type.INT, null, e.getValue().victim), FinishTag.INST});
+		}
+		t[t.length - 1] = FinishTag.INST;
+		return new Tag(Tag.Type.STRUCT, null, t);
+	}
+
+	private void skirmishesFromTag(Tag tag) {
+		skirmishes.clear();
+		Tag[] t = tag.getStruct();
+		for (int i = 0; i < t.length - 1; i++) {
+			Tag[] e = t[i].getStruct();
+			skirmishes.put((long) (Long) e[0].getValue(), new videogoose.betterfactions.diplomacy.Skirmish(e[1].getInt(), e[2].getInt(), 0));
+		}
 	}
 
 	// ------------------------------------------------------------------
@@ -429,9 +476,11 @@ public final class DiplomacyManager extends Observable {
 			case COUNCIL_ACTION -> Council.server().action(sender, tag);
 			case COUNCIL_PROPOSE -> Council.server().propose(sender, tag);
 			case CORP_ACTION -> videogoose.betterfactions.civics.Corporations.server().action(sender, tag);
+			case CONTRACT_ACTION -> videogoose.betterfactions.civics.Contracts.server().action(sender, tag);
 			case GIFT -> giftServer(sender, tag.getInt());
 			case FABRICATE_CLAIM -> fabricateClaimServer(sender, tag.getInt());
 			case REPAIR_CANCEL -> ShipyardRepairs.get().cancel(sender, tag.getString());
+			case TRADE_FLEET_ORDER -> videogoose.betterfactions.fleet.TradeFleetOrders.received((GameServerState) state(), sender, tag);
 			case INTERCEPT_ORDER -> {
 				Tag[] t = tag.getStruct();
 				FleetIntercepts.get().order((GameServerState) state(), sender, t[0].getLong(), t[1].getVector3i());
@@ -538,6 +587,8 @@ public final class DiplomacyManager extends Observable {
 			}
 			case COUNCIL -> Council.client().received(tag);
 			case CORPORATIONS -> videogoose.betterfactions.civics.Corporations.client().received(tag);
+			case CONTRACTS -> videogoose.betterfactions.civics.Contracts.client().received(tag);
+			case ROUTE_SAFETY -> videogoose.betterfactions.trade.RouteSafety.client().fromTag(tag);
 			case CIVIC_TYPES -> Civics.dataReceived(tag);
 			case CIVICS -> {
 				Civics.client().fromTag(tag);
@@ -550,6 +601,10 @@ public final class DiplomacyManager extends Observable {
 			}
 			case REPUTATION -> {
 				reputation.fromTag(tag);
+				changed();
+			}
+			case SKIRMISHES -> {
+				skirmishesFromTag(tag);
 				changed();
 			}
 			case POINT_MODS -> {
@@ -590,9 +645,30 @@ public final class DiplomacyManager extends Observable {
 		handleFactionOffersAccept();
 		lapseCallsToArms(System.currentTimeMillis());
 		for (Faction f : fm().getFactionCollection()) {
+			//the engine's own return fire declares a lasting war; a skirmish replaces it (see onAttacked)
+			f.setAutoDeclareWar(false);
 			diplomacyOf(f).update(now);
 		}
 		long wall = System.currentTimeMillis();
+		boolean ended = false;
+		for (var it = skirmishes.long2ObjectEntrySet().iterator(); it.hasNext(); ) {
+			var e = it.next();
+			videogoose.betterfactions.diplomacy.Skirmish s = e.getValue();
+			if (s.active(wall)) {
+				continue;
+			}
+			it.remove();
+			ended = true;
+			FactionTreatySet set = treaties.get(e.getLongKey());
+			if (set == null || set.getDerivedRelation() != FactionRelation.RType.ENEMY) {
+				history(s.aggressor, s.victim, Lng.str("The skirmish between %s and %s ended without a declaration of war.",
+						getFactionName(s.aggressor), getFactionName(s.victim)));
+			}
+		}
+		if (ended) {
+			broadcast(Kind.SKIRMISHES, skirmishesTag());
+			changed();
+		}
 		expireTreaties(wall);
 		syncIntelSharing(wall);
 		rateMilitary(wall);
@@ -605,6 +681,7 @@ public final class DiplomacyManager extends Observable {
 		Senate.server().update(this::senateCarrier);
 		Council.server().update(wall);
 		videogoose.betterfactions.civics.Corporations.server().update(wall);
+		videogoose.betterfactions.civics.Contracts.server().update(wall);
 		Civics.server().update(wall);
 
 		if (!needsSnapshot.isEmpty()) {
@@ -618,6 +695,7 @@ public final class DiplomacyManager extends Observable {
 				}
 				needsSnapshot.remove(p);
 				BFPacket.toPlayer(p, Kind.SNAPSHOT, snapshot);
+				BFPacket.toPlayer(p, Kind.SKIRMISHES, skirmishesTag());
 				sendSecretHistoryTo(p);
 				BFPacket.toPlayer(p, Kind.CIVIC_TYPES, Civics.server().dataTag());
 				BFPacket.toPlayer(p, Kind.CIVICS, Civics.server().toTag());
@@ -625,6 +703,8 @@ public final class DiplomacyManager extends Observable {
 				Senate.server().sendTo(p);
 				Council.server().sendTo(p);
 				videogoose.betterfactions.civics.Corporations.server().sendTo(p);
+				videogoose.betterfactions.civics.Contracts.server().sendTo(p);
+				videogoose.betterfactions.trade.RouteSafety.server().sendTo(p);
 				sendAllFederationsTo(p);
 				for (Faction f : fm().getFactionCollection()) {
 					diplomacyOf(f).onPlayerJoined(p);
@@ -3256,9 +3336,10 @@ public final class DiplomacyManager extends Observable {
      * Server: a faction was attacked. {@code attackerDbId} is a faction id, or a player's db id when a
      * player's ship did it, as the engine reports it.
      *
-     * <p>Only an attack outside a declared war calls the victim's pact partners: one between neutrals,
-     * or under the engine's own auto-war, which leaves no war treaty behind. A declared war calls them
-     * once, when it is declared.</p>
+     * <p>An attack outside a declared war starts a {@link videogoose.betterfactions.diplomacy.Skirmish}:
+     * the pair are enemies until the fighting stops, the victim gains a casus belli, and its pact
+     * partners are called. Fire coming back from the victim counts for none of that. A declared war
+     * calls the partners once, when it is declared.</p>
      */
     public void onAttacked(int victim, long attackerDbId) {
         int aggressor;
@@ -3279,11 +3360,44 @@ public final class DiplomacyManager extends Observable {
             //would also call the aggressor's partners against anyone who answered that call
             return;
         }
+        long now = System.currentTimeMillis();
+        long code = FactionRelation.getCode(victim, aggressor);
+        videogoose.betterfactions.diplomacy.Skirmish skirmish = skirmishes.get(code);
+        if (skirmish != null && skirmish.active(now)) {
+            if (!skirmish.hit(aggressor, now)) {
+                //the victim returning fire: it was not the one who started this
+                return;
+            }
+        } else {
+            skirmishes.put(code, new videogoose.betterfactions.diplomacy.Skirmish(aggressor, victim, now));
+            broadcast(Kind.SKIRMISHES, skirmishesTag());
+            history(aggressor, victim, Lng.str("%s fired on %s without a declaration of war.", getFactionName(aggressor), getFactionName(victim)));
+            changed();
+            skirmishGrievance(victim, aggressor);
+        }
         if (victim != FactionManager.PIRATES_ID) {
             //nobody thinks less of a faction for shooting pirates
             reputation.attacked(aggressor, victim, System.currentTimeMillis());
         }
         callToArms(victim, aggressor);
+    }
+
+    /** The first shot of a skirmish gives the victim a casus belli, so it can make the fight a war. */
+    private void skirmishGrievance(int victim, int aggressor) {
+        Faction v = getFaction(victim);
+        Faction a = getFaction(aggressor);
+        if (v == null || a == null || victim == FactionManager.PIRATES_ID || aggressor == FactionManager.PIRATES_ID) {
+            //pirates are fought on sight; there is no war with them to justify
+            return;
+        }
+        DiplomacyEntity ledger = diplomacyOf(v).getEntity(aggressor);
+        long lasts = BFConfig.claimLastsMs();
+        boolean had = ledger.claimReadyIn(lasts) == 0;
+        if (ledger.fabricateClaim(0, lasts) && !had) {
+            sendServerFactionMail(Lng.str("[FACTION] Attacked by %s", a.getName()),
+                    Lng.str("%s fired on us without declaring war. We are returning fire until the fighting stops, then they are neutral again unless we declare war.\nWe hold a casus belli against them for %s hours.",
+                            a.getName(), lasts / (60L * 60L * 1000L)), v);
+        }
     }
 
     /**

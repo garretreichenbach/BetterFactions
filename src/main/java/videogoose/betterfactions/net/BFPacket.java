@@ -60,7 +60,15 @@ public final class BFPacket extends Packet {
 		// server -> client, on join: the server's civics.xml
 		CIVIC_TYPES,
 		// server -> client: the faction's corporations. client -> server: charter, run or dissolve one
-		CORPORATIONS, CORP_ACTION
+		CORPORATIONS, CORP_ACTION,
+		// server -> client: the contract board. client -> server: post, take, give up or withdraw a contract
+		CONTRACTS, CONTRACT_ACTION,
+		// client -> server: put a fleet to escorting our trade or raiding others'
+		TRADE_FLEET_ORDER,
+		// server -> client: every undeclared fight going on, whenever one starts or ends
+		SKIRMISHES,
+		// server -> client: what makes each system safe or not to trade through
+		ROUTE_SAFETY
 	}
 
 	private Kind kind;

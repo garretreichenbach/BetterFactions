@@ -41,8 +41,10 @@ public class CouncilContent extends GUIAnchor {
     private static final int NODE_W = 176;
     private static final int NODE_H = 110;
     private static final int DETAIL_X = 660;
-    private static final int DETAIL_W = 380;
-    private static final int WIDTH = DETAIL_X + DETAIL_W + 10;
+    private static final int MIN_DETAIL_W = 380;
+    private int detailW = MIN_DETAIL_W;
+    private int width = DETAIL_X + detailW + 10;
+    private int detailH = 600;
     private static final int HEIGHT = RING_TOP + 600;
     private static final Vector4f TRACK = new Vector4f(0.04f, 0.06f, 0.08f, 1.0f);
     private static final Vector4f RING = new Vector4f(0.17f, 0.24f, 0.32f, 1.0f);
@@ -57,7 +59,7 @@ public class CouncilContent extends GUIAnchor {
     public CouncilContent(InputState state, GUIActiveInterface active) {
         super(state);
         activationInterface = active;
-        content = new GUIAnchor(state, WIDTH, HEIGHT);
+        content = new GUIAnchor(state, width, HEIGHT);
     }
 
     @Override
@@ -76,6 +78,17 @@ public class CouncilContent extends GUIAnchor {
 
     @Override
     public void draw() {
+        //the detail panel takes whatever the pane has, less the scrollbar
+        int fitW = Math.max(MIN_DETAIL_W, (int) getWidth() - DETAIL_X - 34);
+        int fitH = Math.max(600, (int) getHeight() - RING_TOP - 34);
+        if (fitW != detailW || fitH != detailH) {
+            detailW = fitW;
+            detailH = fitH;
+            width = DETAIL_X + detailW + 10;
+            content.setWidth(width);
+            content.setHeight(RING_TOP + detailH + 10);
+            builtVersion = -1;
+        }
         //before drawing, never while the content is being drawn
         if (Council.client().version() != builtVersion || Civics.client().version() != builtCivics || selected != builtSelected) {
             builtVersion = Council.client().version();
@@ -110,22 +123,22 @@ public class CouncilContent extends GUIAnchor {
         GUITextButton rename = FactionSettingsContent.button(getState(), 90, Lng.str("RENAME"), GUITextButton.ColorPalette.NEUTRAL,
                 () -> editor(own), () -> askName(Lng.str("Rename %s (blank for %s)", councilName, CouncilLore.title(flavour)), st.name,
                         name -> Council.requestRename(-1, name)));
-        rename.setPos(WIDTH - 100, 4, 0);
+        rename.setPos(width - 100, 4, 0);
         content.attach(rename);
         //only offered when the civics allow more than the plain Council
         java.util.List<CouncilLore.Flavour> styles = CouncilLore.available(Civics.client().of(own.getIdFaction()));
         GUITextButton style = FactionSettingsContent.button(getState(), 90, Lng.str("STYLE"), GUITextButton.ColorPalette.NEUTRAL,
                 () -> editor(own) && styles.size() > 1, () -> pickStyle(styles, flavour));
-        style.setPos(WIDTH - 196, 4, 0);
+        style.setPos(width - 196, 4, 0);
         content.attach(style);
-        GUIAnchor loreBox = new GUIAnchor(getState(), WIDTH - 20, 40);
+        GUIAnchor loreBox = new GUIAnchor(getState(), width - 20, 40);
         GUITextOverlay lore = st.suspended()
                 ? text(getState(), 14, ORANGE, Lng.str("Suspended while the faction had no active member. It resumes within a minute, its deadlines moved on by the time away."))
                 : text(getState(), 14, DIM, CouncilLore.lore(flavour));
         lore.autoWrapOn = loreBox;
         lore.setPos(8, 30, 0);
         content.attach(title);
-        aligned(shaped, WIDTH - 208, 8, 1);
+        aligned(shaped, width - 208, 8, 1);
         content.attach(lore);
 
         //the ring itself: a dotted circle, then the seats round it
@@ -230,12 +243,12 @@ public class CouncilContent extends GUIAnchor {
         IntFunction<String> names = this::factionName;
         int x = DETAIL_X;
         int y = RING_TOP;
-        GUIColoredRectangle bg = new GUIColoredRectangle(getState(), DETAIL_W, 600, new Vector4f(CARD));
+        GUIColoredRectangle bg = new GUIColoredRectangle(getState(), detailW, detailH, new Vector4f(CARD));
         bg.setPos(x, y, 0);
         content.attach(bg);
         x += 16;
         y += 14;
-        int w = DETAIL_W - 32;
+        int w = detailW - 32;
         y = line(text(getState(), 14, accent, CouncilLore.seat(flavour, seat.archetype).toUpperCase(java.util.Locale.ROOT)), x, y, 18);
         if (!seat.held()) {
             int at = selected;

@@ -3,10 +3,7 @@ package videogoose.betterfactions;
 import api.common.GameCommon;
 import org.schema.schine.resource.tag.Tag;
 import videogoose.betterfactions.battle.BattleTracker;
-import videogoose.betterfactions.civics.Civics;
-import videogoose.betterfactions.civics.Corporations;
-import videogoose.betterfactions.civics.Council;
-import videogoose.betterfactions.civics.Senate;
+import videogoose.betterfactions.civics.*;
 import videogoose.betterfactions.repair.FactionDesigns;
 import videogoose.betterfactions.fleet.FleetIntercepts;
 import videogoose.betterfactions.repair.ShipyardRepairs;
@@ -56,6 +53,14 @@ public final class BFStore {
 
 	public static void save(ShipyardRepairs r) {
 		write("repairs", r.toTag());
+	}
+
+	public static void load(videogoose.betterfactions.fleet.TradeFleetOrders t) {
+		read("tradefleets", t::fromTag);
+	}
+
+	public static void save(videogoose.betterfactions.fleet.TradeFleetOrders t) {
+		write("tradefleets", t.toTag());
 	}
 
 	public static void load(FleetIntercepts i) {
@@ -112,6 +117,22 @@ public final class BFStore {
 
 	public static void save(Council c) {
 		write("council", c.toTag());
+	}
+
+	public static void load(Contracts c) {
+		read("contracts", c::fromTag);
+	}
+
+	public static void save(Contracts c) {
+		write("contracts", c.toTag());
+	}
+
+	public static void load(videogoose.betterfactions.trade.RouteSafety r) {
+		read("routesafety", r::fromTag);
+	}
+
+	public static void save(videogoose.betterfactions.trade.RouteSafety r) {
+		write("routesafety", r.toTag());
 	}
 
 	public static void load(Corporations c) {

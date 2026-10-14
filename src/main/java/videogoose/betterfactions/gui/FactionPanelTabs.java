@@ -1618,7 +1618,11 @@ public class FactionPanelTabs implements GUIActiveInterface {
                         return b.toString();
                     }
                     b.append(BREAK);
-                    switch (getState().getFactionManager().getRelation(viewing.getIdFaction(), f.getIdFaction())) {
+                    int fired = DiplomacyManager.client().skirmishAggressor(viewing.getIdFaction(), f.getIdFaction());
+                    if (fired != 0) {
+                        b.append(fired == f.getIdFaction() ? Lng.str("Skirmishing with %s, who they fired on without a war.", viewing.getName())
+                                : Lng.str("Skirmishing with %s, who fired on them without a war.", viewing.getName()));
+                    } else switch (getState().getFactionManager().getRelation(viewing.getIdFaction(), f.getIdFaction())) {
                         case ENEMY:
                             b.append(Lng.str("At war with %s.", viewing.getName()));
                             break;
@@ -1634,7 +1638,13 @@ public class FactionPanelTabs implements GUIActiveInterface {
                     b.append(Lng.str("Power: %s vs %s's %s   %s", Math.round(FactionStrength.of(f)), viewing.getName(),
                             Math.round(FactionStrength.of(viewing)), powerBreakdown(f)));
                 } else {
-                    switch (getOwnRelationTo(f)) {
+                    int own = getState().getPlayer().getFactionId();
+                    int fired = own != 0 ? DiplomacyManager.client().skirmishAggressor(own, f.getIdFaction()) : 0;
+                    if (fired != 0) {
+                        b.append(fired == f.getIdFaction()
+                                ? Lng.str("Skirmish: they fired on you without a war. Neutral again once the fighting stops, unless you declare war; you hold a casus belli.")
+                                : Lng.str("Skirmish: you fired on them without a war. Neutral again once the fighting stops, unless war is declared."));
+                    } else switch (getOwnRelationTo(f)) {
                         case ENEMY:
                             b.append(Lng.str("At war with you."));
                             break;
