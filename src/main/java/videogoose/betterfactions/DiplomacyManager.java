@@ -49,6 +49,7 @@ import videogoose.betterfactions.repair.FactionDesigns;
 import videogoose.betterfactions.civics.Civics;
 import videogoose.betterfactions.civics.CivicRegistry;
 import videogoose.betterfactions.civics.Senate;
+import videogoose.betterfactions.civics.Council;
 import videogoose.betterfactions.gui.CivicChooser;
 import videogoose.betterfactions.fleet.FleetIntercepts;
 import videogoose.betterfactions.repair.ShipyardRepairs;
@@ -424,6 +425,8 @@ public final class DiplomacyManager extends Observable {
 			case SENATE_RULES -> Civics.server().setSenateRules(sender, tag);
 			case SENATE_LEADER -> Senate.server().lead(sender, tag, this::senateCarrier);
 			case SENATE_BALLOT -> Senate.server().cast(sender, tag, this::senateCarrier);
+			case COUNCIL_ACTION -> Council.server().action(sender, tag);
+			case COUNCIL_PROPOSE -> Council.server().propose(sender, tag);
 			case GIFT -> giftServer(sender, tag.getInt());
 			case FABRICATE_CLAIM -> fabricateClaimServer(sender, tag.getInt());
 			case REPAIR_CANCEL -> ShipyardRepairs.get().cancel(sender, tag.getString());
@@ -531,6 +534,7 @@ public final class DiplomacyManager extends Observable {
 				Senate.client().received(tag);
 				changed();
 			}
+			case COUNCIL -> Council.client().received(tag);
 			case CIVICS -> {
 				Civics.client().fromTag(tag);
 				changed();
@@ -595,6 +599,7 @@ public final class DiplomacyManager extends Observable {
 		updateWarProgress(wall);
 		checkFederationVotes();
 		Senate.server().update(this::senateCarrier);
+		Council.server().update(wall);
 
 		if (!needsSnapshot.isEmpty()) {
 			Tag snapshot = null;
@@ -611,6 +616,7 @@ public final class DiplomacyManager extends Observable {
 				BFPacket.toPlayer(p, Kind.CIVICS, Civics.server().toTag());
 				BFPacket.toPlayer(p, Kind.POINT_MODS, pointMods.toTag());
 				Senate.server().sendTo(p);
+				Council.server().sendTo(p);
 				sendAllFederationsTo(p);
 				for (Faction f : fm().getFactionCollection()) {
 					diplomacyOf(f).onPlayerJoined(p);
@@ -636,6 +642,9 @@ public final class DiplomacyManager extends Observable {
 	public void onFactionDeleted(Faction f) {
 		FactionDesigns.server().onFactionDeleted(f.getIdFaction());
 		(onServer ? Civics.server() : Civics.client()).onFactionDeleted(f.getIdFaction());
+		if (onServer) {
+			Council.server().onDissolved(f.getIdFaction());
+		}
 		removeTreatiesOf(f.getIdFaction());
 		removeFederationsOf(f.getIdFaction());
 		emblems.remove(f.getIdFaction());
@@ -2544,6 +2553,9 @@ public final class DiplomacyManager extends Observable {
 	private void breakTreatyInForce(int a, int b, TreatyType type) {
 		history(a, b, Lng.str("%s broke the %s with %s.", getFactionName(a), type.getDisplayName(), getFactionName(b)));
 		removeTreaty(a, b, type.getId());
+		if (onServer) {
+			Council.server().onBroken(a, b, type.getId());
+		}
 		diplomacyAction(DiplomacyAction.DiplActionType.TREATY_BROKEN, b, a, type.getId());
 		releaseRelation(a, b, type);
 		if (onServer && type.getImplies() == FactionRelation.RType.FRIEND) {
@@ -3420,6 +3432,9 @@ public final class DiplomacyManager extends Observable {
                 history(offer.a, offer.b, Lng.str("The %s was renamed %s.", held.getDisplayName(), treaty.getDisplayName()));
             }
             addTreaty(treaty);
+            if (onServer && held == null) {
+                Council.server().onTreaty(offer.a, offer.b, type.getId());
+            }
         } else {
             clearImplyingTreaties(offer.a, offer.b);
         }
@@ -3736,6 +3751,10 @@ public final class DiplomacyManager extends Observable {
      */
     private java.util.function.Consumer<Senate.Vote> senateCarrier(int faction) {
         return v -> {
+            if (Council.isAct(v.act)) {
+                Council.server().carry(faction, v.act);
+                return;
+            }
             DiplomacyProposal p = new DiplomacyProposal();
             p.fromTagStructure(v.act);
             p.setInitiator(v.proposer);
@@ -3813,7 +3832,8 @@ public final class DiplomacyManager extends Observable {
      * less - half, a third - so standing cannot simply be bought outright.
      */
     private void giftServer(PlayerState sender, int target) {
-        Faction from = spender(sender, target, false, BFConfig.giftCost());
+        int cost = Council.server().cost(sender.getFactionId(), Council.DIPLOMACY, BFConfig.giftCost());
+        Faction from = spender(sender, target, false, cost);
         if (from == null) {
             return;
         }
@@ -3824,7 +3844,7 @@ public final class DiplomacyManager extends Observable {
         }
         DiplomacyEntity ledger = diplomacyOf(to).getEntity(from.getIdFaction());
         int gain = giftOpinion(BFConfig.giftOpinion(), ledger.getActionCount(DiplomacyAction.DiplActionType.GIFT));
-        spend(from, BFConfig.giftCost());
+        spend(from, cost);
         diplomacyAction(DiplomacyAction.DiplActionType.GIFT, target, from.getIdFaction());
         ledger.modPoints(gain);
         sender.sendServerMessagePlayerInfo(Lng.astr("%s accepted your gift: +%s opinion.", to.getName(), gain));
@@ -3884,19 +3904,20 @@ public final class DiplomacyManager extends Observable {
         }
         if (type == null) {
             //peace is free; a settlement is an offer like any treaty
-            return fk.action == DiplomacyProposal.Action.PROPOSE && isSettlement(fk) ? BFConfig.proposeTreatyCost() : 0;
+            return fk.action == DiplomacyProposal.Action.PROPOSE && isSettlement(fk) ? Council.server().cost(from.getIdFaction(), Council.PEACE, BFConfig.proposeTreatyCost()) : 0;
         }
         if (fk.action == DiplomacyProposal.Action.REVOKE) {
             //reopening trade is undoing your own sanction, not breaking your word
-            return hasTreaty(fk.a, fk.b, type.getId()) && !type.isSanction() ? BFConfig.breakTreatyCost() : 0;
+            return hasTreaty(fk.a, fk.b, type.getId()) && !type.isSanction() ? Council.server().cost(from.getIdFaction(), Council.INTRIGUE, BFConfig.breakTreatyCost()) : 0;
         }
         if (fk.action != DiplomacyProposal.Action.PROPOSE) {
             return 0;
         }
         if (type.getImplies() != FactionRelation.RType.ENEMY) {
-            return BFConfig.proposeTreatyCost();
+            return Council.server().cost(from.getIdFaction(), Council.PEACE, BFConfig.proposeTreatyCost());
         }
-        return BFConfig.declareWarCost() + (unjustWar(fk, from, type) ? BFConfig.unjustWarCost() : 0);
+        //the perk eases the declaring, not the price of an unjust war
+        return Council.server().cost(from.getIdFaction(), Council.WAR, BFConfig.declareWarCost()) + (unjustWar(fk, from, type) ? BFConfig.unjustWarCost() : 0);
     }
 
     /**

@@ -41,6 +41,7 @@ import videogoose.betterfactions.net.BFPacket;
 import videogoose.betterfactions.repair.FactionDesigns;
 import videogoose.betterfactions.civics.CivicRegistry;
 import videogoose.betterfactions.civics.Civics;
+import videogoose.betterfactions.civics.Council;
 import videogoose.betterfactions.civics.Senate;
 import videogoose.betterfactions.fleet.FleetIntercepts;
 import videogoose.betterfactions.repair.ShipyardRepairs;
@@ -111,6 +112,7 @@ public final class BetterFactions extends StarMod {
 			BFStore.save(FactionDesigns.server());
 			BFStore.save(Civics.server());
 			BFStore.save(Senate.server());
+			BFStore.save(Council.server());
 			BFStore.save(ShipyardRepairs.get());
 			BFStore.save(FleetIntercepts.get());
 			BFStore.save(Wrecks.get());
@@ -161,6 +163,8 @@ public final class BetterFactions extends StarMod {
 			BFStore.load(Civics.server());
 			Senate.server().clear();
 			BFStore.load(Senate.server());
+			Council.server().clear();
+			BFStore.load(Council.server());
 			ShipyardRepairs.reset();
 			BFStore.load(ShipyardRepairs.get());
 			FleetIntercepts.reset();
@@ -181,6 +185,7 @@ public final class BetterFactions extends StarMod {
 					BFStore.save(FactionDesigns.server());
 					BFStore.save(Civics.server());
 					BFStore.save(Senate.server());
+			BFStore.save(Council.server());
 					BFStore.save(ShipyardRepairs.get());
 					BFStore.save(FleetIntercepts.get());
 					BFStore.save(Wrecks.get());

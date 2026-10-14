@@ -77,6 +77,16 @@ public final class DiplomacyCommands {
 					videogoose.betterfactions.civics.Senate.paused = raw.length == 0 ? !videogoose.betterfactions.civics.Senate.paused : raw[0].equalsIgnoreCase("on");
 					ctx.reply("Senate votes are " + (videogoose.betterfactions.civics.Senate.paused ? "paused: passed votes wait for the leader, even the founder's own, until /senate_pause off." : "running again."));
 				}, CommandArg.string("onOff", "on").optional()));
+		StarLoader.registerCommand(mod, new Command("council_next", "",
+				"DEBUG: every empty seat on your faction's Council asks for its next agenda now, instead of in a day or two.",
+				ctx -> {
+					if (ctx.getSender() == null || ctx.getSender().getFactionId() == 0) {
+						ctx.reply("[ERROR] Run this as a player in a faction.");
+						return;
+					}
+					videogoose.betterfactions.civics.Council.server().hurry(ctx.getSender().getFactionId());
+					ctx.reply("[SUCCESS] Your Council's empty seats have asked.");
+				}));
 		StarLoader.registerCommand(mod, new Command("faction_npc_yield", "<npcFactionId> [on|off]",
 				"DEBUG: makes an NPC faction accept every demand made of it (treaties like vassalage, and terms it gives). NPC factions only; resets on restart.", DiplomacyCommands::npcYield,
 				CommandArg.integer("npcFactionId", "-10000000"), CommandArg.string("onOff", "on").optional()));

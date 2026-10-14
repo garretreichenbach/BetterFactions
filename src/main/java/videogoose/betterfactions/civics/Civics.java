@@ -174,6 +174,9 @@ public final class Civics {
         if (!adopt && CivicRegistry.SENATE.equals(id)) {
             Senate.server().onDissolved(f.getIdFaction());
         }
+        if (!adopt && CivicRegistry.COUNCIL.equals(id)) {
+            Council.server().onDissolved(f.getIdFaction());
+        }
         String name = CivicRegistry.nameOf(id);
         governanceNews(f, p.getName(), adopt ? Lng.str("The %s is founded", name) : Lng.str("The %s is dissolved", name),
                 adopt ? Lng.str("%s adopted the %s. %s", p.getName(), name, type.getDescription())

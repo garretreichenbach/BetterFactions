@@ -51,6 +51,8 @@ public final class BFPacket extends Packet {
 		GIFT, FABRICATE_CLAIM,
 		// client -> server: adopt or drop an institution; cast a Senate ballot. server -> client: the faction's open Senate votes
 		INSTITUTION_SET, SENATE_BALLOT, SENATE, SENATE_RULES, SENATE_LEADER,
+		// server -> client: the faction's Council. client -> server: back, refuse or choose an agenda; put an appointment to the Senate
+		COUNCIL, COUNCIL_ACTION, COUNCIL_PROPOSE,
 		// server -> client: one new line of the diplomatic history between two factions
 		HISTORY,
 		// server -> client: every faction's mod faction point lines from the last income turn

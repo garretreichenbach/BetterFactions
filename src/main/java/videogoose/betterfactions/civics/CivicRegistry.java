@@ -30,6 +30,7 @@ public final class CivicRegistry {
     public static final String HORDE_TACTICS = NAMESPACE + ":horde_tactics";
     public static final String FAMOUS_ADMIRALS = NAMESPACE + ":famous_admirals";
     public static final String SENATE = NAMESPACE + ":senate";
+    public static final String COUNCIL = NAMESPACE + ":council";
     public static final String INDUSTRIALIST = NAMESPACE + ":industrialist";
     public static final String RELIGIOUS = NAMESPACE + ":religious";
 
@@ -88,6 +89,8 @@ public final class CivicRegistry {
         //institutions: any number, each adding upkeep
         register(NAMESPACE, new CivicType.Builder("senate").displayName("Senate").institution()
                 .description("Our members sit as senators, and any of them may propose. Proposing, accepting or countering a treaty, declaring war and breaking a treaty all go to a Senate vote."));
+        register(NAMESPACE, new CivicType.Builder("council").displayName("Council").institution()
+                .description("A ring of councilors, each with an agenda of their own: goals against real factions, paid in faction points, fail or refuse one and we pay. Our civics decide who they are. With a Senate, members can be voted onto it."));
     }
 
     /**

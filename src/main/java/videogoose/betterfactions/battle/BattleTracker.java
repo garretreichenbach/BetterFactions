@@ -508,6 +508,7 @@ public final class BattleTracker {
 			return; //a turret is part of the ship it sits on, not a loss of its own; and neutrals are no side
 		}
 		Side side = battle.side(factionOf(battle, sc));
+		videogoose.betterfactions.civics.Council.server().onShipLost(battle.sides.keySet().toIntArray(), factionOf(battle, sc));
 		side.lost++;
 		side.lostRating += CombatRatings.rateWithDocks(sc);
 		note(battle, sc, true);

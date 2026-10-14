@@ -355,6 +355,13 @@ public class FactionPanelTabs implements GUIActiveInterface {
 					() -> getOwnPlayer().getFactionController().hasPermissionEditPermission(),
 					() -> new SenateRulesDialog(getState(), getOwnFaction()).activate());
 		}
+		if (held.contains(CivicRegistry.COUNCIL)) {
+			//the ring and its detail need the full width, so no summary beside it
+			GUIContentPane council = sub.addTab(Lng.str("COUNCIL"));
+			CouncilContent cc = new CouncilContent(getState(), this);
+			cc.onInit();
+			council.setContent(0, 0, cc);
+		}
 		sub.setSelectedTab(Math.min(wasSelected, sub.getTabs().size() - 1));
 
 		institutions.getContent(0, 0).attach(new GUIAnchor(getState(), 0, 0) {
