@@ -526,7 +526,7 @@ valuation after that investigation lands.
 and the inbox row renders the terms so an offer can be read before it is answered. The acceptance preview
 already round-trips through `QUERY`, so previewing a settlement is the same call with a longer payload.
 
-<!-- ponytail: terms are a list on the proposal and nothing else. Do not build an escrow, a staged-payment
+<!-- todo: terms are a list on the proposal and nothing else. Do not build an escrow, a staged-payment
      system, or a treaty-enforcement tick — everything applies at signing, and anything that genuinely
      recurs is a tributary treaty, which already exists. -->
 
@@ -610,7 +610,7 @@ turns on for their community, having decided they are willing to moderate it.
 Shipping the atlas first is still right: it makes the feature work with no moderation burden at all, and it
 is what every faction falls back to when an upload is removed or the setting is switched off.
 
-<!-- ponytail: the atlas is the whole feature; the upload path is an opt-in extra. Build the atlas, the
+<!-- todo: the atlas is the whole feature; the upload path is an opt-in extra. Build the atlas, the
      server flag and the admin removal together — an upload path without the removal is the part that
      becomes somebody's weekend. -->
 

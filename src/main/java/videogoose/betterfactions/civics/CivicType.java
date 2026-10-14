@@ -173,7 +173,7 @@ public final class CivicType {
     }
 
     /**
-     * The government this civic brings with it, or null. ponytail: a display name until government types
+     * The government this civic brings with it, or null. todo: a display name until government types
      * exist (#9), then a {@code GovernmentType} id.
      */
     public String getImpliesGovernment() {

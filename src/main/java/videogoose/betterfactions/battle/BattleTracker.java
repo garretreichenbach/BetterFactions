@@ -240,7 +240,7 @@ public final class BattleTracker {
 		String name;
 		/**
 		 * Every root ship and station seen fighting, by UID, as last seen: the full report's tables.
-		 * ponytail: not saved with the battle, so a fight carried over a restart reports only what it saw after.
+		 * todo: not saved with the battle, so a fight carried over a restart reports only what it saw after.
 		 */
 		final Object2ObjectOpenHashMap<String, BattleReports.Unit> units = new Object2ObjectOpenHashMap<>();
 
@@ -898,7 +898,7 @@ public final class BattleTracker {
 	/**
 	 * Settles an unloaded sector on paper. Strength is the sum of each faction's stored ratings for what
 	 * it has there (fleet members and anything else the database places in the sector), stations times
-	 * {@link #STATION_BONUS}. ponytail: an entity never seen loaded has no rating and counts nothing;
+	 * {@link #STATION_BONUS}. todo: an entity never seen loaded has no rating and counts nothing;
 	 * rate from its blueprint if NPC spawns start losing every paper battle.
 	 */
 	private void resolve(GameServerState state, Vector3i pos, long now) {
@@ -1535,7 +1535,7 @@ public final class BattleTracker {
 
 	/**
 	 * Folds {@code from}'s tallies into {@code into}, the battle next door it was part of.
-	 * ponytail: committed strength is summed, so a ship that crossed between the sectors counts twice.
+	 * todo: committed strength is summed, so a ship that crossed between the sectors counts twice.
 	 */
 	static void merge(Battle from, Battle into) {
 		for (Side f : from.sides.values()) {
@@ -1739,7 +1739,7 @@ public final class BattleTracker {
 	 * The report body. The winner is the one side with ships left in the sector that did not retreat
 	 * ({@link #holder}); with more than one, or none, whoever lost clearly less came off better
 	 * ({@link #favoured}), else it was inconclusive.
-	 * ponytail: "ships left" counts anything of theirs still there, not what fought. Track participants
+	 * todo: "ships left" counts anything of theirs still there, not what fought. Track participants
 	 * if a parked station starts deciding battles.
 	 */
 	static String summarize(Battle b, IntFunction<String> name, long now) {

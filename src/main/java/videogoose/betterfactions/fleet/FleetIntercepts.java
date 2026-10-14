@@ -172,7 +172,7 @@ public final class FleetIntercepts {
 		Map<Long, Jammer> now = new HashMap<>();
 		for (Fleet f : state.getFleetManager().fleetCache.values()) {
 			FleetMember flag = f.getFlagShip();
-			// ponytail: unloaded flagships count as not jamming, their jammer isn't simulated
+			// todo: unloaded flagships count as not jamming, their jammer isn't simulated
 			if (flag != null && flag.getLoaded() instanceof Ship s && s.isJammingFor(null)) {
 				now.put(f.dbid, new Jammer(VoidSystem.getContainingSystem(flag.getSector(), new Vector3i()), s.getStealthStrength()));
 			}
@@ -185,7 +185,7 @@ public final class FleetIntercepts {
 		recon = new HashMap<>();
 		shared = new HashMap<>();
 		if (!now.isEmpty()) {
-			// ponytail: raw scanner strength over the whole system, no range falloff; vanilla's falloff is sector-local
+			// todo: raw scanner strength over the whole system, no range falloff; vanilla's falloff is sector-local
 			Vector3i sector = new Vector3i();
 			for (SegmentController sc : state.getSegmentControllersByName().values()) {
 				float strength = sc.getFactionId() == 0 ? 0 : sc.getReconStrengthRaw();

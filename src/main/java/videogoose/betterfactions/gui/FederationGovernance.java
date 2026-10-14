@@ -165,7 +165,7 @@ public class FederationGovernance extends GUIAnchor {
     /**
      * A button that shows the rule in force and steps to the next value on a click.
      *
-     * <p>ponytail: a cycling button rather than a dropdown - every list here has two to four
+     * <p>todo: a cycling button rather than a dropdown - every list here has two to four
      * values. Swap for a dropdown if one grows past that.</p>
      */
     private GUITextButton cycle(Supplier<String> value, Runnable next) {

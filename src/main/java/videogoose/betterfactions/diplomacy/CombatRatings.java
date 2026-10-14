@@ -63,7 +63,7 @@ public final class CombatRatings {
      * <p>Block counts throughout, which keeps it free of the engine's config scales, except that
      * offence is scaled by {@code powered}: the share of its guns the reactor can keep firing (see
      * {@link #reactorGate}). A ship with more guns than its reactor can feed is rated by the guns it can
-     * feed. ponytail: thrust is not read; a brick that cannot close the distance still rates.</p>
+     * feed. todo: thrust is not read; a brick that cannot close the distance still rates.</p>
      *
      * @param weapons output blocks of every damaging weapon (cannon barrels, missile tubes, beam modules)
      * @param shields shield capacitor plus recharger blocks
@@ -214,7 +214,7 @@ public final class CombatRatings {
     /**
      * Rates one entity's blueprint (its own blocks, not its docked children, which are spawned and rated
      * as entities of their own, as loaded turrets are). Same block counts as {@link #rate(SegmentController)},
-     * shields read as capacitor and recharger blocks. ponytail: no reactor gate, since a blueprint has no
+     * shields read as capacitor and recharger blocks. todo: no reactor gate, since a blueprint has no
      * calculated power; it is only a stand-in until the entity is first loaded and rated properly.
      */
     public static double rateBlueprint(ElementCountMap counts) {

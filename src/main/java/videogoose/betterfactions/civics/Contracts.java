@@ -367,7 +367,7 @@ public final class Contracts {
             c.posterFaction = faction;
             c.posterName = f.getName();
             c.target = killer.getName();
-            //ponytail: NPC money lives in their homebase shop, unloaded most of the time; their bounties are minted.
+            //todo: NPC money lives in their homebase shop, unloaded most of the time; their bounties are minted.
             //Debit the homebase when it is loaded if NPC rewards turn out to flood the economy.
             c.reward = npcBounty(BFConfig.npcBountyReward(), prior + 1);
             c.posted = now;

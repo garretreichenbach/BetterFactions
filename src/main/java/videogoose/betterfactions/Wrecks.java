@@ -30,7 +30,7 @@ public final class Wrecks {
     private static Wrecks instance = new Wrecks();
 
     private final Set<String> wrecks = new HashSet<>();
-    /** Turret UID to the UID of the root it was knocked off. ponytail: not saved; a restart forgets them. */
+    /** Turret UID to the UID of the root it was knocked off. todo: not saved; a restart forgets them. */
     private final Map<String, String> knockedOff = new HashMap<>();
 
     public static Wrecks get() {
@@ -100,7 +100,7 @@ public final class Wrecks {
     private void removeKnockedOff(String rootUid) {
         for (String uid : takeKnockedOff(rootUid)) {
             Sendable s = GameServerState.instance.getLocalAndRemoteObjectContainer().getUidObjectMap().get(uid);
-            //ponytail: only loaded ones; a turret that drifted into an unloaded sector stays
+            //todo: only loaded ones; a turret that drifted into an unloaded sector stays
             if (s instanceof SegmentController t && !t.railController.isDocked()
                     && !(t instanceof Ship ts && !ts.getAttachedPlayers().isEmpty())) {
                 t.railController.destroyDockedRecursive();

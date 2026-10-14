@@ -167,7 +167,7 @@ public final class ShipyardRepairs {
 
 		/**
 		 * Beside the yard, off its side across the axis, so neither the way in nor the way out runs through the fleet.
-		 * ponytail: fixed distances; size them from the fleets' formations if big fleets still crowd the yard.
+		 * todo: fixed distances; size them from the fleets' formations if big fleets still crowd the yard.
 		 */
 		private Vector3f parkingSpot() {
 			Vector3i min = new Vector3i(), max = new Vector3i();
@@ -278,7 +278,7 @@ public final class ShipyardRepairs {
 		/**
 		 * The first entity, other than the yard and anything docked to it or to the ship, that sits in the corridor between
 		 * the ship and where it is being led: the ship holds until it clears rather than being flown into it.
-		 * ponytail: bounding spheres, so a big entity just off the axis can hold it too; swept boxes if that bites.
+		 * todo: bounding spheres, so a big entity just off the axis can hold it too; swept boxes if that bites.
 		 */
 		private String blocker(Ship ship, Vector3f target) {
 			Vector3f from = ship.getWorldTransform().origin;
@@ -386,7 +386,7 @@ public final class ShipyardRepairs {
 	final Map<String, Yard> yards = new LinkedHashMap<>();
 	/**
 	 * Fleet dbid -> what it was doing before it was sent to a yard, given back once its last ship is done.
-	 * ponytail: not saved, so a fleet mid-repair over a restart just stays at the yard; save it with the queue if that bites.
+	 * todo: not saved, so a fleet mid-repair over a restart just stays at the yard; save it with the queue if that bites.
 	 */
 	private final Map<Long, FleetCommand> previousOrders = new HashMap<>();
 	/** Station UID -> its shipyard computer's block index, as last seen loaded: where an unloaded repair pays from. */
@@ -652,7 +652,7 @@ public final class ShipyardRepairs {
 		Vector3i min = new Vector3i(), max = new Vector3i();
 		scm.getYardBounds(min, max);
 		float length = max.getCoord(axis) - min.getCoord(axis) + 1;
-		//ponytail: rough pre-check, longest side against the yard's length; the yard measures it exactly once docked
+		//todo: rough pre-check, longest side against the yard's length; the yard measures it exactly once docked
 		if (2 * halfSize(ship) > length) {
 			drop(state, y, e, Lng.str("%s is too large for the shipyard at %s and was skipped.", e.name, y.stationName));
 			return;
@@ -701,7 +701,7 @@ public final class ShipyardRepairs {
 	/**
 	 * The rest of a fleet holds formation around its flagship, so a flagship flying into the yard would drag them all in
 	 * after it: the next ship in the fleet leads while it is away. {@link #rejoin} puts the rebuilt ship back in its place.
-	 * ponytail: a repair that fails leaves the old flagship at the back; the player can reorder the fleet by hand.
+	 * todo: a repair that fails leaves the old flagship at the back; the player can reorder the fleet by hand.
 	 */
 	private static void handOverFlagship(Ship ship) {
 		Fleet fleet = ship.getFleet();
@@ -911,7 +911,7 @@ public final class ShipyardRepairs {
 	 * Server: the shipyard's "Inputs Needed" while it has no build of its own on: the components the ships still queued
 	 * at its station need, each its blueprint's less what its old ship gives back, and how many of them the yard and its
 	 * connected chests hold. Null if nothing is queued there.
-	 * ponytail: one ship's refund is not counted towards the next's cost, so the total can read a little high.
+	 * todo: one ship's refund is not counted towards the next's cost, so the total can read a little high.
 	 */
 	public ElementCountMap[] queuedGoal(ShipyardCollectionManager scm) {
 		Yard y = yards.get(scm.getSegmentController().getUniqueIdentifier());
@@ -1149,7 +1149,7 @@ public final class ShipyardRepairs {
 		return state.getSegmentControllersByName().get(uid) instanceof Ship s ? s : null;
 	}
 
-	/** The station's first shipyard that can take an order now. ponytail: one yard per station serves its queue. */
+	/** The station's first shipyard that can take an order now. todo: one yard per station serves its queue. */
 	static ShipyardCollectionManager workingYard(SegmentController station) {
 		if (!(station instanceof ManagedSegmentController<?> m) || !(m.getManagerContainer() instanceof ShipyardManagerContainerInterface c)) {
 			return null;

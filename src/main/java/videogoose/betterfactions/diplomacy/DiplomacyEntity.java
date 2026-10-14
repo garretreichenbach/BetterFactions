@@ -42,7 +42,7 @@ public class DiplomacyEntity implements LogInterface {
      * How much stronger, in doublings ({@link #getRelativeStrength()}), a target may be before an NPC
      * will not declare war on it even with a casus belli. 0.5 is roughly 1.4x our strength.
      */
-    // ponytail: flat for every archetype; move into DiplomacyConfig if archetypes need different nerve
+    // todo: flat for every archetype; move into DiplomacyConfig if archetypes need different nerve
     private static final double MAX_WAR_ODDS = 0.5;
     private static final long TRUST_HOUR_MS = 60L * 60L * 1000L;
     /**
@@ -912,7 +912,7 @@ public class DiplomacyEntity implements LogInterface {
         //it only declares one it can justify
         List<SettlementTerm> goals = List.of();
         if (type != null && type.getImplies() == FactionRelation.RType.ENEMY) {
-            //ponytail: flat ask of one declaration's cost; peace talks price the real amount
+            //todo: flat ask of one declaration's cost; peace talks price the real amount
             goals = List.of(SettlementTerm.points((int) dbId, videogoose.betterfactions.BFConfig.declareWarCost()));
             if (!hasCasusBelli(goals, null)) {
                 return false;

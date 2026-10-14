@@ -98,7 +98,7 @@ public final class BattleReports {
 
 	/**
 	 * Server: reports named {@code base}, numbered or not; what {@link BattleNames#numbered} counts.
-	 * ponytail: only the {@link #KEPT} newest are counted, so a name worn out long ago starts over.
+	 * todo: only the {@link #KEPT} newest are counted, so a name worn out long ago starts over.
 	 */
 	synchronized int countNamed(String base) {
 		int n = 0;

@@ -11,7 +11,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * Who the Council is, by the faction's civics: its name, its lore, what its seats are called and how its
  * councilors speak. Words only; what a seat asks for is its role's directives ({@link Directive}).
  *
- * <p>ponytail: tables in code, not data; move to {@code council.xml} when servers want their own.</p>
+ * <p>todo: tables in code, not data; move to {@code council.xml} when servers want their own.</p>
  */
 public final class CouncilLore {
 

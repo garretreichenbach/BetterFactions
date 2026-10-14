@@ -384,7 +384,7 @@ public class DiplomacyProposeDialog extends PlayerInput {
     /**
      * Every term on offer from here, as picker entries.
      *
-     * <p>ponytail: faction points come in preset amounts rather than a typed number; a number field is
+     * <p>todo: faction points come in preset amounts rather than a typed number; a number field is
      * the upgrade if the presets turn out too coarse.</p>
      */
     private List<SettlementTerm> termChoices() {

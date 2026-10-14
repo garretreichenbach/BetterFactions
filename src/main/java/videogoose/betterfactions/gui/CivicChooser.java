@@ -175,7 +175,7 @@ public final class CivicChooser {
             count.setPos(220, 40, 0);
             body.attach(count);
 
-            //ponytail: no scrolling; 3 columns x 8 rows fit, which is more than the 16 there are. Scroll when mods add enough to overflow
+            //todo: no scrolling; 3 columns x 8 rows fit, which is more than the 16 there are. Scroll when mods add enough to overflow
             int cw = (left - GAP * (COLUMNS - 1)) / COLUMNS;
             for (int i = 0; i < shown.size(); i++) {
                 GUIAnchor card = card(shown.get(i), cw);

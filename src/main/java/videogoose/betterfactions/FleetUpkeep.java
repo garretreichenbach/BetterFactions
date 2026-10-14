@@ -25,7 +25,7 @@ public final class FleetUpkeep {
 
     private static FleetUpkeep instance = new FleetUpkeep();
 
-    /** Entity UID to its last known mass, docks excluded (they ride on the root). ponytail: never pruned. */
+    /** Entity UID to its last known mass, docks excluded (they ride on the root). todo: never pruned. */
     private final Map<String, Double> masses = new HashMap<>();
 
     public static FleetUpkeep get() {

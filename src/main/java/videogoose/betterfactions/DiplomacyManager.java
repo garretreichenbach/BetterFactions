@@ -1237,7 +1237,7 @@ public final class DiplomacyManager extends Observable {
                 System.err.println("[BetterFactions] rated " + n + " never-loaded NPC entities from their blueprints");
             }
         }
-        //ponytail: one database query per rated faction per sweep; round-robin them if that ever
+        //todo: one database query per rated faction per sweep; round-robin them if that ever
         //shows up in a tick profile
         java.sql.Connection db = ((videogoose.betterfactions.mixin.TableAccessor) s.getDatabaseIndex().getTableManager().getEntityTable()).betterFactions$connection();
         for (int f : combatRatings.ratedFactions()) {
@@ -1431,7 +1431,7 @@ public final class DiplomacyManager extends Observable {
 						getFactionName(treaty.from), Math.round(treaty.progress * 100), getFactionName(treaty.to), Math.round((1 - treaty.progress) * 100))
 						: Lng.str("%s ended after %s.", treaty.getDisplayName(), lasted));
 			}
-			//ponytail: ahead at the end is a win, however slim; add a margin if close wars count too easily
+			//todo: ahead at the end is a win, however slim; add a margin if close wars count too easily
 			if (removed && TreatyTypeRegistry.WAR.equals(treaty.typeId) && treaty.progress != 0.5f) {
 				Civics.server().recordWarWon(treaty.progress > 0.5f ? treaty.from : treaty.to);
 			}
@@ -1582,7 +1582,7 @@ public final class DiplomacyManager extends Observable {
     }
 
     /**
-     * Every embargo in force. ponytail: a scan of every pair's treaties, which are counted in the
+     * Every embargo in force. todo: a scan of every pair's treaties, which are counted in the
      * hundreds at most; index embargoes by declarer if a shop screen ever shows up in a profile.
      */
     private List<FactionTreaty> embargoes() {
@@ -3202,7 +3202,7 @@ public final class DiplomacyManager extends Observable {
      * first, or it would go on running a system it no longer owns; that despawns what it had there. The
      * claim is queued with no claiming station, so it stands until the receiver loses it the ordinary
      * ways (debt, or a claim over it) rather than when one station dies.
-     * ponytail: a player giver's claiming station stays the giver's, now in the receiver's space; hand it
+     * todo: a player giver's claiming station stays the giver's, now in the receiver's space; hand it
      * over too if that turns out to matter.
      */
     private void cedeSystem(int giver, int receiver, Vector3i system) {
@@ -3447,7 +3447,7 @@ public final class DiplomacyManager extends Observable {
                     joinWar(victim, partner, aggressor);
                     continue;
                 }
-                //ponytail: keyed on the victim->partner pair like any offer, so it replaces a pending
+                //todo: keyed on the victim->partner pair like any offer, so it replaces a pending
                 //offer the victim made the partner. Give calls their own map if that ever bites.
                 DiplomacyProposal call = new DiplomacyProposal();
                 call.set(getFactionName(victim), victim, partner, TreatyTypeRegistry.WAR, FactionRelation.RType.ENEMY.code,
@@ -3720,7 +3720,7 @@ public final class DiplomacyManager extends Observable {
 	 * Either side: "Name (x, y, z)", or "Void (x, y, z)" where it has no star. Galaxy names come from
 	 * the seed, so a client knows them without ever having been there.
 	 *
-	 * <p>ponytail: a client only names systems in its current galaxy; elsewhere it shows coordinates.</p>
+	 * <p>todo: a client only names systems in its current galaxy; elsewhere it shows coordinates.</p>
 	 */
 	public static String systemLabel(Vector3i system) {
 		Galaxy galaxy = null;

@@ -128,7 +128,7 @@ public final class Templates {
      * A template's weight: a base times each modifier whose condition holds on its side. A multiplied 0
      * stays 0, so a modifier on a base-0 weight first makes it 1: base 0 means "only when a modifier says so".
      *
-     * <p>ponytail: simple product; swap for additive scoring if packs find it hard to tune.</p>
+     * <p>todo: simple product; swap for additive scoring if packs find it hard to tune.</p>
      */
     public static final class Weight {
         public final double base;

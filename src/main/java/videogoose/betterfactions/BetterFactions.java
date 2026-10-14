@@ -256,7 +256,7 @@ public final class BetterFactions extends StarMod {
                 //a raid takes what the convoy's ship carried
                 videogoose.betterfactions.fleet.TradeFleetOrders.get().onOverheat(GameServerState.instance, sc);
                 int us = damager != null ? damager.getFactionId() : 0;
-                //ponytail: any root entity counts, however small; a minimum mass if one-block ships get farmed past the cap
+                //todo: any root entity counts, however small; a minimum mass if one-block ships get farmed past the cap
                 if (us != 0 && us != sc.getFactionId() && BattleTracker.root(sc)) {
                     CivicPayouts.server().fire(new CivicPayouts.CivicEvent(CivicPayouts.Event.SHIP_DESTROYED, us, sc.getFactionId(),
                             null, null, sc.getSector(new Vector3i()), null));
@@ -322,7 +322,7 @@ public final class BetterFactions extends StarMod {
 
         //better prices at a trade partner's shops, worse at one that put tariffs on you; server side only
         ShopPriceListener.TYPE.register((player, shop, type, price, playerBuys) -> {
-            //ponytail: priced, not completed - a trade that then falls through still counts against the
+            //todo: priced, not completed - a trade that then falls through still counts against the
             //trader; hook the buy itself if that turns out to matter
             DiplomacyManager.server().tradedBetween(shop.getFactionId(), player.getFactionId());
             int adjusted = DiplomacyManager.server().shopPrice(shop.getFactionId(), player.getFactionId(), price, playerBuys);

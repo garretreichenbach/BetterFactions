@@ -2,6 +2,8 @@ package videogoose.betterfactions.mixin;
 
 import org.schema.game.common.controller.SegmentController;
 import org.schema.game.common.data.fleet.FleetMember;
+import org.schema.game.server.controller.BluePrintController;
+import org.schema.game.server.data.blueprintnw.BlueprintEntry;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -39,11 +41,29 @@ public abstract class FleetMemberMassMixin {
 		return m;
 	}
 
-	/** A member read from the database has no mass until its ship loads; start it at the last one seen. */
+	/**
+	 * A member read from the database has no mass until its ship loads; start it at the last one seen. A ship
+	 * never seen loaded (spawned straight into the database) falls back to the blueprint it was spawned from.
+	 */
 	@Inject(method = "<init>(Lorg/schema/game/server/data/GameServerState;JLjava/lang/String;Ljava/lang/String;Lorg/schema/common/util/linAlg/Vector3i;JJ)V",
 			at = @At("RETURN"))
 	private void betterFactions$savedMass(CallbackInfo ci) {
-		lastMass = FleetUpkeep.get().massOf(((FleetMember) (Object) this).UID);
+		FleetMember self = (FleetMember) (Object) this;
+		lastMass = FleetUpkeep.get().massOf(self.UID);
+		if (lastMass <= 0 && self.name != null) {
+			lastMass = blueprintMass(self.name);
+		}
+	}
+
+	/** todo: guesses by the spawn naming "<blueprint>_<millis>"; a renamed ship stays 0 until it loads. */
+	private static double blueprintMass(String shipName) {
+		String bp = shipName.replaceFirst("_\\d+$", "");
+		for (BlueprintEntry e : BluePrintController.active.readBluePrints()) {
+			if (e.getName().equals(bp)) {
+				return e.getMass();
+			}
+		}
+		return 0;
 	}
 
 	/**

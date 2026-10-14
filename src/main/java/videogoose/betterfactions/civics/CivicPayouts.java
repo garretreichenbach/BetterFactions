@@ -103,7 +103,7 @@ public final class CivicPayouts {
 
     private static final CivicPayouts SERVER = new CivicPayouts();
 
-    /** Player name to when they joined their faction; since the server started. ponytail: lost on restart, so a restart makes everyone a veteran. */
+    /** Player name to when they joined their faction; since the server started. todo: lost on restart, so a restart makes everyone a veteran. */
     private final Map<String, Long> joined = new HashMap<>();
     /** Killer faction and victim name to when the kill last paid. */
     private final Map<String, Long> lastKill = new HashMap<>();

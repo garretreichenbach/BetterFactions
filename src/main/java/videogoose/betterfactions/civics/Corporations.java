@@ -624,7 +624,7 @@ public final class Corporations {
     /** A station or planet the faction owns, by uid. */
     /**
      * A shipyard on the station, or on any plate of the planet, as loaded now; an unloaded station counts by the
-     * shipyard last seen on it as it unloaded. ponytail: an unloaded planet is not known, so it must be loaded.
+     * shipyard last seen on it as it unloaded. todo: an unloaded planet is not known, so it must be loaded.
      */
     private static boolean hasShipyard(FactionAssets.Asset a) {
         boolean planet = FactionAssets.isPlanet(a.type);

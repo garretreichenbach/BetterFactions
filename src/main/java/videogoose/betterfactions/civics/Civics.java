@@ -30,7 +30,7 @@ import java.util.Set;
  * Every faction's {@link FactionCivics}. One instance per side; the server's is saved by {@code BFStore}.
  *
  * <p>Clients get every faction's civics, not only their own: the names are public (other factions see
- * them on the diplomacy tab) and nothing else held here is secret yet. ponytail: when per-civic private
+ * them on the diplomacy tab) and nothing else held here is secret yet. todo: when per-civic private
  * data arrives (directives, phase 4), send that part to members only.</p>
  */
 public final class Civics {
@@ -435,7 +435,7 @@ public final class Civics {
     public static void governanceNews(Faction f, String author, String title, String body) {
         FactionNewsPost post = new FactionNewsPost();
         post.set(f.getIdFaction(), author, System.currentTimeMillis(), title, body, 0);
-        //ponytail: the engine's categories have no governance; GENERAL until one is added there
+        //todo: the engine's categories have no governance; GENERAL until one is added there
         post.setCategory(FactionNewsCategory.GENERAL);
         GameServerState.instance.getFactionManager().addNewsPostServer(post);
     }
