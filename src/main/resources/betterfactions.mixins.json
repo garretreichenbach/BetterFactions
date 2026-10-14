@@ -50,6 +50,7 @@
 		"FactionAccessor",
 		"SpiceDealerUpkeepMixin",
 		"WreckOverheatMixin",
+		"ReactorLostOverheatMixin",
 		"TurretKnockedOffMixin",
 		"FleetUpkeepMixin",
 		"ShopEmbargoMixin",
