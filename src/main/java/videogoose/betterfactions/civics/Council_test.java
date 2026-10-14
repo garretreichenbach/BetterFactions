@@ -98,10 +98,10 @@ public final class Council_test {
         FactionCivics both = new FactionCivics();
         both.civics.add(CivicRegistry.WARRIOR_CODE);
         both.civics.add(CivicRegistry.RELIGIOUS);
-        assert CouncilLore.available(both).equals(java.util.List.of(CouncilLore.Flavour.MOOT, CouncilLore.Flavour.SHADOW, CouncilLore.Flavour.COUNCIL));
-        assert CouncilLore.of(both, "") == CouncilLore.Flavour.MOOT : "unchosen: the first shaping civic in slot order";
+        assert CouncilLore.available(both).equals(java.util.List.of(CouncilLore.Flavour.JUNTA, CouncilLore.Flavour.SHADOW, CouncilLore.Flavour.COUNCIL));
+        assert CouncilLore.of(both, "") == CouncilLore.Flavour.JUNTA : "unchosen: the first shaping civic in slot order";
         assert CouncilLore.of(both, "SHADOW") == CouncilLore.Flavour.SHADOW && CouncilLore.of(both, "COUNCIL") == CouncilLore.Flavour.COUNCIL;
-        assert !CouncilLore.allowed(both, "BOARD") && CouncilLore.of(both, "BOARD") == CouncilLore.Flavour.MOOT : "a style whose civic is not held falls back";
+        assert !CouncilLore.allowed(both, "BOARD") && CouncilLore.of(both, "BOARD") == CouncilLore.Flavour.JUNTA : "a style whose civic is not held falls back";
         assert CouncilLore.allowed(both, "") && !CouncilLore.allowed(both, "NONSENSE");
         Council.State styled = new Council.State();
         styled.style = "SHADOW";

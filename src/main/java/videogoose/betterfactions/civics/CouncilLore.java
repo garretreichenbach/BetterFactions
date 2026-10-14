@@ -19,7 +19,7 @@ public final class CouncilLore {
     }
 
     public enum Flavour {
-        COUNCIL, SHADOW, BOARD, MOOT
+        COUNCIL, SHADOW, BOARD, JUNTA
     }
 
     /** The styles the faction's civics allow: each shaping civic's, in slot order, then the plain Council. */
@@ -28,7 +28,7 @@ public final class CouncilLore {
         for (String id : c.civics) {
             Flavour f = CivicRegistry.RELIGIOUS.equals(id) ? Flavour.SHADOW
                     : CivicRegistry.CORPORATE_CHAINS.equals(id) ? Flavour.BOARD
-                    : CivicRegistry.WARRIOR_CODE.equals(id) ? Flavour.MOOT : null;
+                    : CivicRegistry.WARRIOR_CODE.equals(id) ? Flavour.JUNTA : null;
             if (f != null && !out.contains(f)) {
                 out.add(f);
             }
@@ -58,7 +58,7 @@ public final class CouncilLore {
         return switch (f) {
             case SHADOW -> CivicRegistry.nameOf(CivicRegistry.RELIGIOUS);
             case BOARD -> CivicRegistry.nameOf(CivicRegistry.CORPORATE_CHAINS);
-            case MOOT -> CivicRegistry.nameOf(CivicRegistry.WARRIOR_CODE);
+            case JUNTA -> CivicRegistry.nameOf(CivicRegistry.WARRIOR_CODE);
             case COUNCIL -> Lng.str("no civic");
         };
     }
@@ -67,7 +67,7 @@ public final class CouncilLore {
         return switch (f) {
             case SHADOW -> Lng.str("The Dark Shadow Council");
             case BOARD -> Lng.str("The Board");
-            case MOOT -> Lng.str("The War Cabinet");
+            case JUNTA -> Lng.str("Military Junta");
             case COUNCIL -> Lng.str("The Council");
         };
     }
@@ -76,7 +76,7 @@ public final class CouncilLore {
         return switch (f) {
             case SHADOW -> Lng.str("We do not meet the Shadow Council. We commune with it: psionic beings from beyond the veil of the world, who speak through our priests in trance.");
             case BOARD -> Lng.str("Directors with a seat for every major shareholder. They meet each quarter and expect returns.");
-            case MOOT -> Lng.str("Old captains who earned their seats in battle. They meet around a fire and speak plainly.");
+            case JUNTA -> Lng.str("Old captains who earned their seats in battle. They meet around a fire and speak plainly.");
             case COUNCIL -> Lng.str("Advisors from the great houses of our faction meet in the high chamber.");
         };
     }
@@ -90,7 +90,7 @@ public final class CouncilLore {
             case BOARD -> new String[]{Lng.str("Head of Security"), Lng.str("VP of Partnerships"), Lng.str("Acquisitions"), Lng.str("Compliance"),
                     Lng.str("Chief Financial Officer"), Lng.str("Head of Operations"), Lng.str("Chief Executive"),
                     Lng.str("VP of Expansion"), Lng.str("General Counsel"), Lng.str("Head of Litigation")};
-            case MOOT -> new String[]{Lng.str("Warlord"), Lng.str("Peace-Speaker"), Lng.str("Raidmaster"), Lng.str("Elder"),
+            case JUNTA -> new String[]{Lng.str("Warlord"), Lng.str("Peace-Speaker"), Lng.str("Raidmaster"), Lng.str("Elder"),
                     Lng.str("Quartermaster"), Lng.str("Champion"), Lng.str("Oath-Binder"),
                     Lng.str("Pathfinder"), Lng.str("Lawspeaker"), Lng.str("Avenger")};
             case COUNCIL -> new String[]{Lng.str("Marshal"), Lng.str("Envoy"), Lng.str("Spymaster"), Lng.str("Steward"),
@@ -108,7 +108,7 @@ public final class CouncilLore {
                     Lng.str("Psionic, Restless"), Lng.str("Psionic, Patient"), Lng.str("Psionic, Zealous")};
             case BOARD -> new String[]{Lng.str("Aggressive"), Lng.str("Networker"), Lng.str("Ruthless"), Lng.str("Cautious"),
                     Lng.str("Miser"), Lng.str("Bold"), Lng.str("Shrewd"), Lng.str("Ambitious"), Lng.str("Meticulous"), Lng.str("Litigious")};
-            case MOOT -> new String[]{Lng.str("Warmonger"), Lng.str("Honourable"), Lng.str("Ruthless"), Lng.str("Ancient, Cautious"),
+            case JUNTA -> new String[]{Lng.str("Warmonger"), Lng.str("Honourable"), Lng.str("Ruthless"), Lng.str("Ancient, Cautious"),
                     Lng.str("Miser"), Lng.str("Bold, Glory-seeker"), Lng.str("Honourable"), Lng.str("Restless"), Lng.str("Honourable, Stern"), Lng.str("Vengeful")};
             case COUNCIL -> new String[]{Lng.str("Warmonger, Impatient"), Lng.str("Idealist"), Lng.str("Paranoid, Ruthless"), Lng.str("Cautious"),
                     Lng.str("Miser"), Lng.str("Bold"), Lng.str("Shrewd"), Lng.str("Ambitious"), Lng.str("Meticulous"), Lng.str("Zealous")};
@@ -139,7 +139,7 @@ public final class CouncilLore {
                 case STAY_SOLVENT -> Lng.str("Close the quarter in the black.");
                 case CLAIM_SYSTEMS -> Lng.str("Untapped markets. Plant our flag.");
             };
-            case MOOT -> switch (o) {
+            case JUNTA -> switch (o) {
                 case DESTROY_SHIPS -> Lng.str("%s mocks us. Answer with fire.", target);
                 case DECLARE_WAR -> Lng.str("Our blades rust. %s will do.", target);
                 case SIGN_TREATY -> Lng.str("Even wolves rest. Swear an oath with %s.", target);

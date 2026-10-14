@@ -654,7 +654,7 @@ public class CouncilContent extends GUIAnchor {
         return switch (f) {
             case SHADOW -> new Vector4f(0.79f, 0.65f, 1.0f, 1.0f);
             case BOARD -> new Vector4f(0.91f, 0.82f, 0.48f, 1.0f);
-            case MOOT -> ORANGE;
+            case JUNTA -> ORANGE;
             case COUNCIL -> BLUE;
         };
     }
