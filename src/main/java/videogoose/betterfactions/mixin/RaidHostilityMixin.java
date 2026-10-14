@@ -32,7 +32,9 @@ public abstract class RaidHostilityMixin {
 		}
 		Fleet fa = sa.railController.getRoot().getFleet();
 		Fleet fb = sb.railController.getRoot().getFleet();
-		if (fa != null && TradeFleetOrders.get().raidingFaction(fa, sb.getFactionId())
+		//the prey fleet by membership too: a prey ship whose faction block is shot off turns faction 0 but is still prey
+		if (fa != null && fb != null && TradeFleetOrders.get().raiding(fa.dbid, fb.dbid)
+				|| fa != null && TradeFleetOrders.get().raidingFaction(fa, sb.getFactionId())
 				|| fb != null && TradeFleetOrders.get().raidingFaction(fb, sa.getFactionId())) {
 			cir.setReturnValue(true);
 		}

@@ -640,7 +640,7 @@ public final class BattleTracker {
 		IntOpenHashSet here = new IntOpenHashSet();
 		for (SimpleTransformableSendableObject<?> o : sector.getEntities()) {
 			if (o instanceof SegmentController sc && root(sc) && !sc.isCoreOverheating()) {
-				here.add(sc.getFactionId());
+				here.add(factionOf(b, sc)); //a ship whose faction block was shot off still counts for its side
 			}
 		}
 		return sidesLeft(b, here) < 2;
