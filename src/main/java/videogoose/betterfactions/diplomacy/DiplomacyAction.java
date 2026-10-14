@@ -97,7 +97,9 @@ public class DiplomacyAction {
          */
         TRADED_WITH_SANCTIONED(en -> Lng.str("Traded with a faction under embargo")),
         /** They put tariffs on us; see {@code TreatyTypeRegistry.TARIFF}. */
-        TARIFF(en -> Lng.str("Put tariffs on us"));
+        TARIFF(en -> Lng.str("Put tariffs on us")),
+        /** Raided a trade delivery or miners of ours outside a war; see {@code TradeFleetOrders#raided}. */
+        RAIDED(en -> Lng.str("Raided our trade"));
 
         private final Translatable description;
 

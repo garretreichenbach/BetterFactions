@@ -86,6 +86,12 @@ public final class BattleCommands {
 			NpcFleetFreeze.on = ctx.optBool(0, !NpcFleetFreeze.on);
 			ctx.reply("NPC fleets are now " + (NpcFleetFreeze.on ? "frozen in place." : "moving."));
 		}, CommandArg.bool("frozen", "true").optional()));
+		StarLoader.registerCommand(mod, new Command("raid_status", "",
+				"Debugging: each raiding fleet's prey, and every fleet in its systems it could take and why it does or doesn't.", ctx -> {
+			for (String line : videogoose.betterfactions.fleet.TradeFleetOrders.get().explain(org.schema.game.server.data.GameServerState.instance)) {
+				ctx.reply(line);
+			}
+		}));
 		StarLoader.registerCommand(mod, new Command("battle_blueprints", "[filter]",
 				"Lists catalog ship blueprints, heaviest first, for /battle_spawn_fleet.", BattleCommands::listBlueprints,
 				CommandArg.greedy("filter", "isanth").optional()));

@@ -29,7 +29,7 @@ public final class FleetUpkeep_test {
         back = new FleetUpkeep();
         back.fromTag(u.toTag());
         assert back.thrustMassRatioOf("big") == 2f && back.thrustMassRatioOf("small") == 0 : "ratio survives, unseen stays 0";
-        assert FleetUpkeep.speedFactor(new float[]{1f, 3f, 0f}, 1f, 0.25f, 4f) == 2f : "average of the known, unknown left out";
+        assert FleetUpkeep.speedFactor(new float[]{2f, 3f, 0f}, 1f, 0.25f, 4f) == 2f : "slowest of the known, unknown left out";
         assert FleetUpkeep.speedFactor(new float[]{0f}, 1f, 0.25f, 4f) == 1f : "none known: vanilla";
         assert FleetUpkeep.speedFactor(new float[]{0.01f}, 1f, 0.25f, 4f) == 0.25f : "clamped";
         assert FleetUpkeep.stationIncome(10_000, 2, 10_000) == 2 : "base at min mass";

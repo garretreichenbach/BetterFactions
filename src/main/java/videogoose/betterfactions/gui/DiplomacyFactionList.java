@@ -261,7 +261,7 @@ public class DiplomacyFactionList extends ScrollableTableList<Faction> {
                 @Override
                 public String toString() {
                     return DiplomacyManager.client().skirmishAggressor(selfId(), f.getIdFaction()) != 0
-                            ? Lng.str("Skirmish") : relationTo(f).getName();
+                            ? Lng.str("SKIRMISH") : relationTo(f).getName();
                 }
             });
             treatyText.setTextSimple(new Object() {

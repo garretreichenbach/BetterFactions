@@ -191,7 +191,7 @@ public class CouncilContent extends GUIAnchor {
             bar.setPos(x, y, 0);
             content.attach(bar);
         }
-        GUITextOverlay title = text(getState(), 14, accent, CouncilLore.seat(flavour, seat.archetype).toUpperCase(java.util.Locale.ROOT));
+        GUITextOverlay title = text(getState(), 14, accent, seat.title(flavour).toUpperCase(java.util.Locale.ROOT));
         title.setPos(x + 9, y + 7, 0);
         content.attach(title);
         Council.Seat rival = Council.clashWith(st, seat);
@@ -249,9 +249,15 @@ public class CouncilContent extends GUIAnchor {
         x += 16;
         y += 14;
         int w = detailW - 32;
-        y = line(text(getState(), 14, accent, CouncilLore.seat(flavour, seat.archetype).toUpperCase(java.util.Locale.ROOT)), x, y, 18);
+        int at = selected;
+        //blank goes back to the title its style gives it
+        GUITextButton retitle = FactionSettingsContent.button(getState(), 80, Lng.str("RETITLE"), GUITextButton.ColorPalette.NEUTRAL,
+                () -> editor, () -> askName(Lng.str("Retitle %s (blank for %s)", seat.title(flavour), CouncilLore.seat(flavour, seat.archetype)), seat.title,
+                        title -> Council.requestRetitle(at, title)));
+        retitle.setPos(x + w - 80, y, 0);
+        content.attach(retitle);
+        y = line(text(getState(), 14, accent, seat.title(flavour).toUpperCase(java.util.Locale.ROOT)), x, y, 18);
         if (!seat.held()) {
-            int at = selected;
             GUITextButton rename = FactionSettingsContent.button(getState(), 80, Lng.str("RENAME"), GUITextButton.ColorPalette.NEUTRAL,
                     () -> editor, () -> askName(Lng.str("Rename %s", seat.name), seat.name, name -> Council.requestRename(at, name)));
             rename.setPos(x + w - 80, y, 0);
@@ -361,7 +367,6 @@ public class CouncilContent extends GUIAnchor {
 
         y += 6;
         if (seat.held() ? senate : editor || senate) {
-            int at = selected;
             GUITextButton change = FactionSettingsContent.button(getState(), w,
                     seat.held() ? Lng.str("PROPOSE REMOVAL (SENATE VOTE)") : Lng.str("REPLACE THIS COUNCILOR..."),
                     GUITextButton.ColorPalette.NEUTRAL, null, () -> {

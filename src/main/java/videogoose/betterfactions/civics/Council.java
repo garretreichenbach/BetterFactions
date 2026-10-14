@@ -163,6 +163,8 @@ public final class Council {
         /** Which ring position's pool it asks from, and so its title. */
         public int archetype;
         public String name = "";
+        /** What the faction calls this seat, or blank for its style's title ({@link CouncilLore#seat}). */
+        public String title = "";
         /** The member holding it, or blank for an AI councilor. */
         public String member = "";
         public int favour = START_FAVOUR;
@@ -174,6 +176,10 @@ public final class Council {
 
         public boolean held() {
             return !member.isEmpty();
+        }
+
+        public String title(CouncilLore.Flavour flavour) {
+            return title.isEmpty() ? CouncilLore.seat(flavour, archetype) : title;
         }
 
         Tag toTag() {
@@ -190,6 +196,7 @@ public final class Council {
                     agenda != null ? agenda.toTag() : new Tag(Tag.Type.STRUCT, null, new Tag[]{FinishTag.INST}),
                     new Tag(Tag.Type.LONG, null, nextAt),
                     new Tag(Tag.Type.STRUCT, null, o),
+                    new Tag(Tag.Type.STRING, null, title),
                     FinishTag.INST});
         }
 
@@ -210,6 +217,7 @@ public final class Council {
                     }
                 }
             }
+            s.title = t.length > 7 && t[7].getType() == Tag.Type.STRING ? t[7].getString() : "";
             return s;
         }
     }
@@ -488,6 +496,13 @@ public final class Council {
         BFPacket.toServer(BFPacket.Kind.COUNCIL_ACTION, new Tag(Tag.Type.STRUCT, null, new Tag[]{
                 new Tag(Tag.Type.BYTE, null, (byte) (seat < 0 ? 3 : 4)), new Tag(Tag.Type.INT, null, seat), new Tag(Tag.Type.INT, null, 0),
                 new Tag(Tag.Type.STRING, null, name == null ? "" : name), FinishTag.INST}));
+    }
+
+    /** Client: retitle the seat {@code seat} (blank for its style's title). */
+    public static void requestRetitle(int seat, String title) {
+        BFPacket.toServer(BFPacket.Kind.COUNCIL_ACTION, new Tag(Tag.Type.STRUCT, null, new Tag[]{
+                new Tag(Tag.Type.BYTE, null, (byte) 8), new Tag(Tag.Type.INT, null, seat), new Tag(Tag.Type.INT, null, 0),
+                new Tag(Tag.Type.STRING, null, title == null ? "" : title), FinishTag.INST}));
     }
 
     /** Client: add a seat in a role not yet on the ring, taken by a new NPC councilor. */
@@ -1048,7 +1063,7 @@ public final class Council {
             reject(p, Lng.str("Your rank may not refuse the Council."));
             return;
         }
-        if ((op == 3 || op == 4) && !Perms.has(f, p.getName(), FactionPermission.PermType.FACTION_EDIT_PERMISSION)) {
+        if ((op == 3 || op == 4 || op == 8) && !Perms.has(f, p.getName(), FactionPermission.PermType.FACTION_EDIT_PERMISSION)) {
             reject(p, Lng.str("Your rank may not rename the Council."));
             return;
         }
@@ -1123,6 +1138,10 @@ public final class Council {
                     String old = seat.name;
                     //an agenda left behind is paid for as refused, so dismissing is no way out of one
                     int cost = seat.agenda != null ? seat.agenda.refuseCost() : 0;
+                    //a custom title named the old role
+                    if (seat.archetype != c.archetype) {
+                        seat.title = "";
+                    }
                     seat.archetype = c.archetype;
                     seat.name = c.name;
                     seat.favour = c.favour;
@@ -1139,6 +1158,16 @@ public final class Council {
                                 cost > 0 ? Lng.str("%s dismissed %s and seated %s as %s. %s's unfinished agenda cost %s faction points.", p.getName(), old, c.name, title, old, cost)
                                         : Lng.str("%s dismissed %s and seated %s as %s.", p.getName(), old, c.name, title));
                     });
+                }
+                case 8 -> {
+                    if (seat.title.equals(newName)) {
+                        return;
+                    }
+                    String old = seatTitle(f, seat);
+                    seat.title = newName;
+                    String retitled = seatTitle(f, seat);
+                    after.add(() -> Civics.governanceNews(f, p.getName(), Lng.str("The %s is now the %s", old, retitled),
+                            Lng.str("%s retitled the seat of %s, held by %s, to %s.", p.getName(), old, seat.name, retitled)));
                 }
                 case 4 -> {
                     if (seat.held()) {
@@ -1359,7 +1388,7 @@ public final class Council {
     }
 
     private String seatTitle(Faction f, Seat seat) {
-        return CouncilLore.seat(flavour(f), seat.archetype);
+        return seat.title(flavour(f));
     }
 
     private String who(Faction f, Seat seat) {

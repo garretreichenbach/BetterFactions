@@ -16,7 +16,7 @@ import videogoose.betterfactions.fleet.NpcFleetFreeze;
 /**
  * Server: an unloaded fleet member's sector-to-sector move. Vanilla takes {@code FLEET_OUT_OF_SECTOR_MOVEMENT} per
  * sector for every fleet; here that time is divided by {@link FleetUpkeep#speedFactor}, so a fleet of fast ships
- * crosses space faster. The whole fleet uses its average, so members still arrive together.
+ * crosses space faster. The whole fleet moves at its slowest member's speed, so members still arrive together.
  *
  * <p>While {@code /npc_fleets_frozen} is on, NPC fleets' unloaded members do not move at all.</p>
  */

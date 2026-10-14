@@ -36,6 +36,8 @@ public final class BFConfig {
 	private static SimpleConfigInt fabricateClaimCost;
 	private static SimpleConfigInt fabricateClaimHours;
 	private static SimpleConfigInt claimLastsHours;
+	private static SimpleConfigInt claimSystemCost;
+	private static SimpleConfigInt miningBonusRampHours;
 	private static SimpleConfigInt reputationHalfLifeDays;
 	private static SimpleConfigInt spiceDealerPercent;
 	private static SimpleConfigInt wreckLifetimeHours;
@@ -113,6 +115,10 @@ public final class BFConfig {
 				"Hours of server uptime a fabricated claim takes before it can be used.");
 		claimLastsHours = new SimpleConfigInt(config, "claim_lasts_hours", 72,
 				"Hours of server uptime a fabricated claim can be used for once it is ready.");
+		claimSystemCost = new SimpleConfigInt(config, "claim_system_cost", 500,
+				"Faction points a player faction pays, once, to claim a system. A faction holding no systems claims its first for free. 0 makes claims free.");
+		miningBonusRampHours = new SimpleConfigInt(config, "mining_bonus_ramp_hours", 48,
+				"Hours after a system is claimed before its owner gets the full owner mining bonus; until then it climbs evenly from the unowned bonus. 0 gives it at once.");
 		reputationHalfLifeDays = new SimpleConfigInt(config, "reputation_half_life_days", 14,
 				"Days for half of a faction's galaxy-wide reputation for broken treaties and started fights to fade. 0 never fades.");
 		spiceDealerPercent = new SimpleConfigInt(config, "spice_dealer_upkeep_percent", 25,
@@ -120,7 +126,7 @@ public final class BFConfig {
 		wreckLifetimeHours = new SimpleConfigInt(config, "wreck_lifetime_hours", 48,
 				"A ship whose overheat timer runs out stays as an ownerless wreck for this many hours (counted while its sector is loaded) instead of vanishing, docked turrets and all; anyone may board and reboot it. 0 turns wrecks off: ships vanish as in vanilla.");
 		fleetSpeedReferenceTmr = new SimpleConfigDouble(config, "fleet_speed_reference_thrust_mass_ratio", 1.0,
-				"Unloaded fleets cross sectors at the server's FLEET_OUT_OF_SECTOR_MOVEMENT time divided by (members' average thrust to mass ratio / this), clamped to 0.25x to 4x speed. Members never seen loaded are left out. 0 turns it off (vanilla speed).");
+				"Unloaded fleets cross sectors at the server's FLEET_OUT_OF_SECTOR_MOVEMENT time divided by (slowest member's thrust to mass ratio / this), clamped to 0.25x to 4x speed. Members never seen loaded are left out. 0 turns it off (vanilla speed).");
 		fleetUpkeepMassPerPoint = new SimpleConfigInt(config, "fleet_upkeep_mass_per_point", 10000,
 				"Player factions pay one faction point of upkeep each income period for every this much mass in their members' fleets (docked ships count with what they are docked to). With the vanilla config a 100k mass fleet costs about what one claimed system does. 0 turns fleet upkeep off.");
 		institutionUpkeep = new SimpleConfigInt(config, "institution_upkeep_points", 10,
@@ -380,6 +386,16 @@ public final class BFConfig {
 	public static long claimLastsMs() {
 		Integer v = claimLastsHours != null ? claimLastsHours.getValue() : null;
 		return (v == null ? 72 : Math.max(1, v)) * 60L * 60L * 1000L;
+	}
+
+	public static int claimSystemCost() {
+		Integer v = claimSystemCost != null ? claimSystemCost.getValue() : null;
+		return v == null ? 0 : Math.max(0, v);
+	}
+
+	public static long miningBonusRampMs() {
+		Integer v = miningBonusRampHours != null ? miningBonusRampHours.getValue() : null;
+		return (v == null ? 48 : Math.max(0, v)) * 60L * 60L * 1000L;
 	}
 
 	public static boolean customEmblemsEnabled() {

@@ -657,9 +657,11 @@ public final class DiplomacyManager extends Observable {
 			if (s.active(wall)) {
 				continue;
 			}
+			//fastutil's MapEntry is index-backed and dies on remove: read the key first
+			long key = e.getLongKey();
 			it.remove();
 			ended = true;
-			FactionTreatySet set = treaties.get(e.getLongKey());
+			FactionTreatySet set = treaties.get(key);
 			if (set == null || set.getDerivedRelation() != FactionRelation.RType.ENEMY) {
 				history(s.aggressor, s.victim, Lng.str("The skirmish between %s and %s ended without a declaration of war.",
 						getFactionName(s.aggressor), getFactionName(s.victim)));
@@ -882,8 +884,24 @@ public final class DiplomacyManager extends Observable {
 
 	/** Server: as {@link #history(int, int, String)}, told only to {@code viewer}'s members unless it is 0. */
 	private void history(int a, int b, String text, int viewer) {
+		history(a, b, text, viewer, true);
+	}
+
+	/**
+	 * Server: as above; {@code news} also posts it to the faction news of both sides (or only the
+	 * viewer's). Off for callers that post their own, or that loop and would post it many times.
+	 */
+	private void history(int a, int b, String text, int viewer, boolean news) {
 		if (!onServer) {
 			return;
+		}
+		if (news) {
+			if (viewer != 0) {
+				diplomacyNews(viewer, text);
+			} else {
+				diplomacyNews(a, text);
+				diplomacyNews(b, text);
+			}
 		}
 		HistoryEntry e = new HistoryEntry(System.currentTimeMillis(), a, b, text, viewer);
 		addHistory(e);
@@ -2230,7 +2248,7 @@ public final class DiplomacyManager extends Observable {
             }
         }
         for (int i = 0; i < f.members.size(); i++) {
-            history(f.members.getInt(i), factionId, Lng.str("%s joined the federation %s.", getFactionName(factionId), f.name));
+            history(f.members.getInt(i), factionId, Lng.str("%s joined the federation %s.", getFactionName(factionId), f.name), 0, false);
         }
         f.members.add(factionId);
         Faction joined = getFaction(factionId);
@@ -2253,7 +2271,7 @@ public final class DiplomacyManager extends Observable {
             if (m != factionId) {
                 history(m, factionId, expelled
                         ? Lng.str("%s was expelled from the federation %s.", getFactionName(factionId), f.name)
-                        : Lng.str("%s left the federation %s.", getFactionName(factionId), f.name));
+                        : Lng.str("%s left the federation %s.", getFactionName(factionId), f.name), 0, false);
                 removeTreaty(m, factionId, TreatyTypeRegistry.FEDERATION);
             }
         }
@@ -2291,7 +2309,7 @@ public final class DiplomacyManager extends Observable {
     private void dissolveFederation(Federation f) {
         for (int i = 0; i < f.members.size(); i++) {
             for (int j = i + 1; j < f.members.size(); j++) {
-                history(f.members.getInt(i), f.members.getInt(j), Lng.str("The federation %s was dissolved.", f.name));
+                history(f.members.getInt(i), f.members.getInt(j), Lng.str("The federation %s was dissolved.", f.name), 0, false);
                 removeTreaty(f.members.getInt(i), f.members.getInt(j), TreatyTypeRegistry.FEDERATION);
             }
         }
@@ -2364,11 +2382,25 @@ public final class DiplomacyManager extends Observable {
 
     private void federationNews(Federation f, String message) {
         for (int i = 0; i < f.members.size(); i++) {
-            Faction m = getFaction(f.members.getInt(i));
-            if (m != null) {
-                System.err.println("[SERVER][FACTION][" + m.getName() + "]" + "[FEDERATION][" + f.name + "] " + message);
+            int m = f.members.getInt(i);
+            if (getFaction(m) != null) {
+                newsPost(m, f.name, Lng.str("Federation: %s", f.name), message);
             }
         }
+    }
+
+    /** Server: one line of diplomacy in a faction's news feed. Skips ids that are not a real faction. */
+    private void diplomacyNews(int factionId, String text) {
+        if (getFaction(factionId) != null) {
+            newsPost(factionId, Lng.str("Diplomacy"), Lng.str("Diplomatic Relations"), text);
+        }
+    }
+
+    private void newsPost(int factionId, String author, String title, String body) {
+        FactionNewsPost post = new FactionNewsPost();
+        post.set(factionId, author, System.currentTimeMillis(), title, body, 0);
+        post.setCategory(FactionNewsCategory.DIPLOMACY);
+        fm().addNewsPostServer(post);
     }
 
     private void refuseFederation(PlayerState p, Object[] message) {
@@ -3360,6 +3392,12 @@ public final class DiplomacyManager extends Observable {
             //would also call the aggressor's partners against anyone who answered that call
             return;
         }
+        if (videogoose.betterfactions.fleet.TradeFleetOrders.get().raidingFactions(victim, aggressor)) {
+            //a raid is between the raider and its prey (RaidHostilityMixin), not their whole factions; the
+            //ledger already counted the attack, and the victim still gets its casus belli
+            skirmishGrievance(victim, aggressor);
+            return;
+        }
         long now = System.currentTimeMillis();
         long code = FactionRelation.getCode(victim, aggressor);
         videogoose.betterfactions.diplomacy.Skirmish skirmish = skirmishes.get(code);
@@ -4170,7 +4208,7 @@ public final class DiplomacyManager extends Observable {
                     case DECLARATION -> Lng.str("%s declared %s on %s.%s", from.getName(), type.getDisplayName(), to.getName(), said);
                     case DEMAND -> Lng.str("%s demanded %s of %s.%s", from.getName(), type.getDisplayName(), to.getName(), said);
                     default -> Lng.str("%s proposed %s to %s.%s", from.getName(), type.getDisplayName(), to.getName(), said);
-                });
+                }, 0, false); //posts its own news below
 
         if (TreatyTypeRegistry.WAR.equals(typeId)) {
             FactionNewsPost warDeclaration = new FactionNewsPost();
@@ -4208,13 +4246,14 @@ public final class DiplomacyManager extends Observable {
             title = "Settlement Offer";
             body = from.getName() + " offered " + offerName(fk) + "!\n" + fk.getMessage();
             action = null;
-        } else if (typeId == null) {
+        } else if (fk.typeId == null && fk.against == 0) {
+            //peace, even when its terms sign a treaty: typeId above is then that treaty's and type is null
             title = "Peace Offer";
             body = from.getName() + " offered a peace treaty!\n" + fk.getMessage();
             action = DiplomacyAction.DiplActionType.PEACE_OFFER;
         } else {
-            title = type.getDisplayName();
-            body = from.getName() + " offered a " + type.getDisplayName() + "!\n" + fk.getMessage();
+            title = type != null ? type.getDisplayName() : offerName(fk);
+            body = from.getName() + " offered a " + title + "!\n" + fk.getMessage();
             //the opinion vocabulary still names only the three legacy relations, so a pact of any
             //other kind is announced but moves no points
             action = null;

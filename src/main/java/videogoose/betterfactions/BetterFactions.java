@@ -132,6 +132,7 @@ public final class BetterFactions extends StarMod {
             BFStore.save(FleetIntercepts.get()); BFStore.save(videogoose.betterfactions.fleet.TradeFleetOrders.get());
             BFStore.save(Wrecks.get());
             BFStore.save(FleetUpkeep.get());
+            BFStore.save(ClaimAges.get());
             BFStore.save(DiplomacyManager.server().getPointMods());
         }
     }
@@ -140,6 +141,18 @@ public final class BetterFactions extends StarMod {
         //the one hook that makes a treaty mean something to combat: a pair's treaties outrank its
         //relation byte, and pairs with no treaty that says anything about hostility fall through
         FactionRelationQueryListener.TYPE.register((a, b, current, isServer) -> DiplomacyManager.of(isServer).derivedRelation(a, b), this);
+
+        //extractors: an owner's bonus grows in with how long it has held the system (see ClaimAges)
+        api.event.world.generation.ExtractorMiningBonusCalculateListener.TYPE.register((uid, factionId, sectorPos, type, resources, bonus, isServer) -> {
+            try {
+                org.schema.game.common.data.world.StellarSystem sys = GameServerState.instance.getUniverse().getStellarSystemFromSecPos(sectorPos);
+                if (factionId != 0 && sys.getOwnerFaction() == factionId) {
+                    return bonus * ClaimAges.ownerBonusScale(ClaimAges.get().maturity(sys.getPos(), System.currentTimeMillis()));
+                }
+            } catch (java.io.IOException ignored) {
+            }
+            return bonus;
+        }, this);
 
         FactionDeleteListener.TYPE.register((faction, isServer) -> DiplomacyManager.of(isServer).onFactionDeleted(faction), this);
 
@@ -153,9 +166,32 @@ public final class BetterFactions extends StarMod {
                     && system.getOwnerFaction() != faction.getIdFaction()) {
                 return EventResult.CANCEL;
             }
-            //a system newly ours counts toward a Council agenda to claim systems
             int was = system.getOwnerFaction();
             int now = faction != null ? faction.getIdFaction() : 0;
+            //a player's claim costs points once, except a faction's first while it holds none
+            if (isServer && change.sender != 0 && now != 0 && was != now && faction.isPlayerFaction()
+                    && !faction.lastSystemSectors.isEmpty()) {
+                int cost = Council.server().cost(now, Council.EXPANSION, BFConfig.claimSystemCost());
+                if (faction.factionPoints < cost) {
+                    PlayerState p = GameServerState.instance.getPlayerFromNameIgnoreCaseWOException(change.initiator);
+                    if (p != null) {
+                        p.sendServerMessagePlayerError(Lng.astr("Claiming a system costs %s faction points.", cost));
+                    }
+                    return EventResult.CANCEL;
+                }
+                if (cost > 0) {
+                    faction.factionPoints -= cost;
+                    faction.sendFactionPointUpdate(GameServerState.instance.getGameState());
+                }
+            }
+            if (isServer && was != now) {
+                if (now != 0) {
+                    ClaimAges.get().claimed(system.getPos(), System.currentTimeMillis());
+                } else {
+                    ClaimAges.get().unclaimed(system.getPos());
+                }
+            }
+            //a system newly ours counts toward a Council agenda to claim systems
             if (isServer && now != 0 && was != now) {
                 Council.server().onClaim(now);
                 CivicPayouts.server().fire(CivicPayouts.CivicEvent.of(CivicPayouts.Event.SYSTEM_CLAIMED, now, was));
@@ -213,6 +249,8 @@ public final class BetterFactions extends StarMod {
             BFStore.load(Wrecks.get());
             FleetUpkeep.reset();
             BFStore.load(FleetUpkeep.get());
+            ClaimAges.reset();
+            BFStore.load(ClaimAges.get());
             BFStore.load(DiplomacyManager.server().getPointMods());
         }, this);
 
@@ -233,6 +271,7 @@ public final class BetterFactions extends StarMod {
                     BFStore.save(FleetIntercepts.get()); BFStore.save(videogoose.betterfactions.fleet.TradeFleetOrders.get());
                     BFStore.save(Wrecks.get());
                     BFStore.save(FleetUpkeep.get());
+            BFStore.save(ClaimAges.get());
                     BFStore.save(DiplomacyManager.server().getPointMods());
                 }
             }

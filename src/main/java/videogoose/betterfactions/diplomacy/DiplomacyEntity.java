@@ -281,7 +281,8 @@ public class DiplomacyEntity implements LogInterface {
                     return 0;
                 }
             case IN_WAR:
-                if (rel == FactionRelation.RType.ENEMY) {
+                //a skirmish makes them enemies while it lasts, but it is not a war
+                if (rel == FactionRelation.RType.ENEMY && (dbId >= Integer.MAX_VALUE || mgr.skirmishAggressor(getDiplomacy().faction.getIdFaction(), (int) dbId) == 0)) {
 //				System.err.println("RETURNING 1::::: "+rel);
                     return 1;
                 } else {

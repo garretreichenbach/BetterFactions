@@ -95,6 +95,14 @@ public final class BFStore {
 		write("fleet-mass", u.toTag());
 	}
 
+	public static void load(ClaimAges c) {
+		read("claim-ages", c::fromTag);
+	}
+
+	public static void save(ClaimAges c) {
+		write("claim-ages", c.toTag());
+	}
+
 	public static void load(FactionPointMods m) {
 		read("point-mods", m::fromTag);
 	}

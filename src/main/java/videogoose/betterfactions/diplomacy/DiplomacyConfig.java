@@ -160,6 +160,12 @@ public class DiplomacyConfig {
                     c.lowerLimit = 0;
                     c.value = -200;
                     break;
+                case RAIDED:
+                    //a real loss, but not a war: worse than tariffs, short of an embargo, and it fades
+                    c.upperLimit = -150;
+                    c.lowerLimit = 0;
+                    c.value = -150;
+                    break;
                 case TREATY_BROKEN:
                     //the exception: going back on an agreement is the one treaty event that should
                     //cost something no matter which treaty it was

@@ -57,22 +57,20 @@ public final class FleetUpkeep {
 
     /**
      * How much faster than {@code ServerConfig.FLEET_OUT_OF_SECTOR_MOVEMENT} an unloaded fleet moves: the
-     * members' average thrust to mass ratio over {@code reference}, clamped to [{@code min}, {@code max}].
+     * slowest member's thrust to mass ratio over {@code reference}, clamped to [{@code min}, {@code max}].
      * Members never seen loaded are left out; with none known it is 1, vanilla speed.
      */
     public static float speedFactor(float[] tmrs, float reference, float min, float max) {
-        float sum = 0;
-        int n = 0;
+        float slowest = Float.MAX_VALUE;
         for (float t : tmrs) {
             if (t > 0) {
-                sum += t;
-                n++;
+                slowest = Math.min(slowest, t);
             }
         }
-        if (n == 0 || reference <= 0) {
+        if (slowest == Float.MAX_VALUE || reference <= 0) {
             return 1;
         }
-        return Math.clamp(sum / n / reference, min, max);
+        return Math.clamp(slowest / reference, min, max);
     }
 
     /** Last mass seen for this entity, 0 if never seen. */

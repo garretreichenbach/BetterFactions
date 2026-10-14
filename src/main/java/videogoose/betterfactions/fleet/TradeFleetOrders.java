@@ -67,6 +67,13 @@ public final class TradeFleetOrders {
 		int seized;
 		long seizedValue;
 		String seizedFrom;
+		/** A raid: what it took from its current victims since their last news of it, by block, and from whom. */
+		final it.unimi.dsi.fastutil.shorts.Short2IntOpenHashMap stolen = new it.unimi.dsi.fastutil.shorts.Short2IntOpenHashMap();
+		long stolenValue;
+		final java.util.Set<Integer> victims = new java.util.HashSet<>();
+		String victimConvoy;
+		Vector3i victimAt;
+		long lastHitAt;
 		int leg;
 		/** The convoy fleet it is on, or -1. */
 		long convoy = -1;
@@ -113,6 +120,75 @@ public final class TradeFleetOrders {
 	 */
 	public boolean raiding(long a, long b) {
 		return a >= 0 && b >= 0 && (preyOf(a) == b || preyOf(b) == a);
+	}
+
+	/**
+	 * Server: whether the fleet is on a raid against the faction: its prey, and the escorts and defenders who come
+	 * for the raider, are its enemies. The raider's own faction is not at war with them for it.
+	 */
+	public boolean raidingFaction(Fleet raider, int faction) {
+		long prey = preyOf(raider.dbid);
+		Fleet f = prey < 0 ? null : GameServerState.instance.getFleetManager().getByFleetDbId(prey);
+		return f != null && faction != 0 && factionOf(f) == faction;
+	}
+
+	/** Server, for /raid_status: each raid's prey and the fleets in its systems, with why each is or isn't one it takes. */
+	public List<String> explain(GameServerState state) {
+		List<String> out = new ArrayList<>();
+		FactionManager fm = state.getFactionManager();
+		LongOpenHashSet inTrade = new LongOpenHashSet();
+		for (TradeActive t : state.getGameState().getTradeManager().getTradeActiveMap().getTradeList()) {
+			inTrade.add(t.getFleetId());
+		}
+		for (Map.Entry<Long, Post> e : posts.entrySet()) {
+			Post post = e.getValue();
+			Fleet raider = state.getFleetManager().getByFleetDbId(e.getKey());
+			if (post.kind != Kind.RAID || raider == null) {
+				continue;
+			}
+			FleetCommand c = raider.getCurrentCommand();
+			out.add(raider.getName() + " (faction " + factionOf(raider) + "): prey " + post.convoy + ", miners " + post.miners + ", targets " + post.targets
+					+ ", sent " + post.sentType + " " + post.sentTo + ", current " + (c == null ? "none" : c.getCommandType() + " " + java.util.Arrays.toString(c.getArgs())));
+			for (Fleet f : new ArrayList<>(state.getFleetManager().fleetCache.values())) {
+				FleetMember flag = f.getFlagShip();
+				if (f == raider || flag == null || !inRoute(post.route, flag.getSector())) {
+					continue;
+				}
+				FleetCommand fc = f.getCurrentCommand();
+				boolean mining = fc != null && fc.getCommandType() == FleetCommandTypes.MINE_IN_SECTOR
+						|| f.isNPCFleet() && f.getNpcType() == org.schema.game.server.data.simulation.npc.geo.NPCSystemFleetManager.FleetType.MINING;
+				int fac = factionOf(f);
+				out.add("  " + f.getName() + " at " + flag.getSector().toStringPure() + ", faction " + fac + ", npc " + f.isNPCFleet() + "/" + f.isNPCFleetGeneral()
+						+ (f.isAnyNPCFleet() ? " " + f.getNpcType() : "") + ", command " + (fc == null ? "none" : fc.getCommandType())
+						+ ", trading " + inTrade.contains(f.dbid) + ", mining " + mining + ", raidable " + raidable(factionOf(raider), fac, fac, fac, fm::isFriend, post.targets));
+			}
+		}
+		if (out.isEmpty()) {
+			out.add("No fleets are raiding.");
+		}
+		return out;
+	}
+
+	/** Server: whether a fleet of one faction is raiding a fleet of the other, either way round. */
+	public boolean raidingFactions(int a, int b) {
+		for (Map.Entry<Long, Post> e : posts.entrySet()) {
+			Post post = e.getValue();
+			if (post.kind != Kind.RAID || post.convoy < 0) {
+				continue;
+			}
+			Fleet raider = GameServerState.instance.getFleetManager().getByFleetDbId(e.getKey());
+			Fleet prey = GameServerState.instance.getFleetManager().getByFleetDbId(post.convoy);
+			if (raider != null && prey != null && (factionOf(raider) == a && factionOf(prey) == b
+					|| factionOf(raider) == b && factionOf(prey) == a)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** A fleet's faction. An NPC faction's fleet knows its own: the engine reads it off the flagship, 0 while that is unloaded. */
+	public static int factionOf(Fleet f) {
+		return f.isAnyNPCFleet() ? f.getNpcFaction() : f.getFactionId();
 	}
 
 	public boolean anyRaids() {
@@ -192,7 +268,7 @@ public final class TradeFleetOrders {
 	public void order(GameServerState state, PlayerState p, long fleetDbId, Kind kind, List<Vector3i> sectors, boolean append, java.util.Set<Integer> targets,
 					  boolean miners) {
 		Fleet fleet = state.getFleetManager().getByFleetDbId(fleetDbId);
-		if (fleet == null || fleet.isEmpty() || !fleet.canAccess(p.getName()) || fleet.getFactionId() == 0) {
+		if (fleet == null || fleet.isEmpty() || !fleet.canAccess(p.getName()) || factionOf(fleet) == 0) {
 			p.sendServerMessagePlayerInfo(new Object[]{Lng.str("You can't order that fleet; it must be a faction's.")});
 			return;
 		}
@@ -212,7 +288,7 @@ public final class TradeFleetOrders {
 			}
 		}
 		if (!adding && kind == Kind.RAID) {
-			targets.remove(fleet.getFactionId());
+			targets.remove(factionOf(fleet));
 			post.targets.addAll(targets);
 			post.miners = miners;
 		}
@@ -259,10 +335,14 @@ public final class TradeFleetOrders {
 			if (flag == null || overridden(fleet.getCurrentCommand(), post, now)) {
 				it.remove();
 				if (fleet != null) {
+					//the raid is over: its victims hear of it now rather than never
+					post.lastHitAt = 0;
+					newsForVictims(state, fleet, post, now);
 					FleetLabels.refresh(fleet);
 				}
 				continue;
 			}
+			newsForVictims(state, fleet, post, now);
 			Vector3i convoyAt = convoySector(state, post, inTrade, mining);
 			if (convoyAt == null) {
 				post.convoy = pick(state, fm, fleet, post, trades, mining, flag.getSector());
@@ -321,7 +401,7 @@ public final class TradeFleetOrders {
 
 	/** The nearest delivery this post may take on: for an escort, one no other escort has. -1 if none. */
 	private long pick(GameServerState state, FactionManager fm, Fleet fleet, Post post, List<TradeActive> trades, LongOpenHashSet mining, Vector3i from) {
-		int mine = fleet.getFactionId();
+		int mine = factionOf(fleet);
 		LongOpenHashSet escorted = new LongOpenHashSet();
 		for (Post other : posts.values()) {
 			if (other != post && other.kind == Kind.ESCORT && other.convoy >= 0) {
@@ -338,7 +418,7 @@ public final class TradeFleetOrders {
 			}
 			boolean ok = post.kind == Kind.ESCORT
 					? escortable(mine, t.getFromFactionId(), t.getToFactionId()) && !escorted.contains(convoy.dbid)
-					: raidable(mine, t.getFromFactionId(), t.getToFactionId(), convoy.getFactionId(), fm::isFriend, post.targets)
+					: raidable(mine, t.getFromFactionId(), t.getToFactionId(), factionOf(convoy), fm::isFriend, post.targets)
 					&& inRoute(post.route, flag.getSector());
 			if (!ok) {
 				continue;
@@ -354,7 +434,7 @@ public final class TradeFleetOrders {
 			for (long id : mining) {
 				Fleet miners = state.getFleetManager().getByFleetDbId(id);
 				FleetMember flag = miners == null ? null : miners.getFlagShip();
-				int f = miners == null ? 0 : miners.getFactionId();
+				int f = miners == null ? 0 : factionOf(miners);
 				if (flag == null || miners == fleet || !raidable(mine, f, f, f, fm::isFriend, post.targets) || !inRoute(post.route, flag.getSector())) {
 					continue;
 				}
@@ -389,6 +469,14 @@ public final class TradeFleetOrders {
 				continue;
 			}
 			Fleet raiders = state.getFleetManager().getByFleetDbId(e.getKey());
+			//its victims hear of it once the raid goes quiet (newsForVictims), whether or not anything could be taken
+			post.victims.addAll(hurt(state, convoy));
+			if (raiders != null) {
+				post.victims.remove(factionOf(raiders));
+			}
+			post.victimConvoy = convoy.getName();
+			post.victimAt = sc.getSector(new Vector3i());
+			post.lastHitAt = System.currentTimeMillis();
 			List<org.schema.game.common.data.player.inventory.Inventory> holds = holds(raiders, sc.getSectorId());
 			if (holds.isEmpty()) {
 				return;
@@ -409,7 +497,7 @@ public final class TradeFleetOrders {
 				videogoose.betterfactions.trade.RouteSafety.server().onRaid(at);
 			}
 			if (raiders != null) {
-				raided(state, raiders.getFactionId(), convoy);
+				raided(state, factionOf(raiders), convoy);
 			}
 			if (taken > 0) {
 				FleetLabels.refresh(raiders);
@@ -423,14 +511,7 @@ public final class TradeFleetOrders {
 	 * Raiders' victims do; and the raider's name suffers for the attack. The Trading Guild and pirates hold no claims.
 	 */
 	private static void raided(GameServerState state, int raider, Fleet convoy) {
-		java.util.Set<Integer> hurt = new java.util.HashSet<>();
-		hurt.add(convoy.getFactionId());
-		for (TradeActive t : state.getGameState().getTradeManager().getTradeActiveMap().getTradeList()) {
-			if (t.getFleetId() == convoy.dbid) {
-				hurt.add(t.getFromFactionId());
-				hurt.add(t.getToFactionId());
-			}
-		}
+		java.util.Set<Integer> hurt = hurt(state, convoy);
 		videogoose.betterfactions.DiplomacyManager dm = videogoose.betterfactions.DiplomacyManager.server();
 		org.schema.game.common.data.player.faction.Faction raiderFaction = state.getFactionManager().getFaction(raider);
 		long now = System.currentTimeMillis();
@@ -441,6 +522,8 @@ public final class TradeFleetOrders {
 				continue;
 			}
 			dm.getReputation().attacked(raider, id, now);
+			//vanilla's ATTACK only reaches the faction whose ship was shot, and not the buyer or seller of the cargo
+			dm.diplomacyAction(videogoose.betterfactions.diplomacy.DiplomacyAction.DiplActionType.RAIDED, id, raider);
 			var ledger = dm.diplomacyOf(victim).getEntity(raider);
 			long lasts = videogoose.betterfactions.BFConfig.claimLastsMs();
 			boolean had = ledger.claimReadyIn(lasts) == 0;
@@ -450,6 +533,20 @@ public final class TradeFleetOrders {
 								raiderFaction.getName(), lasts / (60L * 60L * 1000L)), victim);
 			}
 		}
+	}
+
+	/** The factions a raid on the convoy hurts: its own, and the buyer's and seller's of what it carries. */
+	private static java.util.Set<Integer> hurt(GameServerState state, Fleet convoy) {
+		java.util.Set<Integer> hurt = new java.util.HashSet<>();
+		hurt.add(factionOf(convoy));
+		for (TradeActive t : state.getGameState().getTradeManager().getTradeActiveMap().getTradeList()) {
+			if (t.getFleetId() == convoy.dbid) {
+				hurt.add(t.getFromFactionId());
+				hurt.add(t.getToFactionId());
+			}
+		}
+		hurt.remove(0);
+		return hurt;
 	}
 
 	/** The raiding fleet's loaded ships' inventories in the sector, where loot can go. */
@@ -598,9 +695,55 @@ public final class TradeFleetOrders {
 
 	private static void tally(Post post, short type, int n) {
 		if (post != null && n > 0) {
+			long value = n * org.schema.game.common.data.element.ElementKeyMap.getInfo(type).getPrice(false);
 			post.seized += n;
-			post.seizedValue += n * org.schema.game.common.data.element.ElementKeyMap.getInfo(type).getPrice(false);
+			post.seizedValue += value;
+			post.stolen.put(type, post.stolen.get(type) + n);
+			post.stolenValue += value;
 		}
+	}
+
+	/** Quiet this long after the raid's last hit and its victims hear of it, loot swept up since included. */
+	private static final long RAID_NEWS_QUIET_MS = 60_000L;
+
+	/** Tells the raid's victims, and the raider's own faction, in their faction news, that they were raided and what was taken. */
+	private static void newsForVictims(GameServerState state, Fleet raiders, Post post, long now) {
+		if (post.victims.isEmpty() || now - post.lastHitAt < RAID_NEWS_QUIET_MS) {
+			return;
+		}
+		String raider = factionOf(raiders) == 0 ? raiders.getName() : state.getFactionManager().getFactionName(factionOf(raiders));
+		StringBuilder body = new StringBuilder(Lng.str("%s raided the trade delivery %s at %s.", raider, post.victimConvoy, post.victimAt == null ? "?" : post.victimAt.toStringPure()));
+		if (post.stolen.isEmpty()) {
+			body.append('\n').append(Lng.str("Nothing was taken."));
+		} else {
+			body.append('\n').append(Lng.str("Stolen, worth about %s credits:", String.format("%,d", post.stolenValue)));
+			List<it.unimi.dsi.fastutil.shorts.Short2IntMap.Entry> taken = new ArrayList<>(post.stolen.short2IntEntrySet());
+			taken.sort((a, b) -> Integer.compare(b.getIntValue(), a.getIntValue()));
+			for (int i = 0; i < taken.size(); i++) {
+				if (i == 15) {
+					body.append('\n').append(Lng.str("...and %s more kinds of block.", taken.size() - i));
+					break;
+				}
+				var t = taken.get(i);
+				body.append("\n  ").append(String.format("%,d", t.getIntValue())).append(" x ")
+						.append(org.schema.game.common.data.element.ElementKeyMap.getInfo(t.getShortKey()).getName());
+			}
+		}
+		for (int id : post.victims) {
+			org.schema.game.common.data.player.faction.FactionNewsPost news = new org.schema.game.common.data.player.faction.FactionNewsPost();
+			news.set(id, raider, now, Lng.str("Trade Raided"), body.toString(), 0);
+			news.setCategory(org.schema.game.common.data.player.faction.FactionNewsCategory.WAR);
+			state.getFactionManager().addNewsPostServer(news);
+		}
+		if (factionOf(raiders) != 0) {
+			org.schema.game.common.data.player.faction.FactionNewsPost news = new org.schema.game.common.data.player.faction.FactionNewsPost();
+			news.set(factionOf(raiders), raiders.getName(), now, Lng.str("Raid Report"), body.toString(), 0);
+			news.setCategory(org.schema.game.common.data.player.faction.FactionNewsCategory.WAR);
+			state.getFactionManager().addNewsPostServer(news);
+		}
+		post.victims.clear();
+		post.stolen.clear();
+		post.stolenValue = 0;
 	}
 
 	private static boolean overridden(FleetCommand c, Post post, long now) {
