@@ -214,7 +214,8 @@ public class DiplomacyOpinionList extends ScrollableTableList<OpinionModifier> {
         }, HButtonType.BUTTON_BLUE_MEDIUM, FilterRowStyle.FULL, FilterPos.BOTTOM);
 
         spendButton(BFPacket.Kind.GIFT, FilterRowStyle.LEFT, HButtonType.BUTTON_BLUE_MEDIUM,
-                BFConfig::giftCost, Lng.str("GIFT"),
+                () -> videogoose.betterfactions.civics.Council.client().cost(GameClientState.instance.getPlayer().getFactionId(),
+                        videogoose.betterfactions.civics.Council.DIPLOMACY, BFConfig.giftCost()), Lng.str("GIFT"),
                 Lng.str("Send %s a gift worth %s faction points?\nThe points are spent. Gifts sent close together are worth less."));
         spendButton(BFPacket.Kind.FABRICATE_CLAIM, FilterRowStyle.RIGHT, HButtonType.BUTTON_RED_MEDIUM,
                 BFConfig::fabricateClaimCost, Lng.str("FABRICATE CLAIM"),

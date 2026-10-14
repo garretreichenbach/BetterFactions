@@ -158,8 +158,18 @@ public class InstitutionsContent extends GUIAnchor {
         FactionCivics c = Civics.client().of(own());
         int n = c.institutions.size();
         int base = BFConfig.institutionUpkeep();
-        StringBuilder b = new StringBuilder(Lng.str("UPKEEP\n%s FP per income turn.\n\nEach institution costs more than the one before it. Dropping one is free and lowers the rest.\n\nCOST LADDER\n",
-                FactionCivics.institutionUpkeep(n, base)));
+        videogoose.betterfactions.civics.Council council = videogoose.betterfactions.civics.Council.client();
+        int extra = council.extraSeats(own(), c.slotsEarned);
+        boolean treasury = council.perk(own(), videogoose.betterfactions.civics.Council.TREASURY);
+        StringBuilder b = new StringBuilder(Lng.str("UPKEEP\n%s FP per income turn.\n\nEach institution costs more than the one before it. Dropping one is free and lowers the rest.\n",
+                Math.round(council.institutionUpkeep(own(), c, base))));
+        if (extra > 0) {
+            b.append(Lng.str("%s Council seats added by vote: +%s FP.\n", extra, extra * base));
+        }
+        if (treasury) {
+            b.append(Lng.str("The Council's treasury seat is devoted: %s\n", videogoose.betterfactions.civics.Council.perk(videogoose.betterfactions.civics.Council.TREASURY)));
+        }
+        b.append(Lng.str("\nCOST LADDER\n"));
         for (int i = 1; i <= Math.max(4, n + 1); i++) {
             b.append(Lng.str("%s held: %s FP%s\n", i, FactionCivics.institutionUpkeep(i, base), i == n ? Lng.str("  (now)") : ""));
         }

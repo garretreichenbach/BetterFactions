@@ -135,10 +135,11 @@ public class DiplomacyActionsDialog extends PlayerInput {
             return;
         }
         String name = other != null ? other.getName() : "";
+        int breakCost = videogoose.betterfactions.civics.Council.client().cost(own.getIdFaction(), videogoose.betterfactions.civics.Council.INTRIGUE, BFConfig.breakTreatyCost());
         new PlayerOkCancelInput("DIPLOMACY_BREAK", state, 440, 230, Lng.str("Break %s", t.getDisplayName()),
-                BFConfig.breakTreatyCost() > 0
+                breakCost > 0
                         ? Lng.str("Really end this agreement with %s?\nThey will be told, and it will cost you standing and %s faction points.",
-                        name, BFConfig.breakTreatyCost())
+                        name, breakCost)
                         : Lng.str("Really end this agreement with %s?\nThey will be told, and it will cost you standing.", name)) {
             @Override
             public void pressedOK() {

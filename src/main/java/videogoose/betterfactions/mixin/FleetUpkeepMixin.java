@@ -19,6 +19,7 @@ import videogoose.betterfactions.FactionPointMods;
 import videogoose.betterfactions.FleetUpkeep;
 import videogoose.betterfactions.assets.FactionAssets;
 import videogoose.betterfactions.civics.Civics;
+import videogoose.betterfactions.civics.Council;
 import videogoose.betterfactions.civics.FactionCivics;
 
 /**
@@ -40,9 +41,10 @@ public abstract class FleetUpkeepMixin {
 			return;
 		}
 		int id = self.getIdFaction();
-		float fleet = massPerPoint <= 0 ? 0 : FleetUpkeep.get().upkeep(FleetUpkeep.shipsOf(self), massPerPoint);
-		float institutions = FactionCivics.institutionUpkeep(Civics.server().of(id).institutions.size(), BFConfig.institutionUpkeep());
-		float stations = betterFactions$stationIncome(id);
+		Council council = Council.server();
+		float fleet = council.scale(id, Council.GLORY, massPerPoint <= 0 ? 0 : FleetUpkeep.get().upkeep(FleetUpkeep.shipsOf(self), massPerPoint));
+		float institutions = council.institutionUpkeep(id, Civics.server().of(id), BFConfig.institutionUpkeep());
+		float stations = council.scale(id, Council.CALM, betterFactions$stationIncome(id));
 		factionPoints += stations - fleet - institutions;
 		FactionPointMods mods = DiplomacyManager.of(true).getPointMods();
 		mods.set(id, FactionPointMods.Line.FLEET, -fleet);
