@@ -384,6 +384,11 @@ public final class ShipyardRepairs {
 	}
 
 	final Map<String, Yard> yards = new LinkedHashMap<>();
+	/**
+	 * Fleet dbid -> what it was doing before it was sent to a yard, given back once its last ship is done.
+	 * ponytail: not saved, so a fleet mid-repair over a restart just stays at the yard; save it with the queue if that bites.
+	 */
+	private final Map<Long, FleetCommand> previousOrders = new HashMap<>();
 	/** Station UID -> its shipyard computer's block index, as last seen loaded: where an unloaded repair pays from. */
 	final Map<String, Long> yardIndexByStation = new HashMap<>();
 	/** Ship UID -> its block counts when it last unloaded: what an unloaded repair refunds. Fleet ships only. */
@@ -462,6 +467,10 @@ public final class ShipyardRepairs {
 			return;
 		}
 		if (yard.fleets.add(fleet.dbid)) {
+			FleetCommand was = fleet.getCurrentCommand();
+			if (was != null) {
+				previousOrders.put(fleet.dbid, new FleetCommand(was.getCommandType(), fleet, was.getArgs()));
+			}
 			fleet.getFleetManager().executeCommand(new FleetCommand(FleetCommandTypes.MOVE_FLEET, fleet, new Vector3i(sector)));
 		}
 		tell(p, Lng.str("%s ships of %s heading to %s for repairs.", queued, fleet.getName(), stationName));
@@ -481,7 +490,7 @@ public final class ShipyardRepairs {
 			release(e);
 			it.remove();
 		}
-		forgetFleetsWithoutEntries(y);
+		forgetFleetsWithoutEntries((GameServerState) p.getState(), y);
 		tell(p, Lng.str("Repair queue at %s cancelled.", y.stationName));
 	}
 
@@ -497,7 +506,7 @@ public final class ShipyardRepairs {
 		for (Iterator<Yard> it = yards.values().iterator(); it.hasNext(); ) {
 			Yard y = it.next();
 			update(state, y, now);
-			forgetFleetsWithoutEntries(y);
+			forgetFleetsWithoutEntries(state, y);
 			if (y.queue.isEmpty()) {
 				it.remove();
 			}
@@ -1116,8 +1125,19 @@ public final class ShipyardRepairs {
 		}
 	}
 
-	private void forgetFleetsWithoutEntries(Yard y) {
-		y.fleets.removeIf(id -> y.queue.stream().noneMatch(e -> e.fleetDbId == id));
+	/** Fleets with no ship left in the queue are done here: each goes back to its old order, unless a player gave it a new one. */
+	private void forgetFleetsWithoutEntries(GameServerState state, Yard y) {
+		y.fleets.removeIf(id -> {
+			if (y.queue.stream().anyMatch(e -> e.fleetDbId == id)) {
+				return false;
+			}
+			FleetCommand was = previousOrders.remove(id);
+			Fleet fleet = state.getFleetManager().getByFleetDbId(id);
+			if (was != null && fleet != null && y.stillOrdered(fleet)) {
+				fleet.getFleetManager().executeCommand(was);
+			}
+			return true;
+		});
 	}
 
 	private static Ship ship(GameServerState state, String uid) {

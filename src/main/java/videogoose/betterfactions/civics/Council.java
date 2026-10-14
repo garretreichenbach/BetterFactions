@@ -773,7 +773,7 @@ public final class Council {
             for (Faction other : others) {
                 int id = other.getIdFaction();
                 boolean war = dm.hasTreaty(me, id, TreatyTypeRegistry.WAR);
-                int opinion = standing(dm, other, me);
+                int opinion = standing(dm, f, other);
                 List<String> found = new ArrayList<>();
                 if (d.objective == Objective.BREAK_TREATY) {
                     if (opinion < BREAK_BELOW) {
@@ -859,13 +859,27 @@ public final class Council {
         };
     }
 
-    /** Their opinion of us, on the NPC rules' scale (war at -500, hostile at -200). */
+    /** Relations, on the NPC rules' scale (war at -500, hostile at -200). */
     static final int WAR_BELOW = -500;
     static final int SANCTION_BELOW = -200;
     static final int BREAK_BELOW = 0;
+    /** No councilor sends us after ships or pilots of a faction relations are this good with, war or not. */
+    static final int FRIENDLY_ABOVE = 200;
 
-    private static int standing(DiplomacyManager dm, Faction other, int me) {
-        videogoose.betterfactions.diplomacy.DiplomacyEntity e = dm.diplomacyOf(other).entities.get((long) me);
+    /**
+     * Relations both ways: the mean of their opinion of us and ours of them. Their view alone would leave a
+     * player faction's own ledger (gifts, grievances) no say in what its Council asks.
+     */
+    private static int standing(DiplomacyManager dm, Faction f, Faction other) {
+        return mutual(points(dm, other, f.getIdFaction()), points(dm, f, other.getIdFaction()));
+    }
+
+    static int mutual(int theirs, int ours) {
+        return (theirs + ours) / 2;
+    }
+
+    private static int points(DiplomacyManager dm, Faction owner, int about) {
+        DiplomacyEntity e = dm.diplomacyOf(owner).entities.get((long) about);
         return e != null ? e.getPoints() : 0;
     }
 
@@ -881,7 +895,7 @@ public final class Council {
     /** The same, naming only treaties from {@code choices} (a directive's {@code treaty}), first not held; null or empty for the defaults. */
     static String targetType(Objective o, int opinion, boolean war, java.util.function.Predicate<String> holds, boolean noTreaties, String[] choices) {
         return switch (o) {
-            case DESTROY_SHIPS, KILL_PLAYERS -> war ? "" : null;
+            case DESTROY_SHIPS, KILL_PLAYERS -> war && opinion <= FRIENDLY_ABOVE ? "" : null;
             case DECLARE_WAR -> !war && opinion <= WAR_BELOW && noTreaties ? "" : null;
             case SANCTION -> war || opinion > SANCTION_BELOW ? null : firstNotHeld(choices, SANCTIONS, holds);
             case SIGN_TREATY -> war || opinion < 0 || holds.test(TreatyTypeRegistry.EMBARGO) ? null : firstNotHeld(choices, SIGNABLE, holds);
@@ -904,6 +918,7 @@ public final class Council {
     /** How likely a faction is chosen: the further relations are past the line, the likelier. */
     static int weight(Objective o, int opinion) {
         return 1 + switch (o) {
+            case DESTROY_SHIPS, KILL_PLAYERS -> FRIENDLY_ABOVE - opinion;
             case DECLARE_WAR -> WAR_BELOW - opinion;
             case SANCTION -> SANCTION_BELOW - opinion;
             case BREAK_TREATY -> BREAK_BELOW - opinion;

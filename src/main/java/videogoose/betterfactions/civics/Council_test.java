@@ -138,6 +138,9 @@ public final class Council_test {
         assert Council.targetType(Council.Objective.SIGN_TREATY, 100, false, none, true) != null;
         assert Council.targetType(Council.Objective.DESTROY_SHIPS, 500, false, none, true) == null : "ships only of those we are at war with";
         assert Council.weight(Council.Objective.DECLARE_WAR, -1500) > Council.weight(Council.Objective.DECLARE_WAR, -550) : "the worse, the likelier";
+        assert Council.targetType(Council.Objective.DESTROY_SHIPS, 300, true, none, false) == null : "not even at war, against friends";
+        assert Council.weight(Council.Objective.DESTROY_SHIPS, -400) > Council.weight(Council.Objective.DESTROY_SHIPS, 100) : "the bitterer foe, the likelier";
+        assert Council.mutual(-600, 600) == 0 : "our own goodwill tempers their grudge";
         assert videogoose.betterfactions.template.Templates.pick(new double[]{1, 5, 1}, 0) == 0 && videogoose.betterfactions.template.Templates.pick(new double[]{1, 5, 1}, 3) == 1 && videogoose.betterfactions.template.Templates.pick(new double[]{1, 5, 1}, 6.5) == 2;
 
         //perks: a devoted councilor or a member's seat gives its archetype's perk
