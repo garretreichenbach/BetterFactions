@@ -78,6 +78,43 @@ public final class Corporations_test {
         planet.holdings.add(new Corporations.Holding(core, "Nerva", new Vector3i(4, -2, 9)));
         assert planet.holding(videogoose.betterfactions.assets.FactionAssets.planetUid(ico, new Vector3i(4, -2, 9))) != null;
         assert Corporations.cleanDescription("  two\n  lines ").equals("two lines") && Corporations.cleanDescription("x".repeat(300)).length() == Corporations.MAX_DESCRIPTION;
+        //franchises: fees by kind, traffic and discounts; traffic fades a tenth a day
+        assert Corporations.decayed(1000, 5, 5) == 1000 && Corporations.decayed(1000, 5, 6) == 900 && Corporations.decayed(1000, 5, 7) == 810;
+        assert Corporations.decayed(1000, 9, 5) == 1000 : "no fading backwards";
+        long base = 100_000_000L, unit = 50_000_000L;
+        assert Corporations.franchiseFee(base, false, 0, unit, false) == base : "a quiet outpost: the base";
+        assert Corporations.franchiseFee(base, true, 0, unit, false) == 2 * base : "a Trade Station: twice";
+        assert Corporations.franchiseFee(base, false, unit, unit, false) == 2 * base : "a unit of sales adds the base again";
+        assert Corporations.franchiseFee(base, false, 100 * unit, unit, false) == 4 * base : "busy tops out at four times";
+        assert Corporations.franchiseFee(base, false, 0, unit, true) == base * 3 / 4 : "Corporate Chains: a quarter off";
+        assert Corporations.tradeStation("Trade Station") && !Corporations.tradeStation("Trade Outpost") && !Corporations.tradeStation(null);
+        assert Corporations.systems(new Vector3i(0, 0, 0), new Vector3i(80, -17, 3)) == 5;
+        Corporations.Offer offer = new Corporations.Offer();
+        offer.shop = new Corporations.Holding("ENTITY_SHOP_Outpost", "Trade Outpost", new Vector3i(70, 0, 0));
+        offer.fee = 1000;
+        Corporations.Corp goods = new Corporations.Corp();
+        goods.type = Corporations.Type.CONSUMER_GOODS;
+        assert Corporations.feeFor(goods, offer, 0) == 1000 : "no HQ, no discount";
+        goods.hq = new Corporations.Holding("ENTITY_SPACESTATION_Mall", "Mall", new Vector3i(0, 0, 0));
+        goods.hqSince = 0;
+        assert Corporations.feeFor(goods, offer, Corporations.HQ_SETTLE_MS) == 900 : "a Consumer Goods HQ within 5 systems: 10% off";
+        assert Corporations.feeFor(goods, offer, Corporations.HQ_SETTLE_MS - 1) == 1000 : "not while it settles";
+        goods.type = Corporations.Type.SHIPYARDS;
+        assert Corporations.feeFor(goods, offer, Corporations.HQ_SETTLE_MS) == 1000 : "only Consumer Goods";
+        goods.franchises.add(offer.shop);
+        goods.holdings.add(new Corporations.Holding("A", "A", new Vector3i()));
+        Corporations.Corp g2 = Corporations.Corp.fromTag(goods.toTag());
+        assert g2.franchises.size() == 1 && g2.franchise("Outpost") != null && g2.holdingCount() == 2 : "franchises survive a save and share the limit";
+        Corporations whole = new Corporations();
+        Corporations.State ws = new Corporations.State();
+        ws.corps.add(goods);
+        whole.fromTag(new org.schema.schine.resource.tag.Tag(org.schema.schine.resource.tag.Tag.Type.STRUCT, null, new org.schema.schine.resource.tag.Tag[]{
+                new org.schema.schine.resource.tag.Tag(org.schema.schine.resource.tag.Tag.Type.STRUCT, null, new org.schema.schine.resource.tag.Tag[]{
+                        new org.schema.schine.resource.tag.Tag(org.schema.schine.resource.tag.Tag.Type.INT, null, 9), ws.toTag(), org.schema.schine.resource.tag.FinishTag.INST}),
+                org.schema.schine.resource.tag.FinishTag.INST}));
+        Corporations again = new Corporations();
+        again.fromTag(whole.toTag());
+        assert again.of(9) != null && again.of(9).corps.get(0).franchises.size() == 1 : "a whole save, traffic entry and all, reads back";
         System.out.println("Corporations_test: OK");
     }
 }

@@ -259,9 +259,9 @@ public class CorporationsContent extends GUIAnchor {
         x = DETAIL_X;
         y = 388;
         w = DETAIL_W;
-        line(text(getState(), 14, DIM, Lng.str("STATIONS AND PLANETS IT RUNS  (%s of %s)", c.holdings.size(), Corporations.MAX_HOLDINGS)), x + 4, y, 0);
+        line(text(getState(), 14, DIM, Lng.str("STATIONS AND PLANETS IT RUNS  (%s of %s with franchises)", c.holdingCount(), Corporations.MAX_HOLDINGS)), x + 4, y, 0);
         GUITextButton assign = FactionSettingsContent.button(getState(), 200, Lng.str("ASSIGN A STATION OR PLANET..."),
-                GUITextButton.ColorPalette.NEUTRAL, () -> runs && c.holdings.size() < Corporations.MAX_HOLDINGS, () -> pickStation(st, at));
+                GUITextButton.ColorPalette.NEUTRAL, () -> runs && c.holdingCount() < Corporations.MAX_HOLDINGS, () -> pickStation(st, at));
         assign.setPos(x + w - 200, y - 4, 0);
         content.attach(assign);
         y += 26;
@@ -282,11 +282,37 @@ public class CorporationsContent extends GUIAnchor {
             content.attach(release);
             y += 34;
         }
+        //franchises on Trading Guild shops
+        y += 14;
+        line(text(getState(), 14, DIM, Lng.str("FRANCHISES ON TRADING GUILD SHOPS  (%s)", c.franchises.size())), x + 4, y, 0);
+        GUITextButton buy = FactionSettingsContent.button(getState(), 200, Lng.str("FRANCHISE A GUILD SHOP..."),
+                GUITextButton.ColorPalette.NEUTRAL, () -> runs && c.holdingCount() < Corporations.MAX_HOLDINGS, () -> pickFranchise(st, at, c));
+        buy.setPos(x + w - 200, y - 4, 0);
+        content.attach(buy);
+        y += 26;
+        if (c.franchises.isEmpty()) {
+            y = wrapped(DIM, Lng.str("None yet. A franchise takes %s%% of every sale at a Guild shop, less the Guild's %s%% royalty. The shop stays the Guild's; build your own station to keep every credit.",
+                    BFConfig.franchiseCutPercent(), BFConfig.franchiseRoyaltyPercent()), x + 4, y, w - 8, 40);
+        }
+        for (Corporations.Holding h : c.franchises) {
+            GUIColoredRectangle row = new GUIColoredRectangle(getState(), w, 30, new Vector4f(CARD));
+            row.setPos(x, y, 0);
+            content.attach(row);
+            boolean near = c.hq != null && Corporations.near(h.sector, c.hq.sector);
+            line(text(getState(), 14, GOLD, h.name), x + 10, y + 7, 0);
+            line(text(getState(), 14, near ? BLUE : DIM, near ? Lng.str("sector %s  -  near the HQ", h.sector) : Lng.str("sector %s", h.sector)), x + 260, y + 7, 0);
+            GUITextButton drop = FactionSettingsContent.button(getState(), 90, Lng.str("GIVE UP"), GUITextButton.ColorPalette.HOSTILE,
+                    () -> runs, () -> confirmGiveUp(c, h, at));
+            drop.setPos(x + w - 96, y + 3, 0);
+            content.attach(drop);
+            y += 34;
+        }
         y += 10;
         GUITextButton dissolve = FactionSettingsContent.button(getState(), 160, Lng.str("DISSOLVE"), GUITextButton.ColorPalette.HOSTILE,
                 () -> editor, () -> confirmDissolve(c, at));
         dissolve.setPos(x + w - 160, y, 0);
         content.attach(dissolve);
+        content.setHeight(Math.max(HEIGHT, y + 40));
     }
 
     /** One of four figures across the books, in column {@code col}. */
@@ -383,6 +409,68 @@ public class CorporationsContent extends GUIAnchor {
                         Corporations.request(7, at, 0, (String) player);
                     }
                 });
+    }
+
+    /** The Guild shops near us nobody holds, with what each would cost this corporation. */
+    private void pickFranchise(Corporations.State st, int at, Corporations.Corp c) {
+        long now = System.currentTimeMillis();
+        Faction own = getState().getFaction();
+        List<GUIElement> items = new ArrayList<>();
+        for (Corporations.Offer o : st.market) {
+            long fee = Corporations.feeFor(c, o, now);
+            String from = own == null ? "" : Lng.str(", %s systems away", Corporations.systems(own.getHomeSector(), o.shop.sector));
+            items.add(row(Lng.str("%s  -  sector %s%s  -  sales lately %s cr  -  fee %s cr%s", o.shop.name, o.shop.sector, from,
+                    money(o.traffic), money(fee), fee > c.treasury ? Lng.str("  (treasury short)") : ""), o));
+        }
+        if (items.isEmpty()) {
+            getState().getController().popupAlertTextMessage(Lng.str("No Trading Guild shop near us is free to franchise."), 0);
+            return;
+        }
+        drop("CORP_FRANCHISE", Lng.str("Franchise a Guild shop for %s", c.name),
+                Lng.str("Treasury: %s credits. The nearest Guild shops nobody holds; busier shops cost more. Paid from the treasury.", money(c.treasury)),
+                items, o -> confirmFranchise(c, (Corporations.Offer) o, at));
+    }
+
+    private void confirmFranchise(Corporations.Corp c, Corporations.Offer o, int at) {
+        long fee = Corporations.feeFor(c, o, System.currentTimeMillis());
+        new PlayerGameOkCancelInput("CONFIRM", getState(), Lng.str("Franchise %s?", o.shop.name),
+                Lng.str("%s pays %s credits from its treasury. It takes %s%% of every sale there, less the Guild's %s%% royalty. If the shop is destroyed, the fee is lost.",
+                        c.name, money(fee), BFConfig.franchiseCutPercent(), BFConfig.franchiseRoyaltyPercent())) {
+            @Override
+            public boolean isOccluded() {
+                return false;
+            }
+
+            @Override
+            public void onDeactivate() {
+            }
+
+            @Override
+            public void pressedOK() {
+                deactivate();
+                Corporations.request(10, at, 0, o.shop.uid);
+            }
+        }.activate();
+    }
+
+    private void confirmGiveUp(Corporations.Corp c, Corporations.Holding h, int at) {
+        new PlayerGameOkCancelInput("CONFIRM", getState(), Lng.str("Give up the franchise on %s?", h.name),
+                Lng.str("%s stops earning there, and the fee is not returned.", c.name)) {
+            @Override
+            public boolean isOccluded() {
+                return false;
+            }
+
+            @Override
+            public void onDeactivate() {
+            }
+
+            @Override
+            public void pressedOK() {
+                deactivate();
+                Corporations.request(11, at, 0, h.uid);
+            }
+        }.activate();
     }
 
     private void confirmDissolve(Corporations.Corp c, int at) {

@@ -163,6 +163,23 @@ public final class Corporations {
         public int lastDividend;
         /** What the faction says it does, or blank for its type's own words. */
         public String description = "";
+        /** Trading Guild shops it holds a franchise on. */
+        public final List<Holding> franchises = new ArrayList<>();
+
+        /** Its own stations and franchises together, which share {@link #MAX_HOLDINGS}. */
+        public int holdingCount() {
+            return holdings.size() + franchises.size();
+        }
+
+        public Holding franchise(String uid) {
+            String k = key(uid);
+            for (Holding h : franchises) {
+                if (h.uid.equals(k)) {
+                    return h;
+                }
+            }
+            return null;
+        }
 
         public String describe() {
             return description.isEmpty() ? type.description() : description;
@@ -196,6 +213,11 @@ public final class Corporations {
                 h[i] = holdings.get(i).toTag();
             }
             h[holdings.size()] = FinishTag.INST;
+            Tag[] fr = new Tag[franchises.size() + 1];
+            for (int i = 0; i < franchises.size(); i++) {
+                fr[i] = franchises.get(i).toTag();
+            }
+            fr[franchises.size()] = FinishTag.INST;
             return new Tag(Tag.Type.STRUCT, null, new Tag[]{
                     new Tag(Tag.Type.STRING, null, name),
                     new Tag(Tag.Type.BYTE, null, (byte) type.ordinal()),
@@ -210,6 +232,7 @@ public final class Corporations {
                     new Tag(Tag.Type.LONG, null, lastRevenue),
                     new Tag(Tag.Type.INT, null, lastDividend),
                     new Tag(Tag.Type.STRING, null, description),
+                    new Tag(Tag.Type.STRUCT, null, fr),
                     FinishTag.INST});
         }
 
@@ -238,6 +261,16 @@ public final class Corporations {
             c.lastDividend = t[11].getInt();
             //saved before descriptions could be written
             c.description = t.length > 12 && t[12].getType() == Tag.Type.STRING ? t[12].getString() : "";
+            if (t.length > 13 && t[13].getType() == Tag.Type.STRUCT) {
+                for (Tag e : t[13].getStruct()) {
+                    if (e.getType() == Tag.Type.STRUCT) {
+                        Holding h = Holding.fromTag(e);
+                        if (h != null) {
+                            c.franchises.add(h);
+                        }
+                    }
+                }
+            }
             return c;
         }
     }
@@ -246,6 +279,8 @@ public final class Corporations {
         public final List<Corp> corps = new ArrayList<>();
         /** Client only: the faction's stations and planets, to assign or seat an HQ at. Not saved. */
         public final List<Holding> stations = new ArrayList<>();
+        /** Client only: Trading Guild shops near the faction no corporation holds yet. Not saved. */
+        public final List<Offer> market = new ArrayList<>();
 
         /** The corporation running a station, or null. */
         public Corp runs(String uid) {
@@ -277,7 +312,20 @@ public final class Corporations {
         }
     }
 
+    /** A Trading Guild shop on offer: its sales this past while, and its fee before a corporation's own discounts. */
+    public static final class Offer {
+        public Holding shop;
+        public long traffic;
+        public long fee;
+    }
+
     private final Map<Integer, State> byFaction = new HashMap<>();
+    /** Server: each Trading Guild shop's sales, fading by the day: {volume, day it was last brought up to}. */
+    private final Map<String, long[]> traffic = new HashMap<>();
+    /** Server: every Trading Guild shop, read from the database at most once a minute. */
+    private List<Holding> guildShops = List.of();
+    private boolean guildShopsTruncated;
+    private long guildShopsAt;
     private int version;
     private long nextCheck;
     /** Factions whose corporations earned since they were last sent. */
@@ -307,9 +355,48 @@ public final class Corporations {
 
     /** Whether two sectors are within the HQ's reach, counted in whole systems each way. */
     public static boolean near(Vector3i a, Vector3i b) {
-        return Math.abs(Math.floorDiv(a.x, VoidSystem.SYSTEM_SIZE) - Math.floorDiv(b.x, VoidSystem.SYSTEM_SIZE)) <= HQ_RADIUS_SYSTEMS
-                && Math.abs(Math.floorDiv(a.y, VoidSystem.SYSTEM_SIZE) - Math.floorDiv(b.y, VoidSystem.SYSTEM_SIZE)) <= HQ_RADIUS_SYSTEMS
-                && Math.abs(Math.floorDiv(a.z, VoidSystem.SYSTEM_SIZE) - Math.floorDiv(b.z, VoidSystem.SYSTEM_SIZE)) <= HQ_RADIUS_SYSTEMS;
+        return systems(a, b) <= HQ_RADIUS_SYSTEMS;
+    }
+
+    /** How many whole systems apart two sectors are, the furthest way. */
+    public static int systems(Vector3i a, Vector3i b) {
+        return Math.max(Math.abs(Math.floorDiv(a.x, VoidSystem.SYSTEM_SIZE) - Math.floorDiv(b.x, VoidSystem.SYSTEM_SIZE)),
+                Math.max(Math.abs(Math.floorDiv(a.y, VoidSystem.SYSTEM_SIZE) - Math.floorDiv(b.y, VoidSystem.SYSTEM_SIZE)),
+                        Math.abs(Math.floorDiv(a.z, VoidSystem.SYSTEM_SIZE) - Math.floorDiv(b.z, VoidSystem.SYSTEM_SIZE))));
+    }
+
+    static final int TRAFFIC_KEEP_PERCENT = 90;
+    static final int MAX_TRAFFIC_MULTIPLIER = 4;
+    static final int CHAINS_FEE_PERCENT = 25;
+    static final int GOODS_FEE_PERCENT = 10;
+    static final int GOODS_FEE_RADIUS = 5;
+    public static final int MARKET_SIZE = 12;
+
+    /** A shop's sales brought up to {@code toDay}: each day keeps {@link #TRAFFIC_KEEP_PERCENT} of the last. */
+    static long decayed(long volume, long fromDay, long toDay) {
+        long days = Math.min(365, Math.max(0, toDay - fromDay));
+        return (long) (volume * Math.pow(TRAFFIC_KEEP_PERCENT / 100.0, days));
+    }
+
+    /**
+     * What a franchise costs, before a corporation's own discounts: the base, doubled for a Trade Station,
+     * more the busier the shop (up to {@link #MAX_TRAFFIC_MULTIPLIER} times), Corporate Chains taking its share off.
+     */
+    static long franchiseFee(long base, boolean station, long traffic, long trafficUnit, boolean chains) {
+        double busy = Math.min(MAX_TRAFFIC_MULTIPLIER, 1 + (double) Math.max(0, traffic) / Math.max(1, trafficUnit));
+        long fee = (long) (base * (station ? 2 : 1) * busy);
+        return chains ? fee * (100 - CHAINS_FEE_PERCENT) / 100 : fee;
+    }
+
+    /** The fee for this corporation: a Consumer Goods HQ near the shop takes {@link #GOODS_FEE_PERCENT} off. */
+    public static long feeFor(Corp c, Offer o, long now) {
+        boolean goods = c.type == Type.CONSUMER_GOODS && c.hqActive(now) && systems(c.hq.sector, o.shop.sector) <= GOODS_FEE_RADIUS;
+        return goods ? o.fee * (100 - GOODS_FEE_PERCENT) / 100 : o.fee;
+    }
+
+    /** A Trade Station rather than an outpost, as the engine's blueprints name them. */
+    static boolean tradeStation(String name) {
+        return name != null && name.toLowerCase(java.util.Locale.ROOT).contains("station");
     }
 
     /** What a sale at a holding earns its corporation: the cut, taken from the shop, plus the HQ's bonus on top. */
@@ -383,6 +470,18 @@ public final class Corporations {
                     }
                 }
             }
+            if (t.length > 3 && t[3].getType() == Tag.Type.STRUCT) {
+                for (Tag e : t[3].getStruct()) {
+                    if (e.getType() == Tag.Type.STRUCT) {
+                        Tag[] o = e.getStruct();
+                        Offer offer = new Offer();
+                        offer.shop = Holding.fromTag(o[0]);
+                        offer.traffic = o[1].getLong();
+                        offer.fee = o[2].getLong();
+                        st.market.add(offer);
+                    }
+                }
+            }
             byFaction.put(t[0].getInt(), st);
         }
         version++;
@@ -391,7 +490,8 @@ public final class Corporations {
     /**
      * Client. {@code op}: 0 charter (value: type), 1 dissolve, 2 rename (text), 3 dividend rate (value),
      * 4 assign a station (text: uid), 5 release one, 6 seat the HQ (text: uid), 7 appoint a CEO (text: member,
-     * blank for a new NPC; by Senate vote when the faction has one), 8 describe (text, blank for the type's own words), 9 rename its NPC CEO (text).
+     * blank for a new NPC; by Senate vote when the faction has one), 8 describe (text, blank for the type's own words), 9 rename its NPC CEO (text),
+     * 10 buy a franchise on a Trading Guild shop (text: uid), 11 give one up.
      */
     public static void request(int op, int corp, int value, String text) {
         BFPacket.toServer(BFPacket.Kind.CORP_ACTION, new Tag(Tag.Type.STRUCT, null, new Tag[]{
@@ -414,6 +514,7 @@ public final class Corporations {
             return;
         }
         nextCheck = now + CHECK_MS;
+        guildShops(now);
         List<Runnable> after = new ArrayList<>();
         List<Faction> dirty = new ArrayList<>();
         for (Faction f : GameServerState.instance.getFactionManager().getFactionCollection()) {
@@ -441,6 +542,17 @@ public final class Corporations {
     private boolean tick(Faction f, State st, FactionAssets assets, List<Runnable> after) {
         boolean changed = false;
         for (Corp c : st.corps) {
+            //a shop gone from the database was destroyed or taken: the risk was the franchisee's
+            if (!guildShopsTruncated && guildShopsAt > 0) {
+                for (Holding h : new ArrayList<>(c.franchises)) {
+                    if (guildShops.stream().noneMatch(g -> g.uid.equals(h.uid))) {
+                        c.franchises.remove(h);
+                        after.add(() -> Civics.governanceNews(f, c.name, Lng.str("%s loses its franchise on %s", c.name, h.name),
+                                Lng.str("%s is gone, and the franchise with it.", h.name)));
+                        changed = true;
+                    }
+                }
+            }
             if (c.memberCeo() && !Council.activeMember(f, c.ceo)) {
                 String gone = c.ceo;
                 c.ceo = "";
@@ -502,6 +614,10 @@ public final class Corporations {
         if (credits <= 0) {
             return 0;
         }
+        if (faction == org.schema.game.common.data.player.faction.FactionManager.TRAIDING_GUILD_ID) {
+            onGuildSale(stationUid, credits);
+            return 0;
+        }
         synchronized (this) {
             State st = byFaction.get(faction);
             Corp c = st == null ? null : st.runs(stationUid);
@@ -515,6 +631,121 @@ public final class Corporations {
             earned.add(faction);
             return e[0];
         }
+    }
+
+    /**
+     * A sale at a Trading Guild shop: counted toward its traffic, and its franchisee's cut, less the Guild's
+     * royalty, paid into their treasury. The Guild's own credits are NPC money, so the cut is new money
+     * rather than taken from the shop, which would soon have nothing left to buy from players with.
+     */
+    private synchronized void onGuildSale(String uid, long credits) {
+        String k = key(uid);
+        long day = System.currentTimeMillis() / DAY_MS;
+        long[] tr = traffic.computeIfAbsent(k, x -> new long[]{0, day});
+        tr[0] = decayed(tr[0], tr[1], day) + credits;
+        tr[1] = day;
+        for (Map.Entry<Integer, State> e : byFaction.entrySet()) {
+            for (Corp c : e.getValue().corps) {
+                Holding h = c.franchise(k);
+                if (h != null) {
+                    long[] earned = earn(credits * (100 - BFConfig.franchiseRoyaltyPercent()) / 100, BFConfig.franchiseCutPercent(),
+                            c.hqActive(System.currentTimeMillis()) && near(h.sector, c.hq.sector));
+                    c.treasury += earned[0] + earned[1];
+                    c.revenue += earned[0] + earned[1];
+                    this.earned.add(e.getKey());
+                    return;
+                }
+            }
+        }
+    }
+
+    /**
+     * Server: a trade-network order pays {@code credits} to {@code seller}. Its corporation, if one runs it,
+     * takes its cut from the node as it would from a shop sale. Called before the engine moves the credits.
+     */
+    public void onTradeOrder(org.schema.game.common.controller.trade.TradeNodeStub seller, long credits) {
+        if (seller == null || seller.getFactionId() <= 0 || credits <= 0) {
+            return;
+        }
+        GameServerState s = GameServerState.instance;
+        DatabaseEntry e;
+        try {
+            e = s.getDatabaseIndex().getTableManager().getEntityTable().getById(seller.getEntityDBId());
+        } catch (java.sql.SQLException ex) {
+            return;
+        }
+        if (e == null) {
+            return;
+        }
+        String uid = FactionAssets.isPlanet(e.type) ? FactionAssets.planetUid(e.type, e.sectorPos) : e.uid;
+        long cut = onSale(seller.getFactionId(), uid, credits);
+        if (cut > 0) {
+            seller.modCredits(-cut, s);
+        }
+    }
+
+    /** Every Trading Guild shop and shop station, refreshed at most once a minute. */
+    private void guildShops(long now) {
+        if (now - guildShopsAt < 60_000L) {
+            return;
+        }
+        int limit = 5000;
+        List<Holding> found = new ArrayList<>();
+        try {
+            for (DatabaseEntry e : GameServerState.instance.getDatabaseIndex().getTableManager().getEntityTable().getByFaction(
+                    org.schema.game.common.data.player.faction.FactionManager.TRAIDING_GUILD_ID,
+                    new int[]{SimpleTransformableSendableObject.EntityType.SHOP.dbTypeId, SimpleTransformableSendableObject.EntityType.SPACE_STATION.dbTypeId}, limit)) {
+                String n = e.realName == null || e.realName.isBlank() ? Lng.str("Trading Guild shop") : e.realName.trim();
+                found.add(new Holding(e.uid, n, e.sectorPos));
+            }
+        } catch (java.sql.SQLException ex) {
+            return;
+        }
+        synchronized (this) {
+            guildShops = found;
+            guildShopsTruncated = found.size() >= limit;
+            guildShopsAt = now;
+        }
+    }
+
+    /** The Guild shops nearest {@code from} that nobody holds a franchise on, with their fees for this faction. */
+    private synchronized List<Offer> market(Vector3i from, boolean chains, long now) {
+        java.util.Set<String> held = new java.util.HashSet<>();
+        for (State st : byFaction.values()) {
+            for (Corp c : st.corps) {
+                c.franchises.forEach(h -> held.add(h.uid));
+            }
+        }
+        long day = now / DAY_MS;
+        List<Offer> out = new ArrayList<>();
+        guildShops.stream().filter(g -> !held.contains(g.uid))
+                .sorted(java.util.Comparator.comparingInt(g -> systems(from, g.sector)))
+                .limit(MARKET_SIZE)
+                .forEach(g -> {
+                    Offer o = new Offer();
+                    o.shop = g;
+                    long[] tr = traffic.get(g.uid);
+                    o.traffic = tr == null ? 0 : decayed(tr[0], tr[1], day);
+                    o.fee = franchiseFee(BFConfig.franchiseBaseFee(), tradeStation(g.name), o.traffic, BFConfig.franchiseTrafficUnit(), chains);
+                    out.add(o);
+                });
+        return out;
+    }
+
+    /** Where a faction's market is reckoned from: its homebase, else its first HQ, else the centre. */
+    private synchronized Vector3i marketCentre(Faction f) {
+        if (f.getHomebaseUID() != null && !f.getHomebaseUID().isEmpty()) {
+            return new Vector3i(f.getHomeSector());
+        }
+        State st = byFaction.get(f.getIdFaction());
+        if (st != null) {
+            for (Corp c : st.corps) {
+                if (c.hq != null) {
+                    return new Vector3i(c.hq.sector);
+                }
+            }
+        }
+        return new Vector3i();
     }
 
     /** Server, each income turn: every corporation pays its dividend. @return the faction points paid in all */
@@ -559,6 +790,12 @@ public final class Corporations {
         boolean editor = Perms.has(f, p.getName(), FactionPermission.PermType.FACTION_EDIT_PERMISSION);
         int id = f.getIdFaction();
         FactionAssets assets = op == 4 || op == 6 ? assets(id) : null;
+        Offer offer = null;
+        if (op == 10) {
+            String k = key(t[3].getString());
+            offer = market(marketCentre(f), chains(id, Civics.server()), System.currentTimeMillis()).stream()
+                    .filter(o -> o.shop.uid.equals(k)).findFirst().orElse(null);
+        }
         List<Runnable> after = new ArrayList<>();
         long now = System.currentTimeMillis();
         synchronized (this) {
@@ -626,6 +863,44 @@ public final class Corporations {
                     after.add(() -> Civics.governanceNews(f, p.getName(), Lng.str("%s is now %s", old, name),
                             Lng.str("%s renamed %s's NPC CEO, %s, to %s.", p.getName(), c.name, old, name)));
                 }
+                case 10 -> {
+                    if (!runs) {
+                        reject(p, Lng.str("Only its CEO or your faction's officers may buy franchises."));
+                        return;
+                    }
+                    if (offer == null) {
+                        reject(p, Lng.str("That shop is not on offer: it is gone, too far, or someone holds its franchise."));
+                        return;
+                    }
+                    if (c.holdingCount() >= MAX_HOLDINGS) {
+                        reject(p, Lng.str("%s runs all it can. Release a station or give up a franchise first.", c.name));
+                        return;
+                    }
+                    long fee = feeFor(c, offer, now);
+                    if (c.treasury < fee) {
+                        reject(p, Lng.str("%s's treasury holds %s credits; the franchise costs %s.", c.name, c.treasury, fee));
+                        return;
+                    }
+                    c.treasury -= fee;
+                    Holding h = offer.shop;
+                    c.franchises.add(new Holding(h.uid, h.name, h.sector));
+                    after.add(() -> Civics.governanceNews(f, p.getName(), Lng.str("%s franchises %s", c.name, h.name),
+                            Lng.str("%s paid %s credits for a franchise on %s, at %s. It takes %s%% of every sale there, less the Guild's %s%% royalty.",
+                                    c.name, fee, h.name, h.sector, BFConfig.franchiseCutPercent(), BFConfig.franchiseRoyaltyPercent())));
+                }
+                case 11 -> {
+                    Holding h = c.franchise(text);
+                    if (!runs) {
+                        reject(p, Lng.str("Only its CEO or your faction's officers may give up franchises."));
+                        return;
+                    }
+                    if (h == null) {
+                        return;
+                    }
+                    c.franchises.remove(h);
+                    after.add(() -> Civics.governanceNews(f, p.getName(), Lng.str("%s gives up %s", c.name, h.name),
+                            Lng.str("%s gave up the franchise on %s. The fee is not returned.", p.getName(), h.name)));
+                }
                 case 8 -> {
                     String d = cleanDescription(text);
                     if (!runs) {
@@ -650,7 +925,7 @@ public final class Corporations {
                         reject(p, Lng.str("Only its CEO or your faction's officers may give it stations."));
                         return;
                     }
-                    if (a == null || st.runs(text) != null || c.holdings.size() >= MAX_HOLDINGS) {
+                    if (a == null || st.runs(text) != null || c.holdingCount() >= MAX_HOLDINGS) {
                         reject(p, Lng.str("That is not ours, another corporation runs it, or this one runs all it can."));
                         return;
                     }
@@ -701,7 +976,7 @@ public final class Corporations {
                         return;
                     }
                     boolean taken = other == null;
-                    if (taken && c.holdings.size() >= MAX_HOLDINGS) {
+                    if (taken && c.holdingCount() >= MAX_HOLDINGS) {
                         reject(p, Lng.str("%s runs all it can. Release one first: its HQ is one of them.", c.name));
                         return;
                     }
@@ -850,12 +1125,22 @@ public final class Corporations {
             }
         }
         stations.add(FinishTag.INST);
+        List<Tag> offers = new ArrayList<>();
+        Faction f = GameServerState.instance.getFactionManager().getFaction(id);
+        if (f != null && Civics.server().holds(id, CivicRegistry.CORPORATIONS)) {
+            for (Offer o : market(marketCentre(f), chains(id, Civics.server()), System.currentTimeMillis())) {
+                offers.add(new Tag(Tag.Type.STRUCT, null, new Tag[]{o.shop.toTag(), new Tag(Tag.Type.LONG, null, o.traffic),
+                        new Tag(Tag.Type.LONG, null, o.fee), FinishTag.INST}));
+            }
+        }
+        offers.add(FinishTag.INST);
         Tag tag;
         synchronized (this) {
             State st = byFaction.get(id);
             tag = new Tag(Tag.Type.STRUCT, null, new Tag[]{new Tag(Tag.Type.INT, null, id),
                     st != null ? st.toTag() : new Tag(Tag.Type.STRUCT, null, new Tag[]{FinishTag.INST}),
-                    new Tag(Tag.Type.STRUCT, null, stations.toArray(new Tag[0])), FinishTag.INST});
+                    new Tag(Tag.Type.STRUCT, null, stations.toArray(new Tag[0])),
+                    new Tag(Tag.Type.STRUCT, null, offers.toArray(new Tag[0])), FinishTag.INST});
         }
         BFPacket.toPlayer(p, BFPacket.Kind.CORPORATIONS, tag);
     }
@@ -863,20 +1148,39 @@ public final class Corporations {
     // ---- saved
 
     public synchronized Tag toTag() {
-        Tag[] t = new Tag[byFaction.size() + 1];
+        Tag[] t = new Tag[byFaction.size() + 2];
         int i = 0;
         for (Map.Entry<Integer, State> e : byFaction.entrySet()) {
             t[i++] = new Tag(Tag.Type.STRUCT, null, new Tag[]{new Tag(Tag.Type.INT, null, e.getKey()), e.getValue().toTag(), FinishTag.INST});
         }
+        Tag[] tr = new Tag[traffic.size() + 1];
+        int j = 0;
+        for (Map.Entry<String, long[]> e : traffic.entrySet()) {
+            tr[j++] = new Tag(Tag.Type.STRUCT, null, new Tag[]{new Tag(Tag.Type.STRING, null, e.getKey()),
+                    new Tag(Tag.Type.LONG, null, e.getValue()[0]), new Tag(Tag.Type.LONG, null, e.getValue()[1]), FinishTag.INST});
+        }
+        tr[j] = FinishTag.INST;
+        t[i++] = new Tag(Tag.Type.STRUCT, null, new Tag[]{new Tag(Tag.Type.STRING, null, "traffic"), new Tag(Tag.Type.STRUCT, null, tr), FinishTag.INST});
         t[i] = FinishTag.INST;
         return new Tag(Tag.Type.STRUCT, null, t);
     }
 
     public synchronized void fromTag(Tag tag) {
         byFaction.clear();
+        traffic.clear();
         for (Tag e : tag.getStruct()) {
-            if (e.getType() == Tag.Type.STRUCT) {
-                byFaction.put(e.getStruct()[0].getInt(), State.fromTag(e.getStruct()[1]));
+            if (e.getType() != Tag.Type.STRUCT) {
+                continue;
+            }
+            Tag[] t = e.getStruct();
+            if (t[0].getType() == Tag.Type.STRING) {
+                for (Tag r : t[1].getStruct()) {
+                    if (r.getType() == Tag.Type.STRUCT) {
+                        traffic.put(r.getStruct()[0].getString(), new long[]{r.getStruct()[1].getLong(), r.getStruct()[2].getLong()});
+                    }
+                }
+            } else {
+                byFaction.put(t[0].getInt(), State.fromTag(t[1]));
             }
         }
         version++;
@@ -884,6 +1188,9 @@ public final class Corporations {
 
     public synchronized void clear() {
         byFaction.clear();
+        traffic.clear();
+        guildShops = List.of();
+        guildShopsAt = 0;
         earned.clear();
         version++;
     }

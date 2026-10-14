@@ -304,10 +304,21 @@ public final class BetterFactions extends StarMod {
 
 		//a trade embargo stops trade routes between the two as well as their shops (ShopEmbargoMixin), and
 		//a route that does run is held against whoever traded with an embargoed faction
-		BuyTradeListener.TYPE.register((order, buyer, seller, active, isServer) ->
-				tradeRoute(isServer, buyer.getFactionId(), seller.getFactionId()), this);
-		SellTradeListener.TYPE.register((order, seller, buyer, active, isServer) ->
-				tradeRoute(isServer, seller.getFactionId(), buyer.getFactionId()), this);
+		//and a corporation running the selling station takes its cut, as from a shop sale
+		BuyTradeListener.TYPE.register((order, buyer, seller, active, isServer) -> {
+			EventResult r = tradeRoute(isServer, buyer.getFactionId(), seller.getFactionId());
+			if (isServer && !r.isCanceled()) {
+				videogoose.betterfactions.civics.Corporations.server().onTradeOrder(seller, order.getBuyPrice());
+			}
+			return r;
+		}, this);
+		SellTradeListener.TYPE.register((order, seller, buyer, active, isServer) -> {
+			EventResult r = tradeRoute(isServer, seller.getFactionId(), buyer.getFactionId());
+			if (isServer && !r.isCanceled()) {
+				videogoose.betterfactions.civics.Corporations.server().onTradeOrder(seller, order.getSellPrice());
+			}
+			return r;
+		}, this);
 
 		FactionPanelCreateListener.TYPE.register(FactionPanelTabs::addTabs, this);
 

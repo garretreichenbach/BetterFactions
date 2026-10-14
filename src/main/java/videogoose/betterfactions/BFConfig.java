@@ -47,6 +47,10 @@ public final class BFConfig {
 	private static SimpleConfigInt corporationCutPercent;
 	private static SimpleConfigInt corporationCreditsPerPoint;
 	private static SimpleConfigInt corporationDividendCap;
+	private static SimpleConfigInt franchiseBaseFee;
+	private static SimpleConfigInt franchiseCutPercent;
+	private static SimpleConfigInt franchiseRoyaltyPercent;
+	private static SimpleConfigInt franchiseTrafficUnit;
 
 	private BFConfig() {
 	}
@@ -127,6 +131,14 @@ public final class BFConfig {
 				"Credits of a corporation's dividend that make one faction point.");
 		corporationDividendCap = new SimpleConfigInt(config, "corporation_dividend_cap_points", 100,
 				"Most faction points one corporation pays its faction an income period. -1 for no cap.");
+		franchiseBaseFee = new SimpleConfigInt(config, "franchise_base_fee", 100000000,
+				"Credits a franchise on a quiet Trading Guild outpost costs. A Trade Station costs twice this, and a busy shop up to four times more.");
+		franchiseCutPercent = new SimpleConfigInt(config, "franchise_cut_percent", 8,
+				"Percent of every sale at a franchised Trading Guild shop that goes to the franchisee, before the Guild's royalty.");
+		franchiseRoyaltyPercent = new SimpleConfigInt(config, "franchise_royalty_percent", 20,
+				"Percent of a franchise's takings the Trading Guild keeps.");
+		franchiseTrafficUnit = new SimpleConfigInt(config, "franchise_traffic_unit", 50000000,
+				"Credits of recent sales at a Guild shop that add the base fee again to its franchise's price. Sales fade by a tenth a day.");
 		config.readWriteFields();
 	}
 
@@ -163,6 +175,26 @@ public final class BFConfig {
 	public static int corporationDividendCap() {
 		Integer v = corporationDividendCap != null ? corporationDividendCap.getValue() : null;
 		return v == null ? 100 : Math.max(-1, v);
+	}
+
+	public static int franchiseBaseFee() {
+		Integer v = franchiseBaseFee != null ? franchiseBaseFee.getValue() : null;
+		return v == null ? 100000000 : Math.max(0, v);
+	}
+
+	public static int franchiseCutPercent() {
+		Integer v = franchiseCutPercent != null ? franchiseCutPercent.getValue() : null;
+		return v == null ? 8 : Math.max(0, Math.min(100, v));
+	}
+
+	public static int franchiseRoyaltyPercent() {
+		Integer v = franchiseRoyaltyPercent != null ? franchiseRoyaltyPercent.getValue() : null;
+		return v == null ? 20 : Math.max(0, Math.min(100, v));
+	}
+
+	public static int franchiseTrafficUnit() {
+		Integer v = franchiseTrafficUnit != null ? franchiseTrafficUnit.getValue() : null;
+		return v == null ? 50000000 : Math.max(1, v);
 	}
 
 	public static int institutionUpkeep() {

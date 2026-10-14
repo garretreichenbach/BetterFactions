@@ -114,7 +114,7 @@ public final class CivicRegistry {
         register(NAMESPACE, new CivicType.Builder("council").displayName("Council").institution()
                 .description("A ring of councilors, each with an agenda of their own: goals against real factions, paid in faction points, fail or refuse one and we pay. Our civics decide who they are. With a Senate, members can be voted onto it."));
         register(NAMESPACE, new CivicType.Builder("corporations").displayName("Corporations").institution()
-                .description("Charter companies to run our stations' shops. Each takes a cut of their sales and pays part of it to the faction as dividends in faction points. One charter is free; each further one adds upkeep."));
+                .description("Charter companies to run our stations' shops and buy franchises on Trading Guild shops. Each takes a cut of the sales and pays part of it to the faction as dividends in faction points. One charter is free; each further one adds upkeep."));
     }
 
     /**
