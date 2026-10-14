@@ -17,6 +17,7 @@ import org.schema.game.server.data.blueprint.ChildStats;
 import org.schema.game.server.data.blueprint.SegmentControllerOutline;
 import org.schema.game.server.data.blueprintnw.BlueprintEntry;
 import org.schema.game.server.data.blueprintnw.BlueprintType;
+import videogoose.betterfactions.fleet.NpcFleetFreeze;
 import videogoose.betterfactions.BetterFactions;
 import videogoose.betterfactions.repair.ShipyardRepairs;
 
@@ -79,6 +80,12 @@ public final class BattleCommands {
 			ShipyardRepairs.free = ctx.optBool(0, !ShipyardRepairs.free);
 			ctx.reply("Shipyard repairs are now " + (ShipyardRepairs.free ? "free." : "paid in components."));
 		}, CommandArg.bool("free", "true").optional()));
+		StarLoader.registerCommand(mod, new Command("npc_fleets_frozen", "[true|false]",
+				"Debugging: NPC fleets stop moving, loaded or not, so a raid can be set up on one. Their orders still change."
+						+ " No argument flips it. Not saved: a restart turns it off.", ctx -> {
+			NpcFleetFreeze.on = ctx.optBool(0, !NpcFleetFreeze.on);
+			ctx.reply("NPC fleets are now " + (NpcFleetFreeze.on ? "frozen in place." : "moving."));
+		}, CommandArg.bool("frozen", "true").optional()));
 		StarLoader.registerCommand(mod, new Command("battle_blueprints", "[filter]",
 				"Lists catalog ship blueprints, heaviest first, for /battle_spawn_fleet.", BattleCommands::listBlueprints,
 				CommandArg.greedy("filter", "isanth").optional()));

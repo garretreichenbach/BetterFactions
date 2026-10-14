@@ -2,6 +2,7 @@ package videogoose.betterfactions;
 
 import api.config.simpleconfig.SimpleConfigBool;
 import api.config.simpleconfig.SimpleConfigContainer;
+import api.config.simpleconfig.SimpleConfigDouble;
 import api.config.simpleconfig.SimpleConfigInt;
 import api.config.simpleconfig.SimpleConfigString;
 
@@ -11,7 +12,6 @@ import api.config.simpleconfig.SimpleConfigString;
 public final class BFConfig {
 
 	private static SimpleConfigBool customEmblems;
-	private static SimpleConfigBool fleetJumps;
 	private static SimpleConfigInt tradeDiscount;
 	private static SimpleConfigInt tariff;
 	private static SimpleConfigInt tributePercent;
@@ -40,6 +40,7 @@ public final class BFConfig {
 	private static SimpleConfigInt spiceDealerPercent;
 	private static SimpleConfigInt wreckLifetimeHours;
 	private static SimpleConfigInt fleetUpkeepMassPerPoint;
+	private static SimpleConfigDouble fleetSpeedReferenceTmr;
 	private static SimpleConfigInt institutionUpkeep;
 	private static SimpleConfigInt stationIncome;
 	private static SimpleConfigInt stationIncomeMinMass;
@@ -64,8 +65,6 @@ public final class BFConfig {
 		SimpleConfigContainer config = new SimpleConfigContainer(mod, "config", false);
 		customEmblems = new SimpleConfigBool(config, "custom_emblems_enabled", false,
 				"If true, factions may upload their own emblem image. Off by default: turn it on only if you are willing to moderate what players upload (admins can remove one with /faction_emblem_clear).");
-		fleetJumps = new SimpleConfigBool(config, "fleet_jump_drives_enabled", true,
-				"If true, loaded fleet ships with a jump drive charge it and jump toward their fleet's move target when it is 2 or more sectors away.");
 		tradeDiscount = new SimpleConfigInt(config, "trade_agreement_shop_discount_percent", 10,
 				"Percent off buying from, and extra when selling to, a shop whose faction has a trade agreement with yours. 0 turns it off.");
 		tariff = new SimpleConfigInt(config, "tariff_percent", 20,
@@ -120,6 +119,8 @@ public final class BFConfig {
 				"Percent more faction point upkeep a system costs for each Neighbourhood Spice Dealer faction owning a system that shares a face with it. 0 turns the effect off.");
 		wreckLifetimeHours = new SimpleConfigInt(config, "wreck_lifetime_hours", 48,
 				"A ship whose overheat timer runs out stays as an ownerless wreck for this many hours (counted while its sector is loaded) instead of vanishing, docked turrets and all; anyone may board and reboot it. 0 turns wrecks off: ships vanish as in vanilla.");
+		fleetSpeedReferenceTmr = new SimpleConfigDouble(config, "fleet_speed_reference_thrust_mass_ratio", 1.0,
+				"Unloaded fleets cross sectors at the server's FLEET_OUT_OF_SECTOR_MOVEMENT time divided by (members' average thrust to mass ratio / this), clamped to 0.25x to 4x speed. Members never seen loaded are left out. 0 turns it off (vanilla speed).");
 		fleetUpkeepMassPerPoint = new SimpleConfigInt(config, "fleet_upkeep_mass_per_point", 10000,
 				"Player factions pay one faction point of upkeep each income period for every this much mass in their members' fleets (docked ships count with what they are docked to). With the vanilla config a 100k mass fleet costs about what one claimed system does. 0 turns fleet upkeep off.");
 		institutionUpkeep = new SimpleConfigInt(config, "institution_upkeep_points", 10,
@@ -240,6 +241,11 @@ public final class BFConfig {
 	public static int senateVoteHours() {
 		Integer v = senateVoteHours != null ? senateVoteHours.getValue() : null;
 		return v == null ? 24 : Math.max(1, v);
+	}
+
+	public static float fleetSpeedReferenceTmr() {
+		Double v = fleetSpeedReferenceTmr != null ? fleetSpeedReferenceTmr.getValue() : null;
+		return v == null ? 1f : v.floatValue();
 	}
 
 	public static int fleetUpkeepMassPerPoint() {
@@ -378,10 +384,6 @@ public final class BFConfig {
 
 	public static boolean customEmblemsEnabled() {
 		return customEmblems != null && customEmblems.getValue() != null && customEmblems.getValue();
-	}
-
-	public static boolean fleetJumpsEnabled() {
-		return fleetJumps == null || fleetJumps.getValue() == null || fleetJumps.getValue();
 	}
 
 	public static int tradeDiscountPercent() {

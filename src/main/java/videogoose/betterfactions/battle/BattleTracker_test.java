@@ -17,6 +17,8 @@ import java.util.function.BiPredicate;
 public final class BattleTracker_test {
 
 	public static void main(String[] args) {
+		assert BattleTracker.pair(10001, -2) == BattleTracker.pair(-2, 10001) : "a raid's two factions key the same either way round";
+		assert BattleTracker.pair(1, 2) != BattleTracker.pair(1, 3);
 		reports();
 		ending();
 		pausing();

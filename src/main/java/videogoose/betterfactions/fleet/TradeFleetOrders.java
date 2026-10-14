@@ -101,6 +101,24 @@ public final class TradeFleetOrders {
 		}
 	}
 
+	/** The fleet a raiding fleet is on (a convoy, or miners), or -1. */
+	public long preyOf(long fleetDbId) {
+		Post post = posts.get(fleetDbId);
+		return post != null && post.kind == Kind.RAID ? post.convoy : -1;
+	}
+
+	/**
+	 * Server: whether two fleets are a raider and the fleet it is on, either way round. They fight as enemies
+	 * (RaidHostilityMixin, BattleTracker) though their factions need not be at war: a raid needs no war.
+	 */
+	public boolean raiding(long a, long b) {
+		return a >= 0 && b >= 0 && (preyOf(a) == b || preyOf(b) == a);
+	}
+
+	public boolean anyRaids() {
+		return !posts.isEmpty();
+	}
+
 	public String labelFor(long fleetDbId) {
 		Post post = posts.get(fleetDbId);
 		if (post == null) {

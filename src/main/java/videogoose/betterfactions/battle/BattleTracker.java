@@ -41,6 +41,7 @@ import videogoose.betterfactions.BFConfig;
 import videogoose.betterfactions.DiplomacyManager;
 import videogoose.betterfactions.Wrecks;
 import videogoose.betterfactions.diplomacy.CombatRatings;
+import videogoose.betterfactions.fleet.TradeFleetOrders;
 import videogoose.betterfactions.mixin.TableAccessor;
 import videogoose.betterfactions.net.BFPacket;
 
@@ -934,7 +935,17 @@ public final class BattleTracker {
 			System.err.println("[BetterFactions] auto-resolve could not read sector " + pos + ": " + e);
 		}
 		cooldownUntil.put(pos, now + COOLDOWN_MS);
-		int winner = pickWinner(strength, fm::isEnemy, RNG);
+		//a raider and its prey here are enemies though their factions need not be at war
+		LongOpenHashSet raids = new LongOpenHashSet();
+		for (Fleet a : fleets) {
+			for (Fleet b : fleets) {
+				if (TradeFleetOrders.get().raiding(a.dbid, b.dbid)) {
+					raids.add(pair(a.getFactionId(), b.getFactionId()));
+				}
+			}
+		}
+		BiPredicate<Integer, Integer> enemies = (x, y) -> fm.isEnemy(x, y) || raids.contains(pair(x, y));
+		int winner = pickWinner(strength, enemies, RNG);
 		if (winner == Integer.MIN_VALUE) {
 			return; //nobody there can fight, or nobody there is at war
 		}
@@ -946,18 +957,23 @@ public final class BattleTracker {
 		b.lastHit = now;
 		for (int faction : strength.keySet()) {
 			Side s = b.side(faction);
-			s.survivors = faction == winner || !fm.isEnemy(faction, winner);
+			s.survivors = faction == winner || !enemies.test(faction, winner);
 		}
 		for (Fleet f : fleets) {
 			if (attacks(Order.of(f), pos)) {
 				b.side(f.getFactionId()).attacking = true;
 			}
-			if (fm.isEnemy(f.getFactionId(), winner)) {
+			if (enemies.test(f.getFactionId(), winner)) {
 				retreat(f, pos, fm);
 				b.side(f.getFactionId()).withdrew = true;
 			}
 		}
 		report(state, null, b, now);
+	}
+
+	/** Two factions as one unordered key. */
+	static long pair(int a, int b) {
+		return ((long) Math.min(a, b) << 32) | (Math.max(a, b) & 0xffffffffL);
 	}
 
 	/**
@@ -1109,6 +1125,7 @@ public final class BattleTracker {
 		FactionManager fm = state.getFactionManager();
 		Object2ObjectOpenHashMap<Vector3i, IntOpenHashSet> factions = new Object2ObjectOpenHashMap<>();
 		ObjectOpenHashSet<Vector3i> armed = new ObjectOpenHashSet<>();
+		ObjectOpenHashSet<Vector3i> raided = new ObjectOpenHashSet<>();
 		ObjectOpenHashSet<Vector3i> moved = new ObjectOpenHashSet<>();
 		Long2ObjectOpenHashMap<Vector3i> seen = new Long2ObjectOpenHashMap<>();
 		for (Fleet f : state.getFleetManager().fleetCache.values()) {
@@ -1127,6 +1144,11 @@ public final class BattleTracker {
 			factions.computeIfAbsent(pos, k -> new IntOpenHashSet()).add(f.getFactionId());
 			if (fights(f)) {
 				armed.add(pos);
+				//a raider on its prey fights it with no war between them (RaidHostilityMixin)
+				Fleet prey = state.getFleetManager().getByFleetDbId(TradeFleetOrders.get().preyOf(f.dbid));
+				if (prey != null && prey.getFlagShip() != null && pos.equals(prey.getFlagShip().getSector())) {
+					raided.add(pos);
+				}
 			}
 		}
 		fleetSectors = seen;
@@ -1153,7 +1175,7 @@ public final class BattleTracker {
 			IntOpenHashSet here = e.getValue();
 			here.addAll(known.factions);
 			if ((armed.contains(pos) || known.station) && anyEnemies(here, fm)
-					|| armed.contains(pos) && known.undiscovered) {
+					|| armed.contains(pos) && (known.undiscovered || raided.contains(pos))) {
 				enqueue(pos, now);
 			} else if (armed.contains(pos)) {
 				explainSkipped(pos, here, known, fm);

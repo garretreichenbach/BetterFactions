@@ -244,7 +244,6 @@ public final class BetterFactions extends StarMod {
             BattleWorldTests.tick();
             ShipyardRepairs.get().update(serverState, timer.currentTime);
             FleetIntercepts.get().update(serverState, timer.currentTime);
-            videogoose.betterfactions.fleet.FleetJumps.get().update(serverState, timer.currentTime);
             videogoose.betterfactions.fleet.TradeFleetOrders.get().update(serverState, timer.currentTime);
             videogoose.betterfactions.trade.RouteSafety.server().update(serverState, timer.currentTime);
         }, this);

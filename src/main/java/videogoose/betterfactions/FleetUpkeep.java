@@ -27,6 +27,8 @@ public final class FleetUpkeep {
 
     /** Entity UID to its last known mass, docks excluded (they ride on the root). todo: never pruned. */
     private final Map<String, Double> masses = new HashMap<>();
+    /** Entity UID to its last known thrust to mass ratio, for unloaded fleet speed. Saved beside its mass. */
+    private final Map<String, Float> tmrs = new HashMap<>();
 
     public static FleetUpkeep get() {
         return instance;
@@ -40,6 +42,37 @@ public final class FleetUpkeep {
         if (mass > 0) {
             masses.put(uid, mass);
         }
+    }
+
+    public synchronized void sawThrustMassRatio(String uid, float tmr) {
+        if (tmr > 0) {
+            tmrs.put(uid, tmr);
+        }
+    }
+
+    /** Last thrust to mass ratio seen for this entity, 0 if never seen. */
+    public synchronized float thrustMassRatioOf(String uid) {
+        return tmrs.getOrDefault(uid, 0f);
+    }
+
+    /**
+     * How much faster than {@code ServerConfig.FLEET_OUT_OF_SECTOR_MOVEMENT} an unloaded fleet moves: the
+     * members' average thrust to mass ratio over {@code reference}, clamped to [{@code min}, {@code max}].
+     * Members never seen loaded are left out; with none known it is 1, vanilla speed.
+     */
+    public static float speedFactor(float[] tmrs, float reference, float min, float max) {
+        float sum = 0;
+        int n = 0;
+        for (float t : tmrs) {
+            if (t > 0) {
+                sum += t;
+                n++;
+            }
+        }
+        if (n == 0 || reference <= 0) {
+            return 1;
+        }
+        return Math.clamp(sum / n / reference, min, max);
     }
 
     /** Last mass seen for this entity, 0 if never seen. */
@@ -100,7 +133,8 @@ public final class FleetUpkeep {
         int i = 0;
         for (Map.Entry<String, Double> e : masses.entrySet()) {
             t[i++] = new Tag(Tag.Type.STRUCT, null, new Tag[]{
-                    new Tag(Tag.Type.STRING, null, e.getKey()), new Tag(Tag.Type.DOUBLE, null, e.getValue()), FinishTag.INST});
+                    new Tag(Tag.Type.STRING, null, e.getKey()), new Tag(Tag.Type.DOUBLE, null, e.getValue()),
+                    new Tag(Tag.Type.FLOAT, null, tmrs.getOrDefault(e.getKey(), 0f)), FinishTag.INST});
         }
         t[i] = FinishTag.INST;
         return new Tag(Tag.Type.STRUCT, null, t);
@@ -111,6 +145,9 @@ public final class FleetUpkeep {
             if (e.getType() == Tag.Type.STRUCT) {
                 Tag[] pair = e.getStruct();
                 masses.put(pair[0].getString(), pair[1].getDouble());
+                if (pair.length > 3 && pair[2].getType() == Tag.Type.FLOAT) { //saves from before the ratio was kept have none
+                    sawThrustMassRatio(pair[0].getString(), pair[2].getFloat());
+                }
             }
         }
     }

@@ -1,6 +1,7 @@
 package videogoose.betterfactions.mixin;
 
 import org.schema.game.common.controller.SegmentController;
+import org.schema.game.common.controller.Ship;
 import org.schema.game.common.data.fleet.FleetMember;
 import org.schema.game.server.controller.BluePrintController;
 import org.schema.game.server.data.blueprintnw.BlueprintEntry;
@@ -81,6 +82,9 @@ public abstract class FleetMemberMassMixin {
 		}
 		double m = sc.getMassWithoutDockIncludingStation();
 		FleetUpkeep.get().sawMass(sc.getUniqueIdentifier(), m);
+		if (sc instanceof Ship ship) { //for unloaded fleet speed (FleetUnloadedMoveMixin)
+			FleetUpkeep.get().sawThrustMassRatio(sc.getUniqueIdentifier(), ship.getManagerContainer().getThrusterElementManager().getThrustMassRatio());
+		}
 		if (Math.abs(m - lastMass) > Math.max(1, lastMass * 0.005)) {
 			lastMass = m;
 			cir.setReturnValue(true);
