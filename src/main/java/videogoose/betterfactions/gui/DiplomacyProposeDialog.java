@@ -478,7 +478,7 @@ public class DiplomacyProposeDialog extends PlayerInput {
             return r.accepted
                     ? Lng.str("Your casus belli holds. War takes effect the moment you confirm.")
                     : Lng.str("No casus belli: %s\nAn unjust war costs %s more faction points and marks you an aggressor.",
-                    r.getMessage(), BFConfig.unjustWarCost());
+                    r.getMessage(), videogoose.betterfactions.civics.Council.ownCost(videogoose.betterfactions.civics.Council.ZEAL, BFConfig.unjustWarCost()));
         }
         if (selected != null && selected.getKind() == TreatyType.Kind.DECLARATION) {
             //nobody is being asked, so there is no answer to preview - saying "they would refuse"

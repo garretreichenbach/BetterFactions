@@ -3866,7 +3866,8 @@ public final class DiplomacyManager extends Observable {
      * Buys a casus belli on {@code target}, usable once it has been prepared. Nobody is told.
      */
     private void fabricateClaimServer(PlayerState sender, int target) {
-        Faction from = spender(sender, target, true, BFConfig.fabricateClaimCost());
+        int claimCost = Council.server().cost(sender.getFactionId(), Council.EXPANSION, BFConfig.fabricateClaimCost());
+        Faction from = spender(sender, target, true, claimCost);
         if (from == null) {
             return;
         }
@@ -3885,7 +3886,7 @@ public final class DiplomacyManager extends Observable {
             denyToPlayer(sender.getName(), Lng.astr("The claim could not be made."));
             return;
         }
-        spend(from, BFConfig.fabricateClaimCost());
+        spend(from, claimCost);
         //nobody is told, so neither is the history: only the claimant sees this line
         history(from.getIdFaction(), target, Lng.str("%s began fabricating a claim on %s.", from.getName(), getFactionName(target)), from.getIdFaction());
         sender.sendServerMessagePlayerInfo(Lng.astr("Fabricating a claim on %s. It will be ready in %s hours and justify any war goal against them for %s hours.",
@@ -3917,7 +3918,7 @@ public final class DiplomacyManager extends Observable {
             return Council.server().cost(from.getIdFaction(), Council.PEACE, BFConfig.proposeTreatyCost());
         }
         //the perk eases the declaring, not the price of an unjust war
-        return Council.server().cost(from.getIdFaction(), Council.WAR, BFConfig.declareWarCost()) + (unjustWar(fk, from, type) ? BFConfig.unjustWarCost() : 0);
+        return Council.server().cost(from.getIdFaction(), Council.WAR, BFConfig.declareWarCost()) + (unjustWar(fk, from, type) ? Council.server().cost(from.getIdFaction(), Council.ZEAL, BFConfig.unjustWarCost()) : 0);
     }
 
     /**

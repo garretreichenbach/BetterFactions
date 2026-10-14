@@ -295,7 +295,7 @@ public class FactionSettingsContent extends GUIAnchor {
             public String toString() {
                 return Civics.client().of(own).doctrine == null
                         ? Lng.str("How the faction fights: one doctrine at a time. The first is free; click one to choose it.")
-                        : Lng.str("One at a time. Switching costs %s faction points and shares the civic swap cooldown.", BFConfig.civicSwapCost());
+                        : Lng.str("One at a time. Switching costs %s faction points and shares the civic swap cooldown.", videogoose.betterfactions.civics.Council.ownCost(videogoose.betterfactions.civics.Council.REFORM, BFConfig.civicSwapCost()));
             }
         });
         note.setColor(DIM);
@@ -332,7 +332,7 @@ public class FactionSettingsContent extends GUIAnchor {
             @Override
             public String toString() {
                 return current.getAsBoolean() ? Lng.str("CURRENT")
-                        : Civics.client().of(own).doctrine == null ? Lng.str("FREE") : Lng.str("SWITCH: %s FP", BFConfig.civicSwapCost());
+                        : Civics.client().of(own).doctrine == null ? Lng.str("FREE") : Lng.str("SWITCH: %s FP", videogoose.betterfactions.civics.Council.ownCost(videogoose.betterfactions.civics.Council.REFORM, BFConfig.civicSwapCost()));
             }
         });
         GUITextOverlay desc = new GUITextOverlay(10, 10, FontLibrary.getBlenderProMedium14(), getState());
@@ -378,7 +378,7 @@ public class FactionSettingsContent extends GUIAnchor {
             getState().getController().popupAlertTextMessage(Lng.str("You can switch again in %s days.", days), 0);
             return;
         }
-        int cost = c.cost(FactionCivics.DOCTRINE, now, BFConfig.civicSwapCost(), BFConfig.civicRushCost(), cooldownMs);
+        int cost = c.cost(FactionCivics.DOCTRINE, now, videogoose.betterfactions.civics.Council.ownCost(videogoose.betterfactions.civics.Council.REFORM, BFConfig.civicSwapCost()), BFConfig.civicRushCost(), cooldownMs);
         new PlayerGameOkCancelInput("CONFIRM", getState(), Lng.str("Switch to %s?", t.getDisplayName()),
                 Lng.str("Replaces %s for %s faction points. The next civic or doctrine swap waits %s days.",
                         CivicRegistry.nameOf(c.doctrine), cost, BFConfig.civicSwapCooldownDays())) {

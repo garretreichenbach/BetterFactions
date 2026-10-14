@@ -33,9 +33,21 @@ public final class Council_test {
         assert Council.clash(destroy, signOther);
         assert !Council.clash(war, null);
 
-        assert Council.aiSeats(FactionCivics.STARTING_SLOTS) == 3;
-        assert Council.aiSeats(FactionCivics.STARTING_SLOTS + 1) == 4;
-        assert Council.aiSeats(FactionCivics.STARTING_SLOTS + 9) == 5 : "members fill the rest";
+        //roles: three to start, the rest added; every role has its words
+        assert Council.BASE_SEATS == 3 && Council.ROLES == 10;
+        Council.State ring = new Council.State();
+        for (int i = 0; i < Council.BASE_SEATS; i++) {
+            Council.Seat s = new Council.Seat();
+            s.archetype = i;
+            ring.seats.add(s);
+        }
+        assert Council.openRoles(ring).equals(java.util.List.of(3, 4, 5, 6, 7, 8, 9)) : "a new seat takes a role not on the ring";
+        for (int r = 0; r < Council.ROLES; r++) {
+            for (CouncilLore.Flavour f : CouncilLore.Flavour.values()) {
+                assert !CouncilLore.seat(f, r).equals(CouncilLore.seat(f, (r + 1) % Council.ROLES)) : "each role is its own seat in every style";
+            }
+            assert !Council.perk(r).isEmpty();
+        }
 
         Council.Agenda timed = agenda(Council.Objective.STAY_SOLVENT, 0);
         timed.count = 3;
@@ -68,7 +80,7 @@ public final class Council_test {
         assert back.fulfilled == 4 && back.seats.size() == 2;
         assert back.name.equals("The Inner Circle") : "a renamed Council keeps its name";
         assert back.pool.isEmpty() && back.poolDay == -1 : "no pool drawn yet";
-        st.pool.addAll(Council.drawPool(0));
+        st.pool.addAll(Council.drawPool(0, CouncilLore.Flavour.SHADOW));
         st.poolDay = 3;
         Council.State drawn = Council.State.fromTag(st.toTag());
         assert drawn.pool.size() == Council.POOL_SIZE && drawn.poolDay == 3 : "the day's pool survives a save";
@@ -82,6 +94,35 @@ public final class Council_test {
         assert Council.clashWith(st, ai) == null && Council.clashWith(back, back.seats.get(0)) == null;
         held.agenda = sign;
         assert Council.clashWith(st, ai) == held : "a member's agenda can clash too";
+        //style: the faction picks among what its civics allow
+        FactionCivics both = new FactionCivics();
+        both.civics.add(CivicRegistry.WARRIOR_CODE);
+        both.civics.add(CivicRegistry.RELIGIOUS);
+        assert CouncilLore.available(both).equals(java.util.List.of(CouncilLore.Flavour.MOOT, CouncilLore.Flavour.SHADOW, CouncilLore.Flavour.COUNCIL));
+        assert CouncilLore.of(both, "") == CouncilLore.Flavour.MOOT : "unchosen: the first shaping civic in slot order";
+        assert CouncilLore.of(both, "SHADOW") == CouncilLore.Flavour.SHADOW && CouncilLore.of(both, "COUNCIL") == CouncilLore.Flavour.COUNCIL;
+        assert !CouncilLore.allowed(both, "BOARD") && CouncilLore.of(both, "BOARD") == CouncilLore.Flavour.MOOT : "a style whose civic is not held falls back";
+        assert CouncilLore.allowed(both, "") && !CouncilLore.allowed(both, "NONSENSE");
+        Council.State styled = new Council.State();
+        styled.style = "SHADOW";
+        assert Council.State.fromTag(styled.toTag()).style.equals("SHADOW") : "the chosen style survives a save";
+
+        //suspension: time away is not counted against the faction
+        Council.State away = new Council.State();
+        Council.Seat waiting = new Council.Seat();
+        waiting.nextAt = 1_000;
+        Council.Seat busy = new Council.Seat();
+        busy.agenda = agenda(Council.Objective.KEEP_PEACE, 0);
+        busy.agenda.issued = 500;
+        busy.agenda.deadline = 2_000;
+        away.seats.add(waiting);
+        away.seats.add(busy);
+        away.suspendedAt = 800;
+        assert Council.State.fromTag(away.toTag()).suspendedAt == 800 : "a suspension survives a save";
+        away.resume(10_800);
+        assert !away.suspended() && waiting.nextAt == 11_000 && busy.agenda.issued == 10_500 && busy.agenda.deadline == 12_000
+                : "everything moves on by the time away";
+
         //relations decide what a councilor asks: nudges, not orders
         java.util.function.Predicate<String> none = t -> false;
         String embargo = videogoose.betterfactions.diplomacy.TreatyTypeRegistry.EMBARGO;
@@ -120,11 +161,11 @@ public final class Council_test {
         assert council.cost(9, Council.PEACE, 400) == 400 : "a content councilor gives nothing";
         assert council.cost(8, Council.WAR, 400) == 400 : "another faction's Council is not ours";
         assert council.perk(9, Council.GLORY) && council.scale(9, Council.GLORY, 100f) == 90f : "a member's seat always gives its perk";
-        assert council.extraSeats(9, FactionCivics.STARTING_SLOTS) == 3 : "six seats, three earned";
+        assert council.extraSeats(9) == 3 : "six seats, three to start";
         FactionCivics civics = new FactionCivics();
         civics.institutions.add(CivicRegistry.COUNCIL);
-        civics.slotsEarned = FactionCivics.STARTING_SLOTS + 2;
-        assert council.institutionUpkeep(9, civics, 10) == (10 + 10) * 0.85f : "one institution, one extra seat, less the treasury's 15%";
+        assert Math.abs(council.institutionUpkeep(9, civics, 10) - (10 + 30) * 0.85f) < 0.01f : "one institution, three added seats, less the treasury's 15%";
+        assert council.cost(9, Council.ZEAL, 400) == 400 && council.cost(9, Council.REFORM, 100) == 100 : "roles not on the ring give nothing";
         System.out.println("Council_test: OK");
     }
 }

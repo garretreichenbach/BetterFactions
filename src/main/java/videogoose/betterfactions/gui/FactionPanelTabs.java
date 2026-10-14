@@ -216,6 +216,12 @@ public class FactionPanelTabs implements GUIActiveInterface {
     /** The description's share of its column; the modifiers box under it takes the rest. */
     private static final float DESCRIPTION_FRACTION = 0.5f;
     /**
+     * The same box under the diplomacy list. The engine takes a fraction of the whole column, not
+     * of what is left, so the list and vitals above it have to come out of this share or the column
+     * runs off the window and nothing scrolls.
+     */
+    private static final float DIPLOMACY_DESCRIPTION_FRACTION = 0.25f;
+    /**
      * Name, founding, chair and the charter text.
      */
     private static final int FEDERATION_CARD_HEIGHT = 96;
@@ -282,7 +288,7 @@ public class FactionPanelTabs implements GUIActiveInterface {
         diplomacyTab.setTextBoxHeightLast(0, DIPLOMACY_FACTION_LIST_HEIGHT);
         diplomacyTab.addNewTextBox(0, OVERVIEW_VITALS_HEIGHT);
         diplomacyTab.addNewTextBox(0, 10);
-        diplomacyTab.setTextBoxHeightFractionLast(0, DESCRIPTION_FRACTION);
+        diplomacyTab.setTextBoxHeightFractionLast(0, DIPLOMACY_DESCRIPTION_FRACTION);
         diplomacyTab.addNewTextBox(0, 10);
         diplomacyVitals = diplomacyTab.getContent(0, 1);
         diplomacyAbout = diplomacyTab.getContent(0, 2);

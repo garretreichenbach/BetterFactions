@@ -230,7 +230,7 @@ public final class CivicChooser {
             String why = c.conflict(slot, t.getId());
             long now = System.currentTimeMillis();
             long cooldownMs = BFConfig.civicSwapCooldownDays() * DAY_MS;
-            int cost = c.cost(slot, now, BFConfig.civicSwapCost(), BFConfig.civicRushCost(), cooldownMs);
+            int cost = c.cost(slot, now, videogoose.betterfactions.civics.Council.ownCost(videogoose.betterfactions.civics.Council.REFORM, BFConfig.civicSwapCost()), BFConfig.civicRushCost(), cooldownMs);
             long days = c.cooldownDays(now, cooldownMs);
             boolean swap = c.isSwap(slot);
             if (why == null && swap && days > 0 && BFConfig.civicRushCost() <= 0) {
@@ -270,7 +270,9 @@ public final class CivicChooser {
             GUIAnchor verdictWrap = new GUIAnchor(getState(), DETAIL_WIDTH - 24, 60);
             GUITextOverlay v = text(getState(), 14, why != null ? ORANGE : DIM, verdict);
             v.autoWrapOn = verdictWrap;
-            v.setPos(12, y - 52, 0);
+            v.onInit();
+            v.updateTextSize();
+            v.setPos(12, y - v.getTextHeight() - 6, 0);
             d.attach(v);
             return d;
         }

@@ -96,7 +96,7 @@ public class CouncilContent extends GUIAnchor {
             content.attach(t);
             return;
         }
-        CouncilLore.Flavour flavour = CouncilLore.of(Civics.client().of(own.getIdFaction()));
+        CouncilLore.Flavour flavour = CouncilLore.of(Civics.client().of(own.getIdFaction()), st.style);
         Vector4f accent = accent(flavour);
         selected = Math.min(selected, st.seats.size() - 1);
         builtSelected = selected;
@@ -112,12 +112,20 @@ public class CouncilContent extends GUIAnchor {
                         name -> Council.requestRename(-1, name)));
         rename.setPos(WIDTH - 100, 4, 0);
         content.attach(rename);
+        //only offered when the civics allow more than the plain Council
+        java.util.List<CouncilLore.Flavour> styles = CouncilLore.available(Civics.client().of(own.getIdFaction()));
+        GUITextButton style = FactionSettingsContent.button(getState(), 90, Lng.str("STYLE"), GUITextButton.ColorPalette.NEUTRAL,
+                () -> editor(own) && styles.size() > 1, () -> pickStyle(styles, flavour));
+        style.setPos(WIDTH - 196, 4, 0);
+        content.attach(style);
         GUIAnchor loreBox = new GUIAnchor(getState(), WIDTH - 20, 40);
-        GUITextOverlay lore = text(getState(), 14, DIM, CouncilLore.lore(flavour));
+        GUITextOverlay lore = st.suspended()
+                ? text(getState(), 14, ORANGE, Lng.str("Suspended while the faction had no active member. It resumes within a minute, its deadlines moved on by the time away."))
+                : text(getState(), 14, DIM, CouncilLore.lore(flavour));
         lore.autoWrapOn = loreBox;
         lore.setPos(8, 30, 0);
         content.attach(title);
-        aligned(shaped, WIDTH - 112, 8, 1);
+        aligned(shaped, WIDTH - 208, 8, 1);
         content.attach(lore);
 
         //the ring itself: a dotted circle, then the seats round it
@@ -149,8 +157,9 @@ public class CouncilContent extends GUIAnchor {
         GUITextOverlay held = text(getState(), 14, DIM, Lng.str("%s held by members", members));
 
         boolean senate = Civics.client().holds(own.getIdFaction(), CivicRegistry.SENATE);
-        GUITextButton add = FactionSettingsContent.button(getState(), 150, Lng.str("+ NEW SEAT (VOTE)"), GUITextButton.ColorPalette.NEUTRAL,
-                () -> senate && st.seats.size() < Council.MAX_SEATS, () -> pickMember(own, st, 0, -1));
+        GUITextButton add = FactionSettingsContent.button(getState(), 150, Lng.str("+ NEW SEAT"), GUITextButton.ColorPalette.NEUTRAL,
+                () -> (editor(own) || senate) && st.seats.size() < Council.MAX_SEATS && !Council.openRoles(st).isEmpty(),
+                () -> pickRole(own, st, flavour, senate));
         add.setPos(CX - 75, CY + 24, 0);
         aligned(name, CX, CY - 38, 0.5f);
         aligned(met, CX, CY - 18, 0.5f);
@@ -358,6 +367,33 @@ public class CouncilContent extends GUIAnchor {
                 : Lng.str("Progress counts on its own. A councilor whose favour runs out resigns. With a Senate, members can be voted onto the Council."), x, y, w, 60);
     }
 
+    /** The styles the civics allow; the one in use is marked. */
+    private void pickStyle(java.util.List<CouncilLore.Flavour> styles, CouncilLore.Flavour current) {
+        List<GUIElement> items = new ArrayList<>();
+        for (CouncilLore.Flavour f : styles) {
+            items.add(row(Lng.str("%s  -  shaped by %s%s", CouncilLore.title(f), CouncilLore.shapedBy(f), f == current ? Lng.str("  (now)") : ""), f));
+        }
+        new PlayerGameDropDownInput("COUNCIL_STYLE", getState(), 520, 220, Lng.str("The Council's style"), 24,
+                Lng.str("Who the Council is: its seats, voices and new councilors' names. Councilors keep their names; what they ask for stays the same."), items) {
+            @Override
+            public void onDeactivate() {
+            }
+
+            @Override
+            public boolean isOccluded() {
+                return false;
+            }
+
+            @Override
+            public void pressedOK(GUIListElement current) {
+                deactivate();
+                if (current != null && current.getContent() != null) {
+                    Council.requestStyle(((CouncilLore.Flavour) current.getContent().getUserPointer()).name());
+                }
+            }
+        }.activate();
+    }
+
     /** Who takes an AI councilor's seat: one of today's candidates, or a member by Senate vote. */
     private void pickReplacement(Faction own, Council.State st, Council.Seat seat, int at, CouncilLore.Flavour flavour, boolean editor, boolean senate) {
         List<GUIElement> items = new ArrayList<>();
@@ -426,6 +462,68 @@ public class CouncilContent extends GUIAnchor {
         content.attach(holder);
     }
 
+    /** A new seat: which role, then a new councilor or a member by Senate vote. */
+    private void pickRole(Faction own, Council.State st, CouncilLore.Flavour flavour, boolean senate) {
+        List<GUIElement> items = new ArrayList<>();
+        for (int role : Council.openRoles(st)) {
+            items.add(row(Lng.str("%s  -  devoted: %s", CouncilLore.seat(flavour, role), Council.perk(role)), role));
+        }
+        new PlayerGameDropDownInput("COUNCIL_ROLE", getState(), 760, 320, Lng.str("A new seat"), 24,
+                Lng.str("Choose the seat's role. Each seat past the first three costs %s faction points of upkeep an income turn.",
+                        videogoose.betterfactions.BFConfig.institutionUpkeep()), items) {
+            @Override
+            public void onDeactivate() {
+            }
+
+            @Override
+            public boolean isOccluded() {
+                return false;
+            }
+
+            @Override
+            public void pressedOK(GUIListElement current) {
+                deactivate();
+                if (current != null && current.getContent() != null) {
+                    pickFiller(own, st, flavour, (Integer) current.getContent().getUserPointer(), senate);
+                }
+            }
+        }.activate();
+    }
+
+    private void pickFiller(Faction own, Council.State st, CouncilLore.Flavour flavour, int role, boolean senate) {
+        List<GUIElement> items = new ArrayList<>();
+        if (editor(own)) {
+            items.add(row(Lng.str("A new councilor"), 0));
+        }
+        if (senate) {
+            items.add(row(Lng.str("Add a player... (Senate vote)"), 1));
+        }
+        new PlayerGameDropDownInput("COUNCIL_FILLER", getState(), 420, 200, Lng.str("Who takes the seat of %s?", CouncilLore.seat(flavour, role)), 24,
+                Lng.str("A new councilor takes it now. A player takes it once the Senate agrees."), items) {
+            @Override
+            public void onDeactivate() {
+            }
+
+            @Override
+            public boolean isOccluded() {
+                return false;
+            }
+
+            @Override
+            public void pressedOK(GUIListElement current) {
+                deactivate();
+                if (current == null || current.getContent() == null) {
+                    return;
+                }
+                if ((Integer) current.getContent().getUserPointer() == 0) {
+                    Council.requestAddSeat(role);
+                } else {
+                    pickMember(own, st, 0, role);
+                }
+            }
+        }.activate();
+    }
+
     /** Pick a member for a seat, then say why, then send it to the Senate. */
     private void pickMember(Faction own, Council.State st, int op, int seat) {
         List<GUIElement> items = new ArrayList<>();
@@ -444,7 +542,8 @@ public class CouncilContent extends GUIAnchor {
             getState().getController().popupAlertTextMessage(Lng.str("Every active member already holds a seat."), 0);
             return;
         }
-        String place = op == 1 ? Lng.str("in place of %s", st.seats.get(seat).name) : Lng.str("to a new seat");
+        String place = op == 1 ? Lng.str("in place of %s", st.seats.get(seat).name)
+                : Lng.str("to a new seat as %s", CouncilLore.seat(CouncilLore.of(Civics.client().of(own.getIdFaction()), st.style), seat));
         new PlayerGameDropDownInput("COUNCIL_MEMBER_PICK", getState(), 360, 300, Lng.str("Appoint to the Council"), 24,
                 Lng.str("Who should the Senate appoint %s?", place), items) {
             @Override

@@ -102,7 +102,7 @@ public final class Civics {
             return;
         }
         long now = System.currentTimeMillis();
-        int swapCost = BFConfig.civicSwapCost();
+        int swapCost = Council.server().cost(f.getIdFaction(), Council.REFORM, BFConfig.civicSwapCost());
         int rushCost = BFConfig.civicRushCost();
         long cooldownMs = BFConfig.civicSwapCooldownDays() * DAY_MS;
         Tag update;

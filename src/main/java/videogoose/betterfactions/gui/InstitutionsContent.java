@@ -33,6 +33,8 @@ public class InstitutionsContent extends GUIAnchor {
     static final Vector4f BLUE = new Vector4f(0.49f, 0.75f, 1.0f, 1.0f);
     static final Vector4f ORANGE = new Vector4f(0.94f, 0.64f, 0.40f, 1.0f);
 
+    private GUIElementList list;
+
     public InstitutionsContent(InputState state, GUIActiveInterface active) {
         super(state);
         activationInterface = active;
@@ -46,7 +48,7 @@ public class InstitutionsContent extends GUIAnchor {
     @Override
     public void onInit() {
         super.onInit();
-        GUIElementList list = new GUIElementList(getState());
+        list = new GUIElementList(getState());
         for (CivicType t : CivicRegistry.all()) {
             if (t.getKind() == CivicType.Kind.INSTITUTION) {
                 GUIAnchor c = card(t);
@@ -79,6 +81,7 @@ public class InstitutionsContent extends GUIAnchor {
             }
         };
         GUIAnchor descBox = new GUIAnchor(getState(), 10, CARD_HEIGHT);
+        GUITextOverlay desc = text(getState(), 14, DIM, t.getDescription());
         BooleanSupplier mayEdit = () -> getState().getPlayer().getFactionController().hasPermissionEditPermission();
         GUITextButton adopt = FactionSettingsContent.button(getState(), BUTTON_WIDTH, Lng.str("ADOPT"),
                 GUITextButton.ColorPalette.OK, () -> mayEdit.getAsBoolean() && !held(id), () -> Civics.requestInstitution(id, true));
@@ -113,6 +116,13 @@ public class InstitutionsContent extends GUIAnchor {
                 dissolve.setPos(getWidth() - BUTTON_WIDTH - 20, 14, 0);
                 note.setPos(getWidth() - BUTTON_WIDTH - 20, 44, 0);
                 tag.setPos(26 + name.getMaxLineWidth(), 13, 0);
+                //grow to fit the wrapped description; its height is from the last frame's wrap
+                int h = Math.max(CARD_HEIGHT, 34 + desc.getTextHeight() + 12);
+                if (h != (int) getHeight()) {
+                    setHeight(h);
+                    bg.setHeight(h - 6);
+                    list.updateDim();
+                }
                 super.draw();
             }
         };
@@ -121,7 +131,6 @@ public class InstitutionsContent extends GUIAnchor {
         name.setPos(16, 12, 0);
         a.attach(name);
         a.attach(tag);
-        GUITextOverlay desc = text(getState(), 14, DIM, t.getDescription());
         desc.autoWrapOn = descBox;
         desc.setPos(16, 34, 0);
         a.attach(desc);
@@ -159,7 +168,7 @@ public class InstitutionsContent extends GUIAnchor {
         int n = c.institutions.size();
         int base = BFConfig.institutionUpkeep();
         videogoose.betterfactions.civics.Council council = videogoose.betterfactions.civics.Council.client();
-        int extra = council.extraSeats(own(), c.slotsEarned);
+        int extra = council.extraSeats(own());
         boolean treasury = council.perk(own(), videogoose.betterfactions.civics.Council.TREASURY);
         StringBuilder b = new StringBuilder(Lng.str("UPKEEP\n%s FP per income turn.\n\nEach institution costs more than the one before it. Dropping one is free and lowers the rest.\n",
                 Math.round(council.institutionUpkeep(own(), c, base))));

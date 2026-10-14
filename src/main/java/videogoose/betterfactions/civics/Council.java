@@ -62,7 +62,7 @@ public final class Council {
 
     public enum Objective {
         //appended only: saves keep the ordinal
-        DESTROY_SHIPS, DECLARE_WAR, SIGN_TREATY, BREAK_TREATY, KEEP_PEACE, STAY_SOLVENT, SANCTION;
+        DESTROY_SHIPS, DECLARE_WAR, SIGN_TREATY, BREAK_TREATY, KEEP_PEACE, STAY_SOLVENT, SANCTION, CLAIM_SYSTEMS;
 
         /** Met by not breaking it until the deadline, rather than by counting up. */
         public boolean timed() {
@@ -70,7 +70,10 @@ public final class Council {
         }
     }
 
-    /** What each archetype's seat asks for, by ring position: war, peace, intrigue, calm, treasury, glory, diplomacy. */
+    /**
+     * What each role's seat asks for: war, peace, intrigue, calm, treasury, glory, diplomacy, expansion,
+     * reform, zeal. A Council starts with the first three; the rest are added.
+     */
     static final Objective[][] POOLS = {
             {Objective.DESTROY_SHIPS, Objective.SANCTION, Objective.DECLARE_WAR},
             {Objective.SIGN_TREATY},
@@ -79,7 +82,13 @@ public final class Council {
             {Objective.STAY_SOLVENT},
             {Objective.DESTROY_SHIPS},
             {Objective.SIGN_TREATY, Objective.KEEP_PEACE},
+            {Objective.CLAIM_SYSTEMS},
+            {Objective.KEEP_PEACE, Objective.STAY_SOLVENT},
+            {Objective.SANCTION, Objective.DESTROY_SHIPS},
     };
+
+    /** How many roles there are. */
+    public static final int ROLES = POOLS.length;
 
     /** Treaties an agenda may ask to be broken: ones a signatory can walk out of. */
     private static final String[] BREAKABLE = {TreatyTypeRegistry.NON_AGGRESSION, TreatyTypeRegistry.TRADE_AGREEMENT,
@@ -216,6 +225,30 @@ public final class Council {
         public final List<Seat> pool = new ArrayList<>();
         /** The day ({@code now / DAY_MS}) the pool was drawn. */
         public long poolDay = -1;
+        /** When the faction last had no active member, or 0: while set, the Council stands still. */
+        public long suspendedAt;
+        /** The style the faction chose ({@link CouncilLore.Flavour} name), or blank for its first shaping civic's. */
+        public String style = "";
+
+        public boolean suspended() {
+            return suspendedAt > 0;
+        }
+
+        /**
+         * Picks up where it stopped: every deadline and wait moves on by the time away, so nothing comes
+         * due the moment the faction returns.
+         */
+        void resume(long now) {
+            long away = Math.max(0, now - suspendedAt);
+            for (Seat s : seats) {
+                s.nextAt += away;
+                if (s.agenda != null) {
+                    s.agenda.issued += away;
+                    s.agenda.deadline += away;
+                }
+            }
+            suspendedAt = 0;
+        }
 
         public String title(CouncilLore.Flavour flavour) {
             return name.isEmpty() ? CouncilLore.title(flavour) : name;
@@ -233,7 +266,8 @@ public final class Council {
             }
             c[pool.size()] = FinishTag.INST;
             return new Tag(Tag.Type.STRUCT, null, new Tag[]{new Tag(Tag.Type.INT, null, fulfilled), new Tag(Tag.Type.STRUCT, null, s),
-                    new Tag(Tag.Type.STRING, null, name), new Tag(Tag.Type.STRUCT, null, c), new Tag(Tag.Type.LONG, null, poolDay), FinishTag.INST});
+                    new Tag(Tag.Type.STRING, null, name), new Tag(Tag.Type.STRUCT, null, c), new Tag(Tag.Type.LONG, null, poolDay),
+                    new Tag(Tag.Type.LONG, null, suspendedAt), new Tag(Tag.Type.STRING, null, style), FinishTag.INST});
         }
 
         static State fromTag(Tag tag) {
@@ -253,6 +287,8 @@ public final class Council {
                     }
                 }
                 st.poolDay = t[4].getLong();
+                st.suspendedAt = t.length > 5 && t[5].getType() == Tag.Type.LONG ? t[5].getLong() : 0;
+                st.style = t.length > 6 && t[6].getType() == Tag.Type.STRING ? t[6].getString() : "";
             }
             return st;
         }
@@ -276,9 +312,19 @@ public final class Council {
 
     // ---- rules, kept pure for Council_test
 
-    /** AI seats a faction earns: three, and one more for each civic slot earned past the first three, up to five. */
-    static int aiSeats(int slotsEarned) {
-        return Math.min(5, 3 + Math.max(0, slotsEarned - FactionCivics.STARTING_SLOTS));
+    /** Seats every Council starts with (war, peace, intrigue); more are added by the faction, each at upkeep. */
+    public static final int BASE_SEATS = 3;
+
+    /** Roles not yet on the ring, which a new seat can take. */
+    public static List<Integer> openRoles(State st) {
+        List<Integer> out = new ArrayList<>();
+        for (int r = 0; r < ROLES; r++) {
+            int role = r;
+            if (st.seats.stream().noneMatch(s -> s.archetype == role)) {
+                out.add(r);
+            }
+        }
+        return out;
     }
 
     /** Whether meeting one agenda breaks the other: war on a faction the other wants peace with, or any act of war against keeping the peace. */
@@ -315,6 +361,7 @@ public final class Council {
             case SANCTION -> Lng.str("Impose an %s on %s.", treaty, who);
             case KEEP_PEACE -> Lng.str("Declare no war and break no treaty for %s days.", a.count);
             case STAY_SOLVENT -> Lng.str("Stay out of debt for %s days.", a.count);
+            case CLAIM_SYSTEMS -> Lng.str("Claim %s new systems.", a.count);
         };
     }
 
@@ -329,15 +376,17 @@ public final class Council {
             case SANCTION -> Lng.str("Sanction %s", who);
             case KEEP_PEACE -> Lng.str("Keep the peace %s days", a.count);
             case STAY_SOLVENT -> Lng.str("No debt for %s days", a.count);
+            case CLAIM_SYSTEMS -> Lng.str("Claim %s systems", a.count);
         };
     }
 
     // ---- perks: a seat's, while its councilor is devoted or a member holds it
 
-    public static final int WAR = 0, PEACE = 1, INTRIGUE = 2, CALM = 3, TREASURY = 4, GLORY = 5, DIPLOMACY = 6;
+    public static final int WAR = 0, PEACE = 1, INTRIGUE = 2, CALM = 3, TREASURY = 4, GLORY = 5, DIPLOMACY = 6,
+            EXPANSION = 7, REFORM = 8, ZEAL = 9;
     static final int DEVOTED = 75;
     /** Each archetype's perk, in percent: off a cost or an upkeep, or onto station income for {@link #CALM}. */
-    private static final int[] PERK_PERCENT = {25, 25, 50, 10, 15, 10, 25};
+    private static final int[] PERK_PERCENT = {25, 25, 50, 10, 15, 10, 25, 25, 25, 50};
 
     public static boolean devoted(Seat s) {
         return s.held() || s.favour >= DEVOTED;
@@ -352,7 +401,10 @@ public final class Council {
             case CALM -> Lng.str("our stations earn %s%% more faction points.", p);
             case TREASURY -> Lng.str("institution upkeep is %s%% lower.", p);
             case GLORY -> Lng.str("fleet upkeep is %s%% lower.", p);
-            default -> Lng.str("gifts to other factions cost %s%% fewer faction points.", p);
+            case DIPLOMACY -> Lng.str("gifts to other factions cost %s%% fewer faction points.", p);
+            case EXPANSION -> Lng.str("fabricating a claim costs %s%% fewer faction points.", p);
+            case REFORM -> Lng.str("changing a civic or the fleet doctrine costs %s%% fewer faction points.", p);
+            default -> Lng.str("the extra cost of a war without just cause is %s%% lower.", p);
         };
     }
 
@@ -369,6 +421,12 @@ public final class Council {
         return false;
     }
 
+    /** Client: a cost the own faction pays, after its perk. */
+    public static int ownCost(int archetype, int base) {
+        org.schema.game.client.data.GameClientState s = org.schema.game.client.data.GameClientState.instance;
+        return s == null || s.getPlayer() == null ? base : CLIENT.cost(s.getPlayer().getFactionId(), archetype, base);
+    }
+
     /** A cost after the archetype's discount, if the faction has its perk. */
     public int cost(int faction, int archetype, int base) {
         return perk(faction, archetype) ? base * (100 - PERK_PERCENT[archetype]) / 100 : base;
@@ -383,15 +441,15 @@ public final class Council {
         return archetype == CALM ? v * (100 + p) / 100f : v * (100 - p) / 100f;
     }
 
-    /** Seats members were voted into beyond the AI seats the faction earns; each costs one step of institution upkeep. */
-    public synchronized int extraSeats(int faction, int slotsEarned) {
+    /** Seats added past the first three; each costs one step of institution upkeep. */
+    public synchronized int extraSeats(int faction) {
         State st = byFaction.get(faction);
-        return st == null ? 0 : Math.max(0, st.seats.size() - aiSeats(slotsEarned));
+        return st == null ? 0 : Math.max(0, st.seats.size() - BASE_SEATS);
     }
 
     /** What the faction pays for its institutions an income turn: the ladder, extra Council seats, the Treasury perk. */
     public float institutionUpkeep(int faction, FactionCivics c, int base) {
-        float up = FactionCivics.institutionUpkeep(c.institutions.size(), base) + (float) extraSeats(faction, c.slotsEarned) * base;
+        float up = FactionCivics.institutionUpkeep(c.institutions.size(), base) + (float) extraSeats(faction) * base;
         return scale(faction, TREASURY, up);
     }
 
@@ -428,6 +486,18 @@ public final class Council {
                 new Tag(Tag.Type.STRING, null, name == null ? "" : name), FinishTag.INST}));
     }
 
+    /** Client: add a seat in a role not yet on the ring, taken by a new NPC councilor. */
+    public static void requestAddSeat(int role) {
+        requestAction(7, -1, role);
+    }
+
+    /** Client: give the Council a style its civics allow ({@link CouncilLore.Flavour} name, blank for the default). */
+    public static void requestStyle(String style) {
+        BFPacket.toServer(BFPacket.Kind.COUNCIL_ACTION, new Tag(Tag.Type.STRUCT, null, new Tag[]{
+                new Tag(Tag.Type.BYTE, null, (byte) 6), new Tag(Tag.Type.INT, null, -1), new Tag(Tag.Type.INT, null, 0),
+                new Tag(Tag.Type.STRING, null, style), FinishTag.INST}));
+    }
+
     /** Client: put the pool's candidate in place of the AI councilor in {@code seat}. */
     public static void requestReplace(int seat, int candidate) {
         requestAction(5, seat, candidate);
@@ -455,9 +525,23 @@ public final class Council {
                 continue;
             }
             int earned = Civics.server().of(f.getIdFaction()).slotsEarned;
+            boolean active = hasActiveMember(f);
             synchronized (this) {
                 State st = byFaction.computeIfAbsent(f.getIdFaction(), k -> new State());
-                if (tick(f, st, earned, now, after)) {
+                //a faction nobody plays is not asked anything, and owes nothing for the time away
+                if (!active) {
+                    if (!st.suspended()) {
+                        st.suspendedAt = now;
+                        version++;
+                        dirty.add(f);
+                    }
+                    continue;
+                }
+                boolean resumed = st.suspended();
+                if (resumed) {
+                    st.resume(now);
+                }
+                if (tick(f, st, earned, now, after) | resumed) {
                     version++;
                     dirty.add(f);
                 }
@@ -470,20 +554,30 @@ public final class Council {
     /** @return whether anything changed */
     private boolean tick(Faction f, State st, int earned, long now, List<Runnable> after) {
         boolean changed = false;
+        if (!CouncilLore.allowed(Civics.server().of(f.getIdFaction()), st.style)) {
+            //a saved style a later version no longer knows falls back too
+            String gone = java.util.Arrays.stream(CouncilLore.Flavour.values()).filter(v -> v.name().equals(st.style))
+                    .findFirst().map(CouncilLore::title).orElse(CouncilLore.title(CouncilLore.Flavour.COUNCIL));
+            st.style = "";
+            String now2 = st.title(CouncilLore.of(Civics.server().of(f.getIdFaction()), ""));
+            after.add(() -> Civics.governanceNews(f, now2, Lng.str("%s is no more", gone),
+                    Lng.str("Without the civic that shaped it, the Council takes the style of %s. Its councilors keep their seats.", now2)));
+            changed = true;
+        }
         if (st.poolDay != now / DAY_MS) {
             st.poolDay = now / DAY_MS;
             st.pool.clear();
-            st.pool.addAll(drawPool(now));
+            st.pool.addAll(drawPool(now, flavour(f)));
             changed = true;
         }
-        while (st.seats.size() < aiSeats(earned)) {
-            st.seats.add(newSeat(st.seats.size(), now));
+        while (st.seats.size() < BASE_SEATS) {
+            st.seats.add(newSeat(st.seats.size(), now, flavour(f)));
             changed = true;
         }
         for (Seat seat : new ArrayList<>(st.seats)) {
             if (seat.held() && !activeMember(f, seat.member)) {
                 String gone = seat.member;
-                toAi(seat, now);
+                toAi(seat, now, flavour(f));
                 after.add(() -> Civics.governanceNews(f, title(f), Lng.str("%s leaves the Council", gone),
                         Lng.str("%s is no longer an active member. %s takes the seat of %s.", gone, seat.name, seatTitle(f, seat))));
                 changed = true;
@@ -492,6 +586,9 @@ public final class Council {
             if (a != null) {
                 if (a.objective == Objective.STAY_SOLVENT && f.factionPoints < 0) {
                     settle(f, st, seat, Settle.FAILED, "", now, after);
+                    changed = true;
+                } else if (inPlace(f.getIdFaction(), a)) {
+                    settle(f, st, seat, Settle.MET, "", now, after);
                     changed = true;
                 } else if (now >= a.deadline) {
                     settle(f, st, seat, a.objective.timed() ? Settle.MET : Settle.FAILED, "", now, after);
@@ -518,10 +615,10 @@ public final class Council {
         return changed;
     }
 
-    private static Seat newSeat(int archetype, long now) {
+    private static Seat newSeat(int archetype, long now, CouncilLore.Flavour flavour) {
         Seat s = new Seat();
         s.archetype = archetype;
-        s.name = CouncilLore.name();
+        s.name = CouncilLore.name(flavour);
         //the first agendas come in over the first day, not all at once
         s.nextAt = now + ThreadLocalRandom.current().nextLong(DAY_MS / 4);
         return s;
@@ -530,20 +627,20 @@ public final class Council {
     static final int POOL_SIZE = 4;
 
     /** A day's candidates: any seat's role, each with their own starting favour. */
-    static List<Seat> drawPool(long now) {
+    static List<Seat> drawPool(long now, CouncilLore.Flavour flavour) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         List<Seat> out = new ArrayList<>();
         for (int i = 0; i < POOL_SIZE; i++) {
-            Seat s = newSeat(r.nextInt(POOLS.length), now);
+            Seat s = newSeat(r.nextInt(POOLS.length), now, flavour);
             s.favour = 35 + r.nextInt(36);
             out.add(s);
         }
         return out;
     }
 
-    private static void toAi(Seat seat, long now) {
+    private static void toAi(Seat seat, long now, CouncilLore.Flavour flavour) {
         seat.member = "";
-        seat.name = CouncilLore.name();
+        seat.name = CouncilLore.name(flavour);
         seat.favour = START_FAVOUR;
         seat.agenda = null;
         seat.options.clear();
@@ -604,7 +701,7 @@ public final class Council {
         }
         if (!seat.held() && seat.favour <= 0) {
             String old = seat.name;
-            seat.name = CouncilLore.name();
+            seat.name = CouncilLore.name(flavour(f));
             seat.favour = START_FAVOUR;
             after.add(() -> Civics.governanceNews(f, title(f), Lng.str("%s resigns from the Council", old),
                     Lng.str("Out of patience with us, %s gave up the seat of %s. %s takes it.", old, seatTitle(f, seat), seat.name)));
@@ -663,7 +760,10 @@ public final class Council {
         Agenda a = new Agenda();
         a.objective = o;
         a.issued = now;
-        if (o.timed()) {
+        if (o == Objective.CLAIM_SYSTEMS) {
+            a.count = 1 + r.nextInt(2);
+            a.deadline = now + (3 + r.nextInt(3)) * DAY_MS;
+        } else if (o.timed()) {
             if (o == Objective.STAY_SOLVENT && f.factionPoints < 0) {
                 return null;
             }
@@ -686,9 +786,30 @@ public final class Council {
             case SANCTION -> 200;
             case KEEP_PEACE -> 200;
             case STAY_SOLVENT -> 150;
+            case CLAIM_SYSTEMS -> 200 * a.count;
         };
         a.penalty = a.reward * 3 / 5;
         return a;
+    }
+
+    /**
+     * Whether what the agenda asks for already stands, however it came about: a sanction or treaty in
+     * force, a war under way, a treaty gone. Agendas are only issued for what does not stand yet, so this
+     * catches what the hooks miss (a renewal, a sanction set some other way) without paying for nothing.
+     */
+    private static boolean inPlace(int me, Agenda a) {
+        DiplomacyManager dm = DiplomacyManager.server();
+        return switch (a.objective) {
+            case DECLARE_WAR -> dm.hasTreaty(me, a.target, TreatyTypeRegistry.WAR);
+            case SIGN_TREATY -> dm.hasTreaty(me, a.target, a.typeId);
+            case BREAK_TREATY -> !dm.hasTreaty(me, a.target, a.typeId);
+            case SANCTION -> {
+                //ours on them, not theirs on us
+                FactionTreaty t = dm.getTreaties(me, a.target).get(a.typeId);
+                yield t != null && t.from == me;
+            }
+            default -> false;
+        };
     }
 
     /** Their opinion of us, on the NPC rules' scale (war at -500, hostile at -200). */
@@ -756,6 +877,17 @@ public final class Council {
         }
     }
 
+    /** Server: the faction claimed a system that was not its own. */
+    public void onClaim(int faction) {
+        progress(faction, ag -> {
+            if (ag.objective == Objective.CLAIM_SYSTEMS) {
+                ag.done++;
+                return ag.done >= ag.count ? Settle.MET : null;
+            }
+            return null;
+        });
+    }
+
     /** Server: {@code breaker} walked out of a treaty with {@code other}. */
     public void onBroken(int breaker, int other, String typeId) {
         progress(breaker, ag -> ag.objective == Objective.BREAK_TREATY && ag.target == other && ag.typeId.equals(typeId) ? Settle.MET
@@ -787,7 +919,7 @@ public final class Council {
         boolean changed = false;
         synchronized (this) {
             State st = byFaction.get(faction);
-            if (st == null) {
+            if (st == null || st.suspended()) {
                 return;
             }
             long now = System.currentTimeMillis();
@@ -835,6 +967,14 @@ public final class Council {
             reject(p, Lng.str("Your rank may not rename the Council."));
             return;
         }
+        if (op == 7 && !Perms.has(f, p.getName(), FactionPermission.PermType.FACTION_EDIT_PERMISSION)) {
+            reject(p, Lng.str("Your rank may not add seats to the Council."));
+            return;
+        }
+        if (op == 6 && !Perms.has(f, p.getName(), FactionPermission.PermType.FACTION_EDIT_PERMISSION)) {
+            reject(p, Lng.str("Your rank may not change the Council's style."));
+            return;
+        }
         if (op == 5 && !Perms.has(f, p.getName(), FactionPermission.PermType.FACTION_EDIT_PERMISSION)) {
             reject(p, Lng.str("Your rank may not change the Council's councilors."));
             return;
@@ -847,7 +987,7 @@ public final class Council {
             int i = t[1].getInt();
             //renaming the Council is the one action that is about no seat
             Seat seat = st == null || i < 0 || i >= st.seats.size() ? null : st.seats.get(i);
-            if (st == null || seat == null && op != 3) {
+            if (st == null || seat == null && op != 3 && op != 6 && op != 7) {
                 return;
             }
             switch (op) {
@@ -855,12 +995,38 @@ public final class Council {
                     if (st.name.equals(newName)) {
                         return;
                     }
-                    CouncilLore.Flavour flavour = CouncilLore.of(Civics.server().of(f.getIdFaction()));
+                    CouncilLore.Flavour flavour = CouncilLore.of(Civics.server().of(f.getIdFaction()), st.style);
                     String old = st.title(flavour);
                     st.name = newName;
                     String renamed = st.title(flavour);
                     after.add(() -> Civics.governanceNews(f, p.getName(), Lng.str("%s is renamed", old),
                             Lng.str("%s renamed %s to %s.", p.getName(), old, renamed)));
+                }
+                case 7 -> {
+                    int role = t[2].getInt();
+                    if (st.seats.size() >= MAX_SEATS || !openRoles(st).contains(role)) {
+                        reject(p, Lng.str("That role is taken, or the Council has no room for another seat."));
+                        return;
+                    }
+                    Seat added = newSeat(role, now, flavour(f));
+                    st.seats.add(added);
+                    String title = seatTitle(f, added);
+                    after.add(() -> Civics.governanceNews(f, p.getName(), Lng.str("A new seat: %s", title),
+                            Lng.str("%s added a seat to the Council. %s takes it as %s. It costs %s faction points of upkeep an income turn.",
+                                    p.getName(), added.name, title, videogoose.betterfactions.BFConfig.institutionUpkeep())));
+                }
+                case 6 -> {
+                    String chosen = t.length > 3 && t[3].getType() == Tag.Type.STRING ? t[3].getString() : "";
+                    FactionCivics civics = Civics.server().of(f.getIdFaction());
+                    if (chosen.equals(st.style) || !CouncilLore.allowed(civics, chosen)) {
+                        return;
+                    }
+                    String old = st.title(CouncilLore.of(civics, st.style));
+                    st.style = chosen;
+                    CouncilLore.Flavour now2 = CouncilLore.of(civics, chosen);
+                    String renamed = st.title(now2);
+                    after.add(() -> Civics.governanceNews(f, p.getName(), Lng.str("%s takes a new style", old),
+                            Lng.str("%s gave the Council the style of %s, shaped by %s. Its councilors keep their names.", p.getName(), renamed, CouncilLore.shapedBy(now2))));
                 }
                 case 5 -> {
                     int k = t[2].getInt();
@@ -964,7 +1130,7 @@ public final class Council {
             State st = byFaction.get(f.getIdFaction());
             why = st == null ? Lng.str("Your faction has no Council.") : problem(f, st, op, i, player);
             description = why != null ? "" : switch (op) {
-                case 0 -> Lng.str("Appoint %s to a new seat on the Council", player);
+                case 0 -> Lng.str("Appoint %s to a new seat on the Council, as %s", player, CouncilLore.seat(flavour(f), i));
                 case 1 -> Lng.str("Appoint %s to the Council in place of %s", player, st.seats.get(i).name);
                 default -> Lng.str("Remove %s from the Council", st.seats.get(i).member);
             };
@@ -991,6 +1157,9 @@ public final class Council {
                 }
                 if (op == 0 && st.seats.size() >= MAX_SEATS) {
                     return Lng.str("The Council has no room for another seat.");
+                }
+                if (op == 0 && !openRoles(st).contains(i)) {
+                    return Lng.str("That role already has a seat.");
                 }
                 if (op == 1 && (i < 0 || i >= st.seats.size() || st.seats.get(i).held())) {
                     return Lng.str("That seat is not held by a councilor who can be replaced.");
@@ -1033,10 +1202,10 @@ public final class Council {
             } else if (op == 2) {
                 Seat seat = st.seats.get(i);
                 String gone = seat.member;
-                toAi(seat, now);
+                toAi(seat, now, flavour(f));
                 news = Lng.str("%s leaves the Council by Senate vote. %s takes the seat of %s.", gone, seat.name, seatTitle(f, seat));
             } else {
-                Seat seat = op == 0 ? newSeat(st.seats.size(), now) : st.seats.get(i);
+                Seat seat = op == 0 ? newSeat(i, now, flavour(f)) : st.seats.get(i);
                 String replaced = op == 1 ? seat.name : null;
                 if (op == 0) {
                     st.seats.add(seat);
@@ -1092,25 +1261,42 @@ public final class Council {
         synchronized (this) {
             st = byFaction.get(f.getIdFaction());
         }
-        CouncilLore.Flavour flavour = CouncilLore.of(Civics.server().of(f.getIdFaction()));
+        CouncilLore.Flavour flavour = CouncilLore.of(Civics.server().of(f.getIdFaction()), st != null ? st.style : "");
         return st != null ? st.title(flavour) : CouncilLore.title(flavour);
     }
 
-    private static String seatTitle(Faction f, Seat seat) {
-        return CouncilLore.seat(CouncilLore.of(Civics.server().of(f.getIdFaction())), seat.archetype);
+    private CouncilLore.Flavour flavour(Faction f) {
+        State st;
+        synchronized (this) {
+            st = byFaction.get(f.getIdFaction());
+        }
+        return CouncilLore.of(Civics.server().of(f.getIdFaction()), st != null ? st.style : "");
     }
 
-    private static String who(Faction f, Seat seat) {
+    private String seatTitle(Faction f, Seat seat) {
+        return CouncilLore.seat(flavour(f), seat.archetype);
+    }
+
+    private String who(Faction f, Seat seat) {
         return seat.held() ? Lng.str("%s (%s)", seat.name, seatTitle(f, seat)) : Lng.str("%s, %s", seatTitle(f, seat), seat.name);
     }
 
-    private static String quote(Faction f, Agenda a) {
-        return CouncilLore.quote(CouncilLore.of(Civics.server().of(f.getIdFaction())), a.objective, serverName(a.target));
+    private String quote(Faction f, Agenda a) {
+        return CouncilLore.quote(flavour(f), a.objective, serverName(a.target));
     }
 
     private static String serverName(int id) {
         Faction f = GameServerState.instance.getFactionManager().getFaction(id);
         return f != null ? f.getName() : "?";
+    }
+
+    private static boolean hasActiveMember(Faction f) {
+        for (FactionPermission p : f.getMembersUID().values()) {
+            if (p.isActiveMember()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     static boolean activeMember(Faction f, String player) {

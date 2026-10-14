@@ -131,9 +131,17 @@ public final class BetterFactions extends StarMod {
 		//a player claims only free space or its own: the engine leaves that to the client's claim button,
 		//and a ceded system keeps the loser's station in it - nothing else would stop that station taking
 		//the system straight back. Server-made changes (sender 0: treaties, revokes, admins) pass.
-		api.event.faction.SystemClaimListener.TYPE.register((system, change, sectorPos, sector, faction, isServer) ->
-				isServer && change.sender != 0 && faction != null && system.getOwnerFaction() != 0
-						&& system.getOwnerFaction() != faction.getIdFaction() ? EventResult.CANCEL : EventResult.CONTINUE, this);
+		api.event.faction.SystemClaimListener.TYPE.register((system, change, sectorPos, sector, faction, isServer) -> {
+			if (isServer && change.sender != 0 && faction != null && system.getOwnerFaction() != 0
+					&& system.getOwnerFaction() != faction.getIdFaction()) {
+				return EventResult.CANCEL;
+			}
+			//a system newly ours counts toward a Council agenda to claim systems
+			if (isServer && faction != null && system.getOwnerFaction() != faction.getIdFaction()) {
+				Council.server().onClaim(faction.getIdFaction());
+			}
+			return EventResult.CONTINUE;
+		}, this);
 
 		//every faction keeps a ledger now, not only NPC ones, so the engine's opinion events feed it
 		FactionDiplomacyActionListener.TYPE.register((type, toFaction, otherDbId) -> {
