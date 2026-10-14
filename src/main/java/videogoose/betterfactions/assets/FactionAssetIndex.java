@@ -44,6 +44,14 @@ public class FactionAssetIndex {
     private static final int[] HOLDING_TYPES = {
             SimpleTransformableSendableObject.EntityType.SPACE_STATION.dbTypeId,
             SimpleTransformableSendableObject.EntityType.SHOP.dbTypeId};
+    /**
+     * Planets, queried apart: an ico planet is twenty plates and a core, each its own row, and a faction's
+     * plates must not crowd its stations out of {@link #MAX_ASSETS}. Collapsed to one row per planet.
+     */
+    private static final int[] PLANET_TYPES = {
+            SimpleTransformableSendableObject.EntityType.PLANET_ICO.dbTypeId,
+            SimpleTransformableSendableObject.EntityType.PLANET_SEGMENT.dbTypeId,
+            SimpleTransformableSendableObject.EntityType.GAS_PLANET.dbTypeId};
 
     private final GameServerState state;
     /**
@@ -97,7 +105,7 @@ public class FactionAssetIndex {
                 return true;
             }
         }
-        return false;
+        return FactionAssets.isPlanet(type.dbTypeId);
     }
 
     /**
@@ -113,6 +121,42 @@ public class FactionAssetIndex {
             }
         }
         return sc == null ? -1 : sc.getMassWithoutDockIncludingStation();
+    }
+
+    /** One row per planet the faction owns any plate of, its mass the loaded plates' together. */
+    private void addPlanets(FactionAssets a, int factionId) throws SQLException {
+        List<DatabaseEntry> rows = state.getDatabaseIndex().getTableManager().getEntityTable()
+                .getByFaction(factionId, PLANET_TYPES, MAX_ASSETS + 1);
+        if (rows.size() > MAX_ASSETS) {
+            a.truncated = true;
+        }
+        java.util.Map<org.schema.common.util.linAlg.Vector3i, FactionAssets.Asset> bySector = new java.util.LinkedHashMap<>();
+        for (DatabaseEntry e : rows) {
+            FactionAssets.Asset p = bySector.get(e.sectorPos);
+            if (p == null) {
+                if (a.assets.size() + bySector.size() >= MAX_ASSETS) {
+                    a.truncated = true;
+                    break;
+                }
+                p = new FactionAssets.Asset(FactionAssets.planetUid(e.type, e.sectorPos), "", (byte) e.type, e.sectorPos);
+                bySector.put(e.sectorPos, p);
+            }
+            //plates carry the engine's generated names; a name a player gave any of them wins
+            String n = e.realName == null ? "" : e.realName.trim();
+            if (p.name.isEmpty() && !n.isEmpty() && !n.startsWith("ENTITY_")) {
+                p.name = n;
+            }
+            double m = loadedMass(e);
+            if (m >= 0) {
+                p.mass = Math.max(0, p.mass) + m;
+            }
+        }
+        for (FactionAssets.Asset p : bySector.values()) {
+            if (p.name.isEmpty()) {
+                p.name = SimpleTransformableSendableObject.EntityType.byDbId[p.type].getName();
+            }
+            a.assets.add(p);
+        }
     }
 
     private FactionAssets query(int factionId, long now) {
@@ -132,6 +176,7 @@ public class FactionAssetIndex {
                 asset.mass = loadedMass(e);
                 a.assets.add(asset);
             }
+            addPlanets(a, factionId);
             return a;
         } catch (SQLException e) {
             System.err.println("[SERVER][FACTION] asset query failed for faction " + factionId);

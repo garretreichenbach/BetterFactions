@@ -2,6 +2,7 @@ package videogoose.betterfactions.assets;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.schema.common.util.linAlg.Vector3i;
+import org.schema.game.common.data.world.SimpleTransformableSendableObject.EntityType;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -71,6 +72,23 @@ public class FactionAssets {
             a.mass = in.readDouble();
             return a;
         }
+    }
+
+    /**
+     * Whether a {@link Asset#type} is a planet: an ico planet and its plates, a gas giant, or an old-style
+     * planet segment. The index lists each planet the faction owns any of once, not plate by plate.
+     */
+    public static boolean isPlanet(int type) {
+        return type == EntityType.PLANET_ICO.dbTypeId || type == EntityType.PLANET_SEGMENT.dbTypeId || type == EntityType.GAS_PLANET.dbTypeId;
+    }
+
+    /**
+     * The one uid a planet is listed under, whichever of its plates the faction owns: its core's, as the
+     * engine names an ico planet's core. Stable while plates change hands, so it can be kept as a key.
+     */
+    public static String planetUid(int type, Vector3i sector) {
+        EntityType t = type == EntityType.GAS_PLANET.dbTypeId ? EntityType.GAS_PLANET : EntityType.PLANET_ICO;
+        return t.dbPrefix + "CORE_" + sector.x + "_" + sector.y + "_" + sector.z;
     }
 
     /**

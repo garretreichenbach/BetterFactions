@@ -44,6 +44,9 @@ public final class BFConfig {
 	private static SimpleConfigInt stationIncomeMinMass;
 	private static SimpleConfigInt senateVoteHours;
 	private static SimpleConfigInt senateMaxVoteHours;
+	private static SimpleConfigInt corporationCutPercent;
+	private static SimpleConfigInt corporationCreditsPerPoint;
+	private static SimpleConfigInt corporationDividendCap;
 
 	private BFConfig() {
 	}
@@ -118,6 +121,12 @@ public final class BFConfig {
 				"Hours a Senate vote stays open. It carries early once more than half the faction's active members are for it; at the close, more for than against carries.");
 		senateMaxVoteHours = new SimpleConfigInt(config, "senate_vote_max_hours", 72,
 				"Longest a faction may set its own Senate votes to stay open, in hours. senate_vote_hours is used until a faction chooses.");
+		corporationCutPercent = new SimpleConfigInt(config, "corporation_shop_cut_percent", 20,
+				"Percent of every sale at a station's shops that the corporation running the station takes from the shop into its treasury.");
+		corporationCreditsPerPoint = new SimpleConfigInt(config, "corporation_credits_per_fp", 10000,
+				"Credits of a corporation's dividend that make one faction point.");
+		corporationDividendCap = new SimpleConfigInt(config, "corporation_dividend_cap_points", 100,
+				"Most faction points one corporation pays its faction an income period. -1 for no cap.");
 		config.readWriteFields();
 	}
 
@@ -139,6 +148,21 @@ public final class BFConfig {
 	public static int stationIncomeMinMass() {
 		Integer v = stationIncomeMinMass != null ? stationIncomeMinMass.getValue() : null;
 		return v == null ? 10000 : Math.max(0, v);
+	}
+
+	public static int corporationCutPercent() {
+		Integer v = corporationCutPercent != null ? corporationCutPercent.getValue() : null;
+		return v == null ? 20 : Math.max(0, Math.min(100, v));
+	}
+
+	public static int corporationCreditsPerPoint() {
+		Integer v = corporationCreditsPerPoint != null ? corporationCreditsPerPoint.getValue() : null;
+		return v == null ? 10000 : Math.max(1, v);
+	}
+
+	public static int corporationDividendCap() {
+		Integer v = corporationDividendCap != null ? corporationDividendCap.getValue() : null;
+		return v == null ? 100 : Math.max(-1, v);
 	}
 
 	public static int institutionUpkeep() {

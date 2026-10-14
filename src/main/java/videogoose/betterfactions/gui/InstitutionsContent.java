@@ -175,6 +175,10 @@ public class InstitutionsContent extends GUIAnchor {
         if (extra > 0) {
             b.append(Lng.str("%s Council seats added by vote: +%s FP.\n", extra, extra * base));
         }
+        int charters = videogoose.betterfactions.civics.Corporations.client().extraCharters(own());
+        if (charters > 0) {
+            b.append(Lng.str("%s corporations past the free charters: +%s FP.\n", charters, charters * base));
+        }
         if (treasury) {
             b.append(Lng.str("The Council's treasury seat is devoted: %s\n", videogoose.betterfactions.civics.Council.perk(videogoose.betterfactions.civics.Council.TREASURY)));
         }

@@ -58,7 +58,9 @@ public final class BFPacket extends Packet {
 		// server -> client: every faction's mod faction point lines from the last income turn
 		POINT_MODS,
 		// server -> client, on join: the server's civics.xml
-		CIVIC_TYPES
+		CIVIC_TYPES,
+		// server -> client: the faction's corporations. client -> server: charter, run or dissolve one
+		CORPORATIONS, CORP_ACTION
 	}
 
 	private Kind kind;

@@ -47,6 +47,7 @@
 		"TurretKnockedOffMixin",
 		"FleetUpkeepMixin",
 		"ShopEmbargoMixin",
+		"ShopSaleMixin",
 		"MemberRowButtonsMixin",
 		"NewsRowButtonsMixin"
 	],

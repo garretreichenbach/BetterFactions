@@ -4,6 +4,7 @@ import api.common.GameCommon;
 import org.schema.schine.resource.tag.Tag;
 import videogoose.betterfactions.battle.BattleTracker;
 import videogoose.betterfactions.civics.Civics;
+import videogoose.betterfactions.civics.Corporations;
 import videogoose.betterfactions.civics.Council;
 import videogoose.betterfactions.civics.Senate;
 import videogoose.betterfactions.repair.FactionDesigns;
@@ -111,6 +112,14 @@ public final class BFStore {
 
 	public static void save(Council c) {
 		write("council", c.toTag());
+	}
+
+	public static void load(Corporations c) {
+		read("corporations", c::fromTag);
+	}
+
+	public static void save(Corporations c) {
+		write("corporations", c.toTag());
 	}
 
 	public static void load(Wrecks w) {

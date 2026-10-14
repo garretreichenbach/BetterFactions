@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class FactionPointMods {
 
-	public enum Line {FLEET, INSTITUTIONS, SPICE_DEALER, STATIONS, TRIBUTE}
+	public enum Line {FLEET, INSTITUTIONS, SPICE_DEALER, STATIONS, TRIBUTE, DIVIDENDS}
 
 	private final Map<Integer, float[]> byFaction = new ConcurrentHashMap<>();
 

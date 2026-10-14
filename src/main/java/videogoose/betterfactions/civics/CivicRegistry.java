@@ -34,6 +34,7 @@ public final class CivicRegistry {
     public static final String FAMOUS_ADMIRALS = NAMESPACE + ":famous_admirals";
     public static final String SENATE = NAMESPACE + ":senate";
     public static final String COUNCIL = NAMESPACE + ":council";
+    public static final String CORPORATIONS = NAMESPACE + ":corporations";
     public static final String INDUSTRIALIST = NAMESPACE + ":industrialist";
     public static final String RELIGIOUS = NAMESPACE + ":religious";
 
@@ -57,7 +58,7 @@ public final class CivicRegistry {
                 .handler(CivicPayouts::holyLeader)
                 .description("Ruled by a self-declared god. The leader's kills of enemy players earn faction points; the leader's death costs them."));
         register(NAMESPACE, new CivicType.Builder("corporate_chains").displayName("Corporate Chains")
-                .description("Trade through our shops and our trade agreements earn faction points."));
+                .description("Our corporations thrive: one more free charter, and their dividends are 15% higher. The Council takes the style of the Board. Without the Corporations institution it does little."));
         register(NAMESPACE, new CivicType.Builder("warrior_code").displayName("Warrior Code")
                 .payout(SHIP_DESTROYED, 10, 300, VICTIM_AT_WAR)
                 .payout(SHIP_DESTROYED, 10, 300, VICTIM_AT_WAR, WITH_CASUS_BELLI)
@@ -112,6 +113,8 @@ public final class CivicRegistry {
                 .description("Our members sit as senators, and any of them may propose. Proposing, accepting or countering a treaty, declaring war and breaking a treaty all go to a Senate vote."));
         register(NAMESPACE, new CivicType.Builder("council").displayName("Council").institution()
                 .description("A ring of councilors, each with an agenda of their own: goals against real factions, paid in faction points, fail or refuse one and we pay. Our civics decide who they are. With a Senate, members can be voted onto it."));
+        register(NAMESPACE, new CivicType.Builder("corporations").displayName("Corporations").institution()
+                .description("Charter companies to run our stations' shops. Each takes a cut of their sales and pays part of it to the faction as dividends in faction points. One charter is free; each further one adds upkeep."));
     }
 
     /**

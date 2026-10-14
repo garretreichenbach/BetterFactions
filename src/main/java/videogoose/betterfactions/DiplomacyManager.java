@@ -428,6 +428,7 @@ public final class DiplomacyManager extends Observable {
 			case SENATE_BALLOT -> Senate.server().cast(sender, tag, this::senateCarrier);
 			case COUNCIL_ACTION -> Council.server().action(sender, tag);
 			case COUNCIL_PROPOSE -> Council.server().propose(sender, tag);
+			case CORP_ACTION -> videogoose.betterfactions.civics.Corporations.server().action(sender, tag);
 			case GIFT -> giftServer(sender, tag.getInt());
 			case FABRICATE_CLAIM -> fabricateClaimServer(sender, tag.getInt());
 			case REPAIR_CANCEL -> ShipyardRepairs.get().cancel(sender, tag.getString());
@@ -536,6 +537,7 @@ public final class DiplomacyManager extends Observable {
 				changed();
 			}
 			case COUNCIL -> Council.client().received(tag);
+			case CORPORATIONS -> videogoose.betterfactions.civics.Corporations.client().received(tag);
 			case CIVIC_TYPES -> Civics.dataReceived(tag);
 			case CIVICS -> {
 				Civics.client().fromTag(tag);
@@ -602,6 +604,7 @@ public final class DiplomacyManager extends Observable {
 		checkFederationVotes();
 		Senate.server().update(this::senateCarrier);
 		Council.server().update(wall);
+		videogoose.betterfactions.civics.Corporations.server().update(wall);
 		Civics.server().update(wall);
 
 		if (!needsSnapshot.isEmpty()) {
@@ -621,6 +624,7 @@ public final class DiplomacyManager extends Observable {
 				BFPacket.toPlayer(p, Kind.POINT_MODS, pointMods.toTag());
 				Senate.server().sendTo(p);
 				Council.server().sendTo(p);
+				videogoose.betterfactions.civics.Corporations.server().sendTo(p);
 				sendAllFederationsTo(p);
 				for (Faction f : fm().getFactionCollection()) {
 					diplomacyOf(f).onPlayerJoined(p);
@@ -648,6 +652,7 @@ public final class DiplomacyManager extends Observable {
 		(onServer ? Civics.server() : Civics.client()).onFactionDeleted(f.getIdFaction());
 		if (onServer) {
 			Council.server().onDissolved(f.getIdFaction());
+			videogoose.betterfactions.civics.Corporations.server().onDissolved(f.getIdFaction());
 		}
 		removeTreatiesOf(f.getIdFaction());
 		removeFederationsOf(f.getIdFaction());
@@ -3777,6 +3782,10 @@ public final class DiplomacyManager extends Observable {
         return v -> {
             if (Council.isAct(v.act)) {
                 Council.server().carry(faction, v.act);
+                return;
+            }
+            if (videogoose.betterfactions.civics.Corporations.isAct(v.act)) {
+                videogoose.betterfactions.civics.Corporations.server().carry(faction, v.act);
                 return;
             }
             DiplomacyProposal p = new DiplomacyProposal();

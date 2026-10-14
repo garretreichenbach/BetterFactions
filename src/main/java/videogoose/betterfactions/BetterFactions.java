@@ -116,6 +116,7 @@ public final class BetterFactions extends StarMod {
 			BFStore.save(Civics.server());
 			BFStore.save(Senate.server());
 			BFStore.save(Council.server());
+			BFStore.save(videogoose.betterfactions.civics.Corporations.server());
 			BFStore.save(ShipyardRepairs.get());
 			BFStore.save(FleetIntercepts.get());
 			BFStore.save(Wrecks.get());
@@ -183,6 +184,8 @@ public final class BetterFactions extends StarMod {
 			BFStore.load(Senate.server());
 			Council.server().clear();
 			BFStore.load(Council.server());
+			videogoose.betterfactions.civics.Corporations.server().clear();
+			BFStore.load(videogoose.betterfactions.civics.Corporations.server());
 			ShipyardRepairs.reset();
 			BFStore.load(ShipyardRepairs.get());
 			FleetIntercepts.reset();
@@ -204,6 +207,7 @@ public final class BetterFactions extends StarMod {
 					BFStore.save(Civics.server());
 					BFStore.save(Senate.server());
 			BFStore.save(Council.server());
+			BFStore.save(videogoose.betterfactions.civics.Corporations.server());
 					BFStore.save(ShipyardRepairs.get());
 					BFStore.save(FleetIntercepts.get());
 					BFStore.save(Wrecks.get());

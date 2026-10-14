@@ -368,6 +368,12 @@ public class FactionPanelTabs implements GUIActiveInterface {
 			cc.onInit();
 			council.setContent(0, 0, cc);
 		}
+		if (held.contains(CivicRegistry.CORPORATIONS)) {
+			GUIContentPane corporations = sub.addTab(Lng.str("CORPORATIONS"));
+			CorporationsContent co = new CorporationsContent(getState(), this);
+			co.onInit();
+			corporations.setContent(0, 0, co);
+		}
 		sub.setSelectedTab(Math.min(wasSelected, sub.getTabs().size() - 1));
 
 		institutions.getContent(0, 0).attach(new GUIAnchor(getState(), 0, 0) {

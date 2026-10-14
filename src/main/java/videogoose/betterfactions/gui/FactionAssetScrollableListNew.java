@@ -334,7 +334,7 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
 
     /** What a row is, for the left-hand filter. The homebase counts as a station. */
     private enum Category {
-        ALL, STATIONS, SHOPS, FLEETS, CLAIMS;
+        ALL, STATIONS, PLANETS, SHOPS, FLEETS, CLAIMS;
 
         boolean matches(Holding h) {
             switch (this) {
@@ -344,8 +344,10 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
                     return h.isBareClaim();
                 case SHOPS:
                     return h.asset != null && typeOf(h.asset) == SimpleTransformableSendableObject.EntityType.SHOP;
+                case PLANETS:
+                    return h.asset != null && FactionAssets.isPlanet(h.asset.type);
                 case STATIONS:
-                    return h.asset != null && typeOf(h.asset) != SimpleTransformableSendableObject.EntityType.SHOP;
+                    return h.asset != null && typeOf(h.asset) != SimpleTransformableSendableObject.EntityType.SHOP && !FactionAssets.isPlanet(h.asset.type);
                 default:
                     return true;
             }
@@ -355,6 +357,8 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
             switch (this) {
                 case STATIONS:
                     return Lng.str("STATIONS");
+                case PLANETS:
+                    return Lng.str("PLANETS");
                 case SHOPS:
                     return Lng.str("SHOPS");
                 case FLEETS:
@@ -438,7 +442,10 @@ public class FactionAssetScrollableListNew extends ScrollableTableList<FactionAs
             for (FactionAssets.Asset asset : a.assets) {
                 Vector3i system = VoidSystem.getContainingSystem(asset.sector, new Vector3i());
                 listed.add(system);
-                out.add(Holding.of(asset, system, !homeUid.isEmpty() && homeUid.equals(asset.uid),
+                //a planet is listed under its core, and the homebase is one of its plates
+                boolean home = !homeUid.isEmpty() && (homeUid.equals(asset.uid)
+                        || FactionAssets.isPlanet(asset.type) && asset.sector.equals(faction.getHomeSector()));
+                out.add(Holding.of(asset, system, home,
                         claimed.contains(system)));
             }
         }

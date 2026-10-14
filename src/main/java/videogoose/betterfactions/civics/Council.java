@@ -450,9 +450,10 @@ public final class Council {
         return st == null ? 0 : Math.max(0, st.seats.size() - BASE_SEATS);
     }
 
-    /** What the faction pays for its institutions an income turn: the ladder, extra Council seats, the Treasury perk. */
+    /** What the faction pays for its institutions an income turn: the ladder, extra Council seats and charters, the Treasury perk. */
     public float institutionUpkeep(int faction, FactionCivics c, int base) {
-        float up = FactionCivics.institutionUpkeep(c.institutions.size(), base) + (float) extraSeats(faction) * base;
+        Corporations corps = this == CLIENT ? Corporations.client() : Corporations.server();
+        float up = FactionCivics.institutionUpkeep(c.institutions.size(), base) + (float) (extraSeats(faction) + corps.extraCharters(faction)) * base;
         return scale(faction, TREASURY, up);
     }
 
