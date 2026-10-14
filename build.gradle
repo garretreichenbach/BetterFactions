@@ -58,7 +58,7 @@ interface InjectedExec {
 tasks.register('selfChecks') {
     def execOps = project.objects.newInstance(InjectedExec).exec
     group = 'verification'
-    dependsOn tasks.compileJava
+    dependsOn tasks.compileJava, tasks.processResources
     doLast {
         def classesDir = sourceSets.main.output.classesDirs.singleFile
         fileTree(classesDir).matching { include '**/*_test.class' }.each { f ->

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  What Council seats ask for. A server replaces this file whole with moddata/BetterFactions/directives.xml,
+  and /directives_reload reads it again without a restart.
+
+  <Directive> attributes:
+    id          unique name
+    roles       seats that may ask it: war, peace, intrigue, calm, treasury, glory, diplomacy, expansion, reform, zeal
+    objective   DESTROY_SHIPS, KILL_PLAYERS, DECLARE_WAR, SIGN_TREATY, BREAK_TREATY, SANCTION,
+                KEEP_PEACE, STAY_SOLVENT, CLAIM_SYSTEMS
+    pick        how the target is chosen: OPINION (default; the worse relations, the likelier for hostile
+                objectives, the better for treaties), STRENGTH (the stronger they are against us) or RANDOM
+    treaty      treaty ids it may name, comma separated, first not held wins (SIGN_TREATY, SANCTION, BREAK_TREATY)
+    count       ships, pilots or systems; for KEEP_PEACE and STAY_SOLVENT the days to hold. "2-4" for a range
+    days        deadline in days, ignored by the timed objectives (their count is their deadline)
+    reward      flat faction points for meeting it; rewardEach adds that much per count
+    penalty     faction points for failing it; three fifths of the reward if left out. Refusing costs two fifths of it
+
+  Children, all optional:
+    <Text>      the agenda's words, with {target} {count} {treaty} {days}. Without it the built-in, translated sentence
+    <Quote style="SHADOW|BOARD|JUNTA|COUNCIL">  what the councilor says when asking; no style for any
+    <Weight base="1"><Modifier side="us|them|either" factor="2"><Condition>...</Condition></Modifier></Weight>
+                how likely it is against the role's other directives. Base 0: only when a modifier holds
+    <When side="us|them"><Condition>...</Condition></When>
+                must hold for it to be asked; side "them" reads the target, and is the default when there is one
+
+  Conditions use the diplomacy grammar (see npc/default.xml), plus HOLDS_CIVIC with an <Argument> civic,
+  institution or fleet doctrine id. A condition on "us" reads the target's view of us when there is a target.
+-->
+<Directives>
+
+    <Directive id="destroy_ships" roles="war,zeal" objective="DESTROY_SHIPS" count="2-4" days="3-5" rewardEach="120"/>
+
+    <Directive id="destroy_strongest" roles="glory" objective="DESTROY_SHIPS" pick="STRENGTH" count="2-4" days="3-5" rewardEach="140">
+        <Text>Destroy {count} ships of {target}, the strongest foe we face.</Text>
+        <Quote style="JUNTA">{target} thinks itself mighty. Show it otherwise.</Quote>
+    </Directive>
+
+    <Directive id="kill_players" roles="war,glory" objective="KILL_PLAYERS" count="1-3" days="3-5" rewardEach="150">
+        <Weight base="1">
+            <Modifier side="us" factor="2"><Condition><Type>HOLDS_CIVIC</Type><Argument>betterfactions:warrior_code</Argument></Condition></Modifier>
+        </Weight>
+    </Directive>
+
+    <Directive id="declare_war" roles="war,intrigue" objective="DECLARE_WAR" days="3-5" reward="300">
+        <Weight base="1">
+            <Modifier side="us" factor="0.5"><Condition><Type>HOLDS_CIVIC</Type><Argument>betterfactions:pacifists</Argument></Condition></Modifier>
+        </Weight>
+    </Directive>
+
+    <Directive id="sanction" roles="war,intrigue,zeal" objective="SANCTION" days="3-5" reward="200">
+        <Weight base="1">
+            <Modifier side="them" factor="3"><Condition><Type>HOLDS_CIVIC</Type><Argument>betterfactions:raiders</Argument></Condition></Modifier>
+        </Weight>
+    </Directive>
+
+    <Directive id="break_treaty" roles="intrigue" objective="BREAK_TREATY" days="3-5" reward="300"/>
+
+    <Directive id="sign_treaty" roles="peace,diplomacy" objective="SIGN_TREATY" days="3-5" reward="250">
+        <Weight base="1">
+            <Modifier side="either" factor="2"><Condition><Type>HOLDS_CIVIC</Type><Argument>betterfactions:diplomatic_corps</Argument></Condition></Modifier>
+        </Weight>
+    </Directive>
+
+    <Directive id="keep_peace" roles="calm,diplomacy,reform" objective="KEEP_PEACE" count="3" reward="200"/>
+
+    <Directive id="stay_solvent" roles="treasury,reform" objective="STAY_SOLVENT" count="3" reward="150"/>
+
+    <Directive id="claim_systems" roles="expansion" objective="CLAIM_SYSTEMS" count="1-2" days="3-5" rewardEach="200">
+        <Weight base="1">
+            <Modifier side="us" factor="2"><Condition><Type>HOLDS_CIVIC</Type><Argument>betterfactions:expansionists</Argument></Condition></Modifier>
+        </Weight>
+    </Directive>
+
+</Directives>

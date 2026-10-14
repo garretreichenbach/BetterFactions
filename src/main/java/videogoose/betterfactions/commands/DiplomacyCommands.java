@@ -100,6 +100,9 @@ public final class DiplomacyCommands {
 					videogoose.betterfactions.civics.Council.server().hurry(ctx.getSender().getFactionId());
 					ctx.reply("[SUCCESS] Your Council's empty seats have asked.");
 				}));
+		StarLoader.registerCommand(mod, new Command("directives_reload", "",
+				"Reads directives.xml again (moddata/BetterFactions/directives.xml if present). Agendas already asked keep their words.",
+				ctx -> ctx.reply("[SUCCESS] " + videogoose.betterfactions.civics.Directive.reload() + " directives loaded.")));
 		StarLoader.registerCommand(mod, new Command("faction_npc_yield", "<npcFactionId> [on|off]",
 				"DEBUG: makes an NPC faction accept every demand made of it (treaties like vassalage, and terms it gives). NPC factions only; resets on restart.", DiplomacyCommands::npcYield,
 				CommandArg.integer("npcFactionId", "-10000000"), CommandArg.string("onOff", "on").optional()));

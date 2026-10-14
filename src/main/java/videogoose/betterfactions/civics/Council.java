@@ -11,13 +11,15 @@ import org.schema.schine.resource.tag.FinishTag;
 import org.schema.schine.resource.tag.Tag;
 import videogoose.betterfactions.DiplomacyManager;
 import videogoose.betterfactions.Perms;
+import videogoose.betterfactions.diplomacy.DiplomacyEntity;
+import videogoose.betterfactions.diplomacy.FactionStrength;
 import videogoose.betterfactions.diplomacy.FactionTreaty;
 import videogoose.betterfactions.diplomacy.TreatyType;
 import videogoose.betterfactions.diplomacy.TreatyTypeRegistry;
 import videogoose.betterfactions.net.BFPacket;
+import videogoose.betterfactions.template.Templates;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,7 +64,7 @@ public final class Council {
 
     public enum Objective {
         //appended only: saves keep the ordinal
-        DESTROY_SHIPS, DECLARE_WAR, SIGN_TREATY, BREAK_TREATY, KEEP_PEACE, STAY_SOLVENT, SANCTION, CLAIM_SYSTEMS;
+        DESTROY_SHIPS, DECLARE_WAR, SIGN_TREATY, BREAK_TREATY, KEEP_PEACE, STAY_SOLVENT, SANCTION, CLAIM_SYSTEMS, KILL_PLAYERS;
 
         /** Met by not breaking it until the deadline, rather than by counting up. */
         public boolean timed() {
@@ -71,24 +73,13 @@ public final class Council {
     }
 
     /**
-     * What each role's seat asks for: war, peace, intrigue, calm, treasury, glory, diplomacy, expansion,
-     * reform, zeal. A Council starts with the first three; the rest are added.
+     * The roles, as {@code directives.xml} names them; what each seat asks for is the directives listing its
+     * role ({@link Directive}). A Council starts with the first three; the rest are added.
      */
-    static final Objective[][] POOLS = {
-            {Objective.DESTROY_SHIPS, Objective.SANCTION, Objective.DECLARE_WAR},
-            {Objective.SIGN_TREATY},
-            {Objective.BREAK_TREATY, Objective.SANCTION, Objective.DECLARE_WAR},
-            {Objective.KEEP_PEACE},
-            {Objective.STAY_SOLVENT},
-            {Objective.DESTROY_SHIPS},
-            {Objective.SIGN_TREATY, Objective.KEEP_PEACE},
-            {Objective.CLAIM_SYSTEMS},
-            {Objective.KEEP_PEACE, Objective.STAY_SOLVENT},
-            {Objective.SANCTION, Objective.DESTROY_SHIPS},
-    };
+    public static final String[] ROLE_IDS = {"war", "peace", "intrigue", "calm", "treasury", "glory", "diplomacy", "expansion", "reform", "zeal"};
 
     /** How many roles there are. */
-    public static final int ROLES = POOLS.length;
+    public static final int ROLES = ROLE_IDS.length;
 
     /** Treaties an agenda may ask to be broken: ones a signatory can walk out of. */
     private static final String[] BREAKABLE = {TreatyTypeRegistry.NON_AGGRESSION, TreatyTypeRegistry.TRADE_AGREEMENT,
@@ -106,10 +97,14 @@ public final class Council {
         public int reward;
         public int penalty;
         public String backedBy = "";
+        /** The directive's own wording, tokens unfilled; blank for the objective's built-in sentence. */
+        public String text = "";
+        /** The councilor's words as it is issued, tokens unfilled; blank for the style's built-in voice. Not saved: said only then. */
+        public String quote = "";
 
         boolean hostile() {
             return objective == Objective.DESTROY_SHIPS || objective == Objective.DECLARE_WAR || objective == Objective.BREAK_TREATY
-                    || objective == Objective.SANCTION;
+                    || objective == Objective.SANCTION || objective == Objective.KILL_PLAYERS;
         }
 
         boolean breaksPeace() {
@@ -137,6 +132,7 @@ public final class Council {
                     new Tag(Tag.Type.INT, null, reward),
                     new Tag(Tag.Type.INT, null, penalty),
                     new Tag(Tag.Type.STRING, null, backedBy),
+                    new Tag(Tag.Type.STRING, null, text),
                     FinishTag.INST});
         }
 
@@ -157,6 +153,8 @@ public final class Council {
             a.reward = t[7].getInt();
             a.penalty = t[8].getInt();
             a.backedBy = t[9].getString();
+            //saved before agendas came from directives.xml: built-in words
+            a.text = t.length > 10 && t[10].getType() == Tag.Type.STRING ? t[10].getString() : "";
             return a;
         }
     }
@@ -353,6 +351,9 @@ public final class Council {
         String who = factionName.apply(a.target);
         TreatyType type = TreatyTypeRegistry.get(a.typeId);
         String treaty = type != null ? type.getDisplayName() : Lng.str("treaty");
+        if (!a.text.isEmpty()) {
+            return Directive.fill(a.text, who, a.count, treaty, a.count);
+        }
         return switch (a.objective) {
             case DESTROY_SHIPS -> Lng.str("Destroy %s ships of %s.", a.count, who);
             case DECLARE_WAR -> Lng.str("Declare war on %s.", who);
@@ -362,6 +363,7 @@ public final class Council {
             case KEEP_PEACE -> Lng.str("Declare no war and break no treaty for %s days.", a.count);
             case STAY_SOLVENT -> Lng.str("Stay out of debt for %s days.", a.count);
             case CLAIM_SYSTEMS -> Lng.str("Claim %s new systems.", a.count);
+            case KILL_PLAYERS -> Lng.str("Kill %s pilots of %s.", a.count, who);
         };
     }
 
@@ -377,6 +379,7 @@ public final class Council {
             case KEEP_PEACE -> Lng.str("Keep the peace %s days", a.count);
             case STAY_SOLVENT -> Lng.str("No debt for %s days", a.count);
             case CLAIM_SYSTEMS -> Lng.str("Claim %s systems", a.count);
+            case KILL_PLAYERS -> Lng.str("Kill %s %s pilots", a.count, who);
         };
     }
 
@@ -596,14 +599,14 @@ public final class Council {
                 }
             } else if (now >= seat.nextAt) {
                 if (!seat.held()) {
-                    Agenda made = generate(f, seat.archetype, now);
+                    Agenda made = generate(f, seat.archetype, now, flavour(f));
                     seat.agenda = made;
                     after.add(() -> Civics.governanceNews(f, title(f), Lng.str("%s asks: %s", who(f, seat), describe(made, Council::serverName)),
                             Lng.str("\"%s\"\n\nMeet it for %s faction points; fail it and pay %s.", quote(f, made), made.reward, made.penalty)));
                     changed = true;
                 } else if (seat.options.isEmpty()) {
                     for (int i = 0; i < 3; i++) {
-                        Agenda o = generate(f, seat.archetype + i, now);
+                        Agenda o = generate(f, seat.archetype + i, now, flavour(f));
                         o.deadline -= o.issued;
                         o.issued = 0;
                         seat.options.add(o);
@@ -631,7 +634,7 @@ public final class Council {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         List<Seat> out = new ArrayList<>();
         for (int i = 0; i < POOL_SIZE; i++) {
-            Seat s = newSeat(r.nextInt(POOLS.length), now, flavour);
+            Seat s = newSeat(r.nextInt(ROLES), now, flavour);
             s.favour = 35 + r.nextInt(36);
             out.add(s);
         }
@@ -710,85 +713,129 @@ public final class Council {
 
     // ---- server: agendas
 
-    private static Agenda generate(Faction f, int archetype, long now) {
+    /** A seat's next agenda: one of its role's directives, or patience when none is possible now. */
+    private static Agenda generate(Faction f, int archetype, long now, CouncilLore.Flavour flavour) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
-        List<Objective> pool = new ArrayList<>(List.of(POOLS[Math.floorMod(archetype, POOLS.length)]));
-        Collections.shuffle(pool, r);
-        for (Objective o : pool) {
-            Agenda a = make(f, o, now, r);
-            if (a != null) {
-                return a;
-            }
+        Agenda a = choose(f, Directive.forRole(Math.floorMod(archetype, ROLES)), now, flavour, r);
+        if (a != null) {
+            return a;
         }
         //nothing it wants is possible right now: it asks for patience instead
-        Agenda a = make(f, f.factionPoints >= 0 && r.nextBoolean() ? Objective.STAY_SOLVENT : Objective.KEEP_PEACE, now, r);
-        return a != null ? a : make(f, Objective.KEEP_PEACE, now, r);
+        a = new Agenda();
+        a.objective = f.factionPoints >= 0 && r.nextBoolean() ? Objective.STAY_SOLVENT : Objective.KEEP_PEACE;
+        a.issued = now;
+        a.count = 3;
+        a.deadline = now + a.count * DAY_MS;
+        a.reward = a.objective == Objective.STAY_SOLVENT ? 150 : 200;
+        a.penalty = a.reward * 3 / 5;
+        return a;
     }
 
-    private static Agenda make(Faction f, Objective o, long now, ThreadLocalRandom r) {
+    /**
+     * One agenda from {@code ds}: every possible directive and target, each directive's weight shared out
+     * over its targets by its pick, so a directive with many targets is no likelier than one with a few.
+     * Null if none is possible.
+     */
+    private static Agenda choose(Faction f, List<Directive> ds, long now, CouncilLore.Flavour flavour, ThreadLocalRandom r) {
         DiplomacyManager dm = DiplomacyManager.server();
         int me = f.getIdFaction();
-        List<Integer> at = new ArrayList<>();
-        List<String> types = new ArrayList<>();
-        List<Integer> weights = new ArrayList<>();
+        List<Faction> others = new ArrayList<>();
         for (Faction other : GameServerState.instance.getFactionManager().getFactionCollection()) {
             int id = other.getIdFaction();
             //real polities only: not the shop owner, the pirates or the engine's fauna factions
-            if (id == me || id == 0 || id == FactionManager.TRAIDING_GUILD_ID || id == FactionManager.PIRATES_ID || !other.isShowInHub()) {
+            if (id != me && id != 0 && id != FactionManager.TRAIDING_GUILD_ID && id != FactionManager.PIRATES_ID && other.isShowInHub()) {
+                others.add(other);
+            }
+        }
+        double ours = -1;
+        List<Directive> cd = new ArrayList<>();
+        List<Integer> ct = new ArrayList<>();
+        List<String> ctype = new ArrayList<>();
+        List<Double> cw = new ArrayList<>();
+        for (Directive d : ds) {
+            if (d.objective == Objective.STAY_SOLVENT && f.factionPoints < 0) {
                 continue;
             }
-            boolean war = dm.hasTreaty(me, id, TreatyTypeRegistry.WAR);
-            int opinion = standing(dm, other, me);
-            String type = targetType(o, opinion, war, t -> dm.hasTreaty(me, id, t), dm.getTreaties(me, id).getTreaties().isEmpty());
-            if (type != null) {
-                at.add(id);
-                types.add(type);
-                weights.add(weight(o, opinion));
+            if (!d.targeted()) {
+                DiplomacyEntity self = Templates.entity(dm, me, me);
+                if (d.whenUs == null || d.whenUs.satisfied(self)) {
+                    cd.add(d);
+                    ct.add(0);
+                    ctype.add("");
+                    cw.add(d.weight.of(c -> c.satisfied(self), null));
+                }
+                continue;
             }
-            if (o == Objective.BREAK_TREATY && opinion < BREAK_BELOW) {
-                for (FactionTreaty t : dm.getTreaties(me, id).getTreaties()) {
-                    for (String b : BREAKABLE) {
-                        if (b.equals(t.typeId)) {
-                            at.add(id);
-                            types.add(b);
-                            weights.add(weight(o, opinion));
+            List<Integer> at = new ArrayList<>();
+            List<String> types = new ArrayList<>();
+            List<Double> picks = new ArrayList<>();
+            List<Double> weights = new ArrayList<>();
+            for (Faction other : others) {
+                int id = other.getIdFaction();
+                boolean war = dm.hasTreaty(me, id, TreatyTypeRegistry.WAR);
+                int opinion = standing(dm, other, me);
+                List<String> found = new ArrayList<>();
+                if (d.objective == Objective.BREAK_TREATY) {
+                    if (opinion < BREAK_BELOW) {
+                        for (FactionTreaty t : dm.getTreaties(me, id).getTreaties()) {
+                            if (List.of(d.treaties.length > 0 ? d.treaties : BREAKABLE).contains(t.typeId)) {
+                                found.add(t.typeId);
+                            }
                         }
                     }
+                } else {
+                    String type = targetType(d.objective, opinion, war, t -> dm.hasTreaty(me, id, t), dm.getTreaties(me, id).getTreaties().isEmpty(), d.treaties);
+                    if (type != null) {
+                        found.add(type);
+                    }
+                }
+                if (found.isEmpty()) {
+                    continue;
+                }
+                //their view of us reads us; ours of them reads them
+                DiplomacyEntity aboutUs = Templates.entity(dm, id, me);
+                DiplomacyEntity aboutThem = Templates.entity(dm, me, id);
+                if (d.whenUs != null && !d.whenUs.satisfied(aboutUs) || d.whenThem != null && !d.whenThem.satisfied(aboutThem)) {
+                    continue;
+                }
+                double w = d.weight.of(c -> c.satisfied(aboutUs), c -> c.satisfied(aboutThem));
+                if (d.pick == Directive.Pick.STRENGTH && ours < 0) {
+                    ours = FactionStrength.of(f);
+                }
+                double p = pickWeight(d.pick, d.objective, opinion, ours, d.pick == Directive.Pick.STRENGTH ? FactionStrength.of(other) : 0);
+                for (String type : found) {
+                    at.add(id);
+                    types.add(type);
+                    picks.add(p);
+                    weights.add(w);
                 }
             }
+            double sum = picks.stream().mapToDouble(Double::doubleValue).sum();
+            for (int i = 0; i < at.size(); i++) {
+                cd.add(d);
+                ct.add(at.get(i));
+                ctype.add(types.get(i));
+                cw.add(weights.get(i) * picks.get(i) / sum);
+            }
         }
+        double[] w = cw.stream().mapToDouble(Double::doubleValue).toArray();
+        double total = java.util.Arrays.stream(w).sum();
+        if (total <= 0) {
+            return null;
+        }
+        int i = Templates.pick(w, r.nextDouble() * total);
+        Directive d = cd.get(i);
         Agenda a = new Agenda();
-        a.objective = o;
+        a.objective = d.objective;
+        a.target = ct.get(i);
+        a.typeId = ctype.get(i);
         a.issued = now;
-        if (o == Objective.CLAIM_SYSTEMS) {
-            a.count = 1 + r.nextInt(2);
-            a.deadline = now + (3 + r.nextInt(3)) * DAY_MS;
-        } else if (o.timed()) {
-            if (o == Objective.STAY_SOLVENT && f.factionPoints < 0) {
-                return null;
-            }
-            a.count = 3;
-            a.deadline = now + a.count * DAY_MS;
-        } else {
-            if (at.isEmpty()) {
-                return null;
-            }
-            int i = pick(weights, r.nextInt(Math.max(1, weights.stream().mapToInt(Integer::intValue).sum())));
-            a.target = at.get(i);
-            a.typeId = types.get(i);
-            a.count = o == Objective.DESTROY_SHIPS ? 2 + r.nextInt(3) : 1;
-            a.deadline = now + (3 + r.nextInt(3)) * DAY_MS;
-        }
-        a.reward = switch (o) {
-            case DESTROY_SHIPS -> 120 * a.count;
-            case DECLARE_WAR, BREAK_TREATY -> 300;
-            case SIGN_TREATY -> 250;
-            case SANCTION -> 200;
-            case KEEP_PEACE -> 200;
-            case STAY_SOLVENT -> 150;
-            case CLAIM_SYSTEMS -> 200 * a.count;
-        };
-        a.penalty = a.reward * 3 / 5;
+        a.count = d.countMin + r.nextInt(d.countMax - d.countMin + 1);
+        a.deadline = now + (d.objective.timed() ? a.count : d.daysMin + r.nextInt(d.daysMax - d.daysMin + 1)) * DAY_MS;
+        a.reward = d.reward(a.count);
+        a.penalty = d.penalty(a.reward);
+        a.text = d.text;
+        a.quote = d.quote(flavour);
         return a;
     }
 
@@ -828,17 +875,30 @@ public final class Council {
      * treaties when fair. A treaty to break is found by the caller. Null for no.
      */
     static String targetType(Objective o, int opinion, boolean war, java.util.function.Predicate<String> holds, boolean noTreaties) {
+        return targetType(o, opinion, war, holds, noTreaties, null);
+    }
+
+    /** The same, naming only treaties from {@code choices} (a directive's {@code treaty}), first not held; null or empty for the defaults. */
+    static String targetType(Objective o, int opinion, boolean war, java.util.function.Predicate<String> holds, boolean noTreaties, String[] choices) {
         return switch (o) {
-            case DESTROY_SHIPS -> war ? "" : null;
+            case DESTROY_SHIPS, KILL_PLAYERS -> war ? "" : null;
             case DECLARE_WAR -> !war && opinion <= WAR_BELOW && noTreaties ? "" : null;
-            case SANCTION -> war || opinion > SANCTION_BELOW ? null
-                    : !holds.test(TreatyTypeRegistry.EMBARGO) ? TreatyTypeRegistry.EMBARGO
-                    : !holds.test(TreatyTypeRegistry.TARIFF) ? TreatyTypeRegistry.TARIFF : null;
-            case SIGN_TREATY -> war || opinion < 0 || holds.test(TreatyTypeRegistry.EMBARGO) ? null
-                    : !holds.test(TreatyTypeRegistry.NON_AGGRESSION) ? TreatyTypeRegistry.NON_AGGRESSION
-                    : !holds.test(TreatyTypeRegistry.TRADE_AGREEMENT) ? TreatyTypeRegistry.TRADE_AGREEMENT : null;
+            case SANCTION -> war || opinion > SANCTION_BELOW ? null : firstNotHeld(choices, SANCTIONS, holds);
+            case SIGN_TREATY -> war || opinion < 0 || holds.test(TreatyTypeRegistry.EMBARGO) ? null : firstNotHeld(choices, SIGNABLE, holds);
             default -> null;
         };
+    }
+
+    private static final String[] SANCTIONS = {TreatyTypeRegistry.EMBARGO, TreatyTypeRegistry.TARIFF};
+    private static final String[] SIGNABLE = {TreatyTypeRegistry.NON_AGGRESSION, TreatyTypeRegistry.TRADE_AGREEMENT};
+
+    private static String firstNotHeld(String[] choices, String[] defaults, java.util.function.Predicate<String> holds) {
+        for (String t : choices != null && choices.length > 0 ? choices : defaults) {
+            if (!holds.test(t)) {
+                return t;
+            }
+        }
+        return null;
     }
 
     /** How likely a faction is chosen: the further relations are past the line, the likelier. */
@@ -852,15 +912,13 @@ public final class Council {
         } / 50;
     }
 
-    /** The index {@code roll} lands on, walking the weights. */
-    static int pick(List<Integer> weights, int roll) {
-        for (int i = 0; i < weights.size(); i++) {
-            roll -= weights.get(i);
-            if (roll < 0) {
-                return i;
-            }
-        }
-        return weights.size() - 1;
+    /** How likely a target is chosen by a directive's pick; strength picks the stronger they are against us, up to 21 to 1. */
+    static double pickWeight(Directive.Pick p, Objective o, int opinion, double ours, double theirs) {
+        return switch (p) {
+            case OPINION -> weight(o, opinion);
+            case STRENGTH -> 1 + 20 * theirs / Math.max(1, ours + theirs);
+            case RANDOM -> 1;
+        };
     }
 
     // ---- server: progress, from the hooks
@@ -892,6 +950,17 @@ public final class Council {
     public void onBroken(int breaker, int other, String typeId) {
         progress(breaker, ag -> ag.objective == Objective.BREAK_TREATY && ag.target == other && ag.typeId.equals(typeId) ? Settle.MET
                 : ag.objective == Objective.KEEP_PEACE ? Settle.FAILED : null);
+    }
+
+    /** Server: a player of {@code killer}'s faction killed one of {@code victim}'s. */
+    public void onPlayerKilled(int killer, int victim) {
+        progress(killer, ag -> {
+            if (ag.objective == Objective.KILL_PLAYERS && ag.target == victim) {
+                ag.done++;
+                return ag.done >= ag.count ? Settle.MET : null;
+            }
+            return null;
+        });
     }
 
     /** Server: a ship of {@code lost} died in a battle; every other side counts it. */
@@ -1282,7 +1351,12 @@ public final class Council {
     }
 
     private String quote(Faction f, Agenda a) {
-        return CouncilLore.quote(flavour(f), a.objective, serverName(a.target));
+        String target = serverName(a.target);
+        if (!a.quote.isEmpty()) {
+            TreatyType type = TreatyTypeRegistry.get(a.typeId);
+            return Directive.fill(a.quote, target, a.count, type != null ? type.getDisplayName() : "", a.count);
+        }
+        return CouncilLore.quote(flavour(f), a.objective, target);
     }
 
     private static String serverName(int id) {

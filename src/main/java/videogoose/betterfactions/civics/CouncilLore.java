@@ -9,7 +9,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Who the Council is, by the faction's civics: its name, its lore, what its seats are called and how its
- * councilors speak. Words only; what a seat asks for is its archetype's ({@link Council#POOLS}).
+ * councilors speak. Words only; what a seat asks for is its role's directives ({@link Directive}).
  *
  * <p>ponytail: tables in code, not data; move to {@code council.xml} when servers want their own.</p>
  */
@@ -128,6 +128,7 @@ public final class CouncilLore {
                 case KEEP_PEACE -> Lng.str("Be still. We are listening.");
                 case STAY_SOLVENT -> Lng.str("Owe nothing. Debt is a door the void walks through.");
                 case CLAIM_SYSTEMS -> Lng.str("The stars call to us. Answer them.");
+                case KILL_PLAYERS -> Lng.str("The pilots of %s dream too loudly. Silence them.", target);
             };
             case BOARD -> switch (o) {
                 case DESTROY_SHIPS -> Lng.str("%s is eating our margins. Remove them from the market.", target);
@@ -138,6 +139,7 @@ public final class CouncilLore {
                 case KEEP_PEACE -> Lng.str("A quiet quarter. The shareholders are nervous.");
                 case STAY_SOLVENT -> Lng.str("Close the quarter in the black.");
                 case CLAIM_SYSTEMS -> Lng.str("Untapped markets. Plant our flag.");
+                case KILL_PLAYERS -> Lng.str("%s's key personnel are a liability. For them.", target);
             };
             case JUNTA -> switch (o) {
                 case DESTROY_SHIPS -> Lng.str("%s mocks us. Answer with fire.", target);
@@ -148,6 +150,7 @@ public final class CouncilLore {
                 case KEEP_PEACE -> Lng.str("Let the young ones heal.");
                 case STAY_SOLVENT -> Lng.str("An army in debt fights for someone else.");
                 case CLAIM_SYSTEMS -> Lng.str("New ground for new halls.");
+                case KILL_PLAYERS -> Lng.str("Bring me the heads of %s's captains.", target);
             };
             case COUNCIL -> switch (o) {
                 case DESTROY_SHIPS -> Lng.str("%s grows bolder. Strike their ships.", target);
@@ -158,6 +161,7 @@ public final class CouncilLore {
                 case KEEP_PEACE -> Lng.str("Give the colonies time to breathe.");
                 case STAY_SOLVENT -> Lng.str("Debt is a slow defeat.");
                 case CLAIM_SYSTEMS -> Lng.str("Our borders are too narrow. Claim more systems.");
+                case KILL_PLAYERS -> Lng.str("Ships are rebuilt. Pilots are not. Hunt those of %s.", target);
             };
         };
     }

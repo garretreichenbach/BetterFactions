@@ -1207,6 +1207,16 @@ public class DiplomacyEntity implements LogInterface {
         return count;
     }
 
+    /** Whether they hold the civic, institution or fleet doctrine {@code id}. Civics are public, so a client knows too. */
+    public boolean holdsCivic(String id) {
+        if (id == null || !isFaction() || isSinglePlayer()) {
+            return false;
+        }
+        videogoose.betterfactions.civics.FactionCivics c = (state instanceof GameServerState
+                ? videogoose.betterfactions.civics.Civics.server() : videogoose.betterfactions.civics.Civics.client()).of((int) dbId);
+        return c.civics.contains(id) || c.institutions.contains(id) || id.equals(c.doctrine);
+    }
+
     /**
      * @param kind PLAYER, NPC or PIRATE, as an acceptance rule's &lt;Argument&gt; spells it.
      */

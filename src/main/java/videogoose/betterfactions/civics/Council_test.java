@@ -85,7 +85,7 @@ public final class Council_test {
         Council.State drawn = Council.State.fromTag(st.toTag());
         assert drawn.pool.size() == Council.POOL_SIZE && drawn.poolDay == 3 : "the day's pool survives a save";
         for (Council.Seat c : drawn.pool) {
-            assert !c.held() && c.favour >= 35 && c.favour <= 70 && c.archetype >= 0 && c.archetype < Council.POOLS.length;
+            assert !c.held() && c.favour >= 35 && c.favour <= 70 && c.archetype >= 0 && c.archetype < Council.ROLES;
         }
         assert back.seats.get(0).favour == 37 && back.seats.get(0).agenda.objective == Council.Objective.DECLARE_WAR
                 && back.seats.get(0).agenda.backedBy.equals("vael") : "an AI seat survives a save";
@@ -138,7 +138,7 @@ public final class Council_test {
         assert Council.targetType(Council.Objective.SIGN_TREATY, 100, false, none, true) != null;
         assert Council.targetType(Council.Objective.DESTROY_SHIPS, 500, false, none, true) == null : "ships only of those we are at war with";
         assert Council.weight(Council.Objective.DECLARE_WAR, -1500) > Council.weight(Council.Objective.DECLARE_WAR, -550) : "the worse, the likelier";
-        assert Council.pick(java.util.List.of(1, 5, 1), 0) == 0 && Council.pick(java.util.List.of(1, 5, 1), 3) == 1 && Council.pick(java.util.List.of(1, 5, 1), 6) == 2;
+        assert videogoose.betterfactions.template.Templates.pick(new double[]{1, 5, 1}, 0) == 0 && videogoose.betterfactions.template.Templates.pick(new double[]{1, 5, 1}, 3) == 1 && videogoose.betterfactions.template.Templates.pick(new double[]{1, 5, 1}, 6.5) == 2;
 
         //perks: a devoted councilor or a member's seat gives its archetype's perk
         Council council = new Council();

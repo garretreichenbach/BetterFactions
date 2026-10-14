@@ -162,6 +162,8 @@ public class DiplomacyCondition extends DiplomacyConditionGroup {
                 return Lng.str("word is you break your treaties");
             case AGGRESSION:
                 return Lng.str("you have not shown enough teeth for them");
+            case HOLDS_CIVIC:
+                return Lng.str("they look for %s", videogoose.betterfactions.civics.CivicRegistry.nameOf(argumentText));
             default:
                 return Lng.str("they are not satisfied");
         }
@@ -218,6 +220,8 @@ public class DiplomacyCondition extends DiplomacyConditionGroup {
                 return -ent.getInfamy() >= argumentValue;
             case AGGRESSION:
                 return ent.getAggression() >= argumentValue;
+            case HOLDS_CIVIC:
+                return ent.holdsCivic(argumentText);
             case ACTION_COUNTER:
                 return ent.getActionCount(argumentAction) >= argumentValue;
             case ACTION_PERSISTED:
@@ -296,6 +300,7 @@ public class DiplomacyCondition extends DiplomacyConditionGroup {
         WEARINESS("How badly our recent battles against them have gone: 0 is no recent losses, 1 is the worst losing streak there is. Equal or bigger than X", false, false, true),
         REPUTATION("Their galaxy-wide record of keeping treaties, with anyone: 0 is clean, -1 is one recently broken treaty, fading over time. Equal or bigger than X", false, false, true),
         AGGRESSION("How many fights they have started lately, with anyone: 1 is one declared war or four unprovoked attacks, fading over time. Equal or bigger than X", false, false, true),
+        HOLDS_CIVIC("They hold this civic, institution or fleet doctrine. Argument: its id, e.g. betterfactions:religious", false, false, false, true),
         ;
 
         public final String desc;

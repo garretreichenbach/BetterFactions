@@ -257,6 +257,7 @@ public final class BetterFactions extends StarMod {
 				return;
 			}
 			if (ours != 0) {
+				Council.server().onPlayerKilled(ours, theirs);
 				CivicPayouts.server().fire(new CivicPayouts.CivicEvent(CivicPayouts.Event.PLAYER_KILLED, ours, theirs, killer.getName(), victim.getName(), null, null));
 			}
 			if (theirs != 0) {
