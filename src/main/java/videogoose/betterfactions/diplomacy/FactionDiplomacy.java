@@ -109,7 +109,10 @@ public class FactionDiplomacy extends Observable implements LogInterface {
             public void execute() {
                 log("Calculate Diplomacy Turn change " + getDelay(), LogLevel.NORMAL);
                 for (DiplomacyEntity e : entities.values()) {
-                    e.calculateDiplomacyModifiersFromActions(getDelay());
+                    //Diplomatic Corps: what others think of us, good or bad, fades at half speed
+                    boolean corps = videogoose.betterfactions.civics.Civics.server().of((int) e.getDbId()).civics
+                            .contains(videogoose.betterfactions.civics.CivicRegistry.DIPLOMATIC_CORPS);
+                    e.calculateDiplomacyModifiersFromActions(corps ? getDelay() / 2 : getDelay());
                 }
             }
         });

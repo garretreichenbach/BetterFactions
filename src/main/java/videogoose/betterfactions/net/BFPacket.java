@@ -56,7 +56,9 @@ public final class BFPacket extends Packet {
 		// server -> client: one new line of the diplomatic history between two factions
 		HISTORY,
 		// server -> client: every faction's mod faction point lines from the last income turn
-		POINT_MODS
+		POINT_MODS,
+		// server -> client, on join: the server's civics.xml
+		CIVIC_TYPES
 	}
 
 	private Kind kind;

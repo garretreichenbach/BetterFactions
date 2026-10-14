@@ -65,6 +65,19 @@ public final class DiplomacyCommands {
 		StarLoader.registerCommand(mod, new Command("faction_emblem_clear", "<faction>",
 				"Removes a faction's uploaded emblem and tells the faction who did it.", DiplomacyCommands::emblemClear,
 				CommandArg.integer("faction", "10001")));
+		StarLoader.registerCommand(mod, new Command("faction_civic_grant", "<faction> <civicId> [on|off]",
+				"Lets a faction pick a civic that is only granted by an admin, or takes that back (a civic already held stays held).",
+				ctx -> {
+					int faction = Integer.parseInt(ctx.rawArgs()[0]);
+					String id = ctx.rawArgs()[1];
+					boolean on = ctx.rawArgs().length < 3 || !ctx.rawArgs()[2].equalsIgnoreCase("off");
+					if (fm().getFaction(faction) == null || videogoose.betterfactions.civics.CivicRegistry.get(id) == null) {
+						ctx.reply("[ERROR] No such faction or civic.");
+						return;
+					}
+					videogoose.betterfactions.civics.Civics.server().grant(faction, id, on);
+					ctx.reply("[SUCCESS] " + label(faction) + (on ? " may now pick " : " may no longer pick ") + id);
+				}, CommandArg.integer("faction", "10001"), CommandArg.string("civicId", "betterfactions:raiders"), CommandArg.string("onOff", "on").optional()));
 		StarLoader.registerCommand(mod, new Command("faction_federation_list", "",
 				"Lists every federation, its leader and its members.", DiplomacyCommands::federationList));
 		StarLoader.registerCommand(mod, new Command("faction_federation_dissolve", "<federationId>",

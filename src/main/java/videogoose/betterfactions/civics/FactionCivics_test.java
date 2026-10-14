@@ -19,6 +19,8 @@ public final class FactionCivics_test {
         slotsFillInOrder();
         noCivicTwiceAndExclusionsBothWays();
         holyLeaderNeedsReligious();
+        slotsRatchetWithStrength();
+        unlockRulesAreCheckedOnPick();
         oneDoctrineInItsOwnSlot();
         aSwapCostsAndWaits();
         theCooldownCanBeBoughtOff();
@@ -28,7 +30,7 @@ public final class FactionCivics_test {
     }
 
     private static boolean ok(FactionCivics c, int slot, String id, float points, long now) {
-        return c.problem(slot, id, points, now, COST, 0, 7 * DAY) == null;
+        return c.problem(slot, id, CivicType.Standing.NONE, points, now, COST, 0, 7 * DAY) == null;
     }
 
     private static void slotsFillInOrder() {
@@ -64,8 +66,37 @@ public final class FactionCivics_test {
         assert c.conflict(0, CivicRegistry.HOLY_LEADER) != null : "not by replacing Religious itself";
         assert c.conflict(1, CivicRegistry.INDUSTRIALIST) != null : "Religious excludes Industrialist";
         c.set(1, CivicRegistry.HOLY_LEADER, 0);
-        assert c.conflict(0, CivicRegistry.RAIDERS) != null : "Religious cannot be swapped out under Holy Leader";
-        assert c.conflict(1, CivicRegistry.RAIDERS) == null : "Holy Leader itself can go";
+        assert c.dependants(0).equals(java.util.List.of(CivicRegistry.HOLY_LEADER)) : c.dependants(0);
+        assert c.dependants(1).isEmpty() : "nothing needs Holy Leader";
+        c.set(2, CivicRegistry.RAIDERS, 0);
+        assert c.set(0, CivicRegistry.OATHKEEPERS, 5).equals(java.util.List.of(CivicRegistry.HOLY_LEADER)) : "swapping Religious out drops Holy Leader";
+        assert c.civics.equals(java.util.List.of(CivicRegistry.OATHKEEPERS, CivicRegistry.RAIDERS)) : "the slots close up: " + c.civics;
+    }
+
+    private static void slotsRatchetWithStrength() {
+        int[] m = {500, 1200, 2500};
+        assert FactionCivics.slotsFor(0, m) == 3;
+        assert FactionCivics.slotsFor(500, m) == 4 : "a milestone is reached at its value";
+        assert FactionCivics.slotsFor(1850, m) == 5;
+        assert FactionCivics.slotsFor(1e9, m) == 6;
+        assert FactionCivics.slotsFor(1e9, new int[0]) == 3 : "no milestones, no extra slots";
+    }
+
+    private static void unlockRulesAreCheckedOnPick() {
+        CivicRegistry.register("test", new CivicType.Builder("veterans").unlock(CivicType.Unlock.Rule.WARS_WON_AT_LEAST, 3)
+                .unlock(CivicType.Unlock.Rule.STRENGTH_AT_LEAST, 1500));
+        CivicRegistry.register("test", new CivicType.Builder("chosen").adminGranted());
+        try {
+            FactionCivics c = new FactionCivics();
+            CivicType.Standing weak = new CivicType.Standing(2000, 0, 2, 0, java.util.Set.of());
+            CivicType.Standing veteran = new CivicType.Standing(2000, 0, 3, 0, java.util.Set.of());
+            assert c.problem(0, "test:veterans", weak, 0, 0, COST, 0, 7 * DAY) != null : "two wars won is not three";
+            assert c.problem(0, "test:veterans", veteran, 0, 0, COST, 0, 7 * DAY) == null;
+            assert c.problem(0, "test:chosen", veteran, 0, 0, COST, 0, 7 * DAY) != null : "not granted";
+            assert c.problem(0, "test:chosen", new CivicType.Standing(0, 0, 0, 0, java.util.Set.of("test:chosen")), 0, 0, COST, 0, 7 * DAY) == null;
+        } finally {
+            CivicRegistry.unregisterAll();
+        }
     }
 
     private static void oneDoctrineInItsOwnSlot() {
@@ -110,9 +141,9 @@ public final class FactionCivics_test {
         assert c.cost(0, soon, COST, RUSH, 7 * DAY) == COST + RUSH;
         assert c.cost(0, now + 7 * DAY, COST, RUSH, 7 * DAY) == COST : "no rush once the cooldown is over";
         assert c.cost(1, soon, COST, RUSH, 7 * DAY) == 0 : "filling is free even mid cooldown";
-        assert c.problem(0, CivicRegistry.RAIDERS, COST + RUSH - 1, soon, COST, RUSH, 7 * DAY) != null : "cannot afford the rush";
-        assert c.problem(0, CivicRegistry.RAIDERS, COST + RUSH, soon, COST, RUSH, 7 * DAY) == null : "rushed";
-        assert c.problem(0, CivicRegistry.RAIDERS, 1e9f, soon, COST, 0, 7 * DAY) != null : "rush off";
+        assert c.problem(0, CivicRegistry.RAIDERS, CivicType.Standing.NONE, COST + RUSH - 1, soon, COST, RUSH, 7 * DAY) != null : "cannot afford the rush";
+        assert c.problem(0, CivicRegistry.RAIDERS, CivicType.Standing.NONE, COST + RUSH, soon, COST, RUSH, 7 * DAY) == null : "rushed";
+        assert c.problem(0, CivicRegistry.RAIDERS, CivicType.Standing.NONE, 1e9f, soon, COST, 0, 7 * DAY) != null : "rush off";
     }
 
     private static void modifiersListEverythingHeld() {
@@ -136,8 +167,11 @@ public final class FactionCivics_test {
         c.set(2, CivicRegistry.RESOURCE_SPECIALIST, (short) 77, 0);
         c.slotsEarned = 4;
         c.lastSwap = 12345;
+        c.warsWon = 2;
+        c.granted.add("test:chosen");
         FactionCivics back = FactionCivics.fromTag(c.toTag());
         assert back.civics.equals(c.civics) && back.slotsEarned == 4 && back.lastSwap == 12345 : back.civics;
+        assert back.warsWon == 2 && back.granted.equals(c.granted);
         assert back.resource == 77;
 
         FactionCivics empty = FactionCivics.fromTag(new FactionCivics().toTag());

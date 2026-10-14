@@ -1,6 +1,7 @@
 package videogoose.betterfactions.gui;
 
 import videogoose.betterfactions.BFConfig;
+import videogoose.betterfactions.diplomacy.FactionStrength;
 import videogoose.betterfactions.DiplomacyManager;
 import videogoose.betterfactions.civics.CivicRegistry;
 import videogoose.betterfactions.civics.CivicType;
@@ -155,19 +156,28 @@ public class FactionSettingsContent extends GUIAnchor {
 
         add(list, section(Lng.str("Civics"), HEADING));
         int own = getOwnFaction().getIdFaction();
-        for (int i = 0; i < Civics.client().of(own).slotsEarned; i++) {
+        //every slot there can be, so one earned while the panel is open shows without a rebuild
+        int slots = Math.max(Civics.client().of(own).slotsEarned, FactionCivics.STARTING_SLOTS + BFConfig.civicSlotMilestones().length);
+        for (int i = 0; i < slots; i++) {
             int slot = i;
             add(list, row(new Object() {
                         @Override
                         public String toString() {
                             FactionCivics c = Civics.client().of(own);
-                            return slot < c.civics.size() ? CivicRegistry.nameOf(c.civics.get(slot)) : Lng.str("Slot %s: empty", slot + 1);
+                            return slot < c.civics.size() ? CivicRegistry.nameOf(c.civics.get(slot))
+                                    : slot >= c.slotsEarned ? Lng.str("Slot %s: locked", slot + 1) : Lng.str("Slot %s: empty", slot + 1);
                         }
                     },
                     new Object() {
                         @Override
                         public String toString() {
                             FactionCivics c = Civics.client().of(own);
+                            if (slot >= c.slotsEarned) {
+                                int[] m = BFConfig.civicSlotMilestones();
+                                int at = slot - FactionCivics.STARTING_SLOTS;
+                                return at < m.length ? Lng.str("Opens when the faction reaches strength %s (now %s). Once open, it stays open.",
+                                        m[at], Math.round(FactionStrength.of(getOwnFaction()))) : Lng.str("No longer earned on this server.");
+                            }
                             if (slot >= c.civics.size()) {
                                 return Lng.str("A defining trait of the faction, chosen by those who may edit ranks.");
                             }
@@ -178,7 +188,7 @@ public class FactionSettingsContent extends GUIAnchor {
                     button(Lng.str("CHOOSE"), GUITextButton.ColorPalette.OK,
                             //slots fill in order, so only the next empty one is offered
                             () -> getOwnPlayer().getFactionController().hasPermissionEditPermission()
-                                    && slot <= Civics.client().of(own).civics.size(),
+                                    && slot <= Civics.client().of(own).civics.size() && slot < Civics.client().of(own).slotsEarned,
                             () -> CivicChooser.open(getState(), slot, false))));
         }
 

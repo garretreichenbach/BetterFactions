@@ -13,11 +13,18 @@ import org.schema.schine.network.server.ServerMessage;
 import org.schema.schine.resource.tag.FinishTag;
 import org.schema.schine.resource.tag.Tag;
 import videogoose.betterfactions.BFConfig;
+import videogoose.betterfactions.DiplomacyManager;
+import videogoose.betterfactions.diplomacy.FactionStrength;
+import videogoose.betterfactions.diplomacy.FactionTreaty;
+import videogoose.betterfactions.diplomacy.FactionTreatySet;
+import videogoose.betterfactions.diplomacy.TreatyTypeRegistry;
 import videogoose.betterfactions.Perms;
 import videogoose.betterfactions.net.BFPacket;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Every faction's {@link FactionCivics}. One instance per side; the server's is saved by {@code BFStore}.
@@ -32,8 +39,13 @@ public final class Civics {
     private static final Civics CLIENT = new Civics();
     private static final long DAY_MS = 24L * 60L * 60L * 1000L;
 
+    private static final long SLOT_CHECK_MS = 60_000L;
+
     private final Map<Integer, FactionCivics> byFaction = new HashMap<>();
     private int version;
+    private long nextSlotCheck;
+    /** The server's {@code civics.xml} as read, sent to every client so both sides know the same civics. */
+    private String data = "";
 
     public static Civics server() {
         return SERVER;
@@ -88,6 +100,10 @@ public final class Civics {
         String id = t[1].getString();
         short resource = t.length > 2 && t[2].getType() == Tag.Type.SHORT ? t[2].getShort() : 0;
         CivicType type = CivicRegistry.get(id);
+        if (type != null && BFConfig.civicDisabled(id)) {
+            reject(p, Lng.astr("That civic is turned off on this server."));
+            return;
+        }
         if (type != null && type.choosesResource() && !isResource(resource)) {
             reject(p, Lng.astr("Choose a resource for that civic."));
             return;
@@ -105,11 +121,13 @@ public final class Civics {
         int swapCost = Council.server().cost(f.getIdFaction(), Council.REFORM, BFConfig.civicSwapCost());
         int rushCost = BFConfig.civicRushCost();
         long cooldownMs = BFConfig.civicSwapCooldownDays() * DAY_MS;
+        CivicType.Standing standing = standing(f);
         Tag update;
         String replaced;
+        List<String> dropped;
         synchronized (this) {
             FactionCivics c = byFaction.computeIfAbsent(f.getIdFaction(), k -> new FactionCivics());
-            String why = c.problem(slot, id, f.factionPoints, now, swapCost, rushCost, cooldownMs);
+            String why = c.problem(slot, id, standing, f.factionPoints, now, swapCost, rushCost, cooldownMs);
             if (why != null) {
                 reject(p, new Object[]{why});
                 return;
@@ -120,7 +138,7 @@ public final class Civics {
                 f.sendFactionPointUpdate(GameServerState.instance.getGameState());
             }
             replaced = c.at(slot);
-            c.set(slot, id, resource, now);
+            dropped = c.set(slot, id, resource, now);
             version++;
             update = entries(Map.of(f.getIdFaction(), c));
         }
@@ -129,6 +147,151 @@ public final class Civics {
         governanceNews(f, p.getName(), doctrine ? Lng.str("New fleet doctrine: %s", name) : Lng.str("New civic: %s", name),
                 replaced == null ? Lng.str("%s chose %s.", p.getName(), name)
                         : Lng.str("%s replaced %s with %s.", p.getName(), CivicRegistry.nameOf(replaced), name));
+        for (String d : dropped) {
+            governanceNews(f, p.getName(), Lng.str("Civic dropped: %s", CivicRegistry.nameOf(d)),
+                    Lng.str("%s went with %s, which it needed.", CivicRegistry.nameOf(d), CivicRegistry.nameOf(replaced)));
+        }
+        broadcast(update);
+    }
+
+    /** What the unlock rules measure about {@code f} now. Either side; the client's is what the chooser shows. */
+    public static CivicType.Standing standing(Faction f) {
+        DiplomacyManager dm = DiplomacyManager.of(f.isOnServer());
+        int treaties = 0;
+        synchronized (dm.getTreatyMap()) {
+            for (FactionTreatySet set : dm.getTreatyMap().values()) {
+                for (FactionTreaty t : set.getTreaties()) {
+                    if (t.involves(f.getIdFaction()) && !TreatyTypeRegistry.WAR.equals(t.typeId)) {
+                        treaties++;
+                    }
+                }
+            }
+        }
+        FactionCivics c = (f.isOnServer() ? SERVER : CLIENT).of(f.getIdFaction());
+        return new CivicType.Standing(FactionStrength.of(f), treaties, c.warsWon, FactionStrength.claimedSystems(f), Set.copyOf(c.granted));
+    }
+
+    /**
+     * Server, every tick: once a minute, gives each player faction the slots its strength has earned.
+     * Slots only ever go up.
+     */
+    public void update(long now) {
+        if (now < nextSlotCheck) {
+            return;
+        }
+        nextSlotCheck = now + SLOT_CHECK_MS;
+        int[] milestones = BFConfig.civicSlotMilestones();
+        long today = FactionCivics.dayOf(now);
+        for (Faction f : GameServerState.instance.getFactionManager().getFactionCollection()) {
+            if (f.isNPC()) {
+                continue;
+            }
+            boolean daily;
+            synchronized (this) {
+                FactionCivics c = byFaction.get(f.getIdFaction());
+                daily = c != null && !c.civics.isEmpty() && c.dailyDone < today;
+                if (daily) {
+                    c.dailyDone = today;
+                }
+            }
+            if (daily) {
+                CivicPayouts.server().fire(CivicPayouts.CivicEvent.of(CivicPayouts.Event.DAILY, f.getIdFaction(), 0));
+            }
+            int earned = FactionCivics.slotsFor(FactionStrength.of(f), milestones);
+            Tag update;
+            synchronized (this) {
+                FactionCivics c = byFaction.get(f.getIdFaction());
+                if (earned <= (c != null ? c.slotsEarned : FactionCivics.STARTING_SLOTS)) {
+                    continue;
+                }
+                c = byFaction.computeIfAbsent(f.getIdFaction(), k -> new FactionCivics());
+                c.slotsEarned = earned;
+                version++;
+                update = entries(Map.of(f.getIdFaction(), c));
+            }
+            DiplomacyManager.server().sendServerFactionMail(Lng.str("[FACTION] A new civic slot"),
+                    Lng.str("Your faction has grown strong enough to hold %s civics. Choose the new one in Faction Settings.", earned), f);
+            broadcast(update);
+        }
+    }
+
+    /**
+     * Server: pays (or charges) a civic payout, its daily cap applied, and records it in the week's income.
+     *
+     * @param key the payout's own key, so each has its own cap
+     */
+    public void credit(int faction, String key, int fp, int dailyCap, long now) {
+        Faction f = GameServerState.instance.getFactionManager().getFaction(faction);
+        if (f == null || fp == 0) {
+            return;
+        }
+        int paid;
+        Tag update;
+        synchronized (this) {
+            FactionCivics c = byFaction.computeIfAbsent(faction, k -> new FactionCivics());
+            paid = c.credit(key, fp, dailyCap, now);
+            if (paid == 0) {
+                return;
+            }
+            version++;
+            update = entries(Map.of(faction, c));
+        }
+        f.factionPoints += paid;
+        f.sendFactionPointUpdate(GameServerState.instance.getGameState());
+        broadcast(update);
+    }
+
+    /** Server, on world load: reads and applies {@code moddata/BetterFactions/civics.xml}, if there is one. */
+    public void loadData() {
+        java.io.File file = new java.io.File("moddata/BetterFactions/civics.xml");
+        String xml = "";
+        try {
+            if (file.isFile()) {
+                xml = java.nio.file.Files.readString(file.toPath());
+            }
+        } catch (java.io.IOException e) {
+            System.err.println("[BetterFactions] could not read " + file + ": " + e);
+        }
+        data = xml;
+        for (String why : CivicPayouts.apply(xml)) {
+            System.err.println("[BetterFactions] civics.xml: skipped " + why);
+        }
+    }
+
+    /** Server: what a joining client is sent, {@link BFPacket.Kind#CIVIC_TYPES}. */
+    public Tag dataTag() {
+        return new Tag(Tag.Type.STRING, null, data);
+    }
+
+    /** Client: the server's {@code civics.xml}, applied over the built-in civics. */
+    public static void dataReceived(Tag tag) {
+        CivicPayouts.apply(tag.getString());
+        CLIENT.version++;
+    }
+
+    /** Server: a war ended with {@code faction} ahead. */
+    public void recordWarWon(int faction) {
+        Tag update;
+        synchronized (this) {
+            FactionCivics c = byFaction.computeIfAbsent(faction, k -> new FactionCivics());
+            c.warsWon++;
+            version++;
+            update = entries(Map.of(faction, c));
+        }
+        broadcast(update);
+    }
+
+    /** Server: an admin grants or takes back a civic with an ADMIN_GRANTED unlock rule. A held civic stays held. */
+    public void grant(int faction, String id, boolean on) {
+        Tag update;
+        synchronized (this) {
+            FactionCivics c = byFaction.computeIfAbsent(faction, k -> new FactionCivics());
+            if (on ? !c.granted.add(id) : !c.granted.remove(id)) {
+                return;
+            }
+            version++;
+            update = entries(Map.of(faction, c));
+        }
         broadcast(update);
     }
 

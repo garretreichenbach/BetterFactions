@@ -41,6 +41,9 @@ import videogoose.betterfactions.net.BFPacket;
 import videogoose.betterfactions.repair.FactionDesigns;
 import videogoose.betterfactions.civics.CivicRegistry;
 import videogoose.betterfactions.civics.Civics;
+import videogoose.betterfactions.civics.CivicPayouts;
+import org.schema.game.common.data.player.PlayerState;
+import org.schema.common.util.linAlg.Vector3i;
 import videogoose.betterfactions.civics.Council;
 import videogoose.betterfactions.civics.Senate;
 import videogoose.betterfactions.fleet.FleetIntercepts;
@@ -137,8 +140,14 @@ public final class BetterFactions extends StarMod {
 				return EventResult.CANCEL;
 			}
 			//a system newly ours counts toward a Council agenda to claim systems
-			if (isServer && faction != null && system.getOwnerFaction() != faction.getIdFaction()) {
-				Council.server().onClaim(faction.getIdFaction());
+			int was = system.getOwnerFaction();
+			int now = faction != null ? faction.getIdFaction() : 0;
+			if (isServer && now != 0 && was != now) {
+				Council.server().onClaim(now);
+				CivicPayouts.server().fire(CivicPayouts.CivicEvent.of(CivicPayouts.Event.SYSTEM_CLAIMED, now, was));
+			}
+			if (isServer && was != 0 && was != now) {
+				CivicPayouts.server().fire(CivicPayouts.CivicEvent.of(CivicPayouts.Event.SYSTEM_LOST, was, now));
 			}
 			return EventResult.CONTINUE;
 		}, this);
@@ -168,6 +177,7 @@ public final class BetterFactions extends StarMod {
 			FactionDesigns.server().clear();
 			BFStore.load(FactionDesigns.server());
 			Civics.server().clear();
+			Civics.server().loadData();
 			BFStore.load(Civics.server());
 			Senate.server().clear();
 			BFStore.load(Senate.server());
@@ -215,6 +225,12 @@ public final class BetterFactions extends StarMod {
 		SegmentControllerOverheatListener.TYPE.register((sc, damager, isServer) -> {
 			if (isServer) {
 				BattleTracker.get().onOverheat(sc);
+				int us = damager != null ? damager.getFactionId() : 0;
+				//ponytail: any root entity counts, however small; a minimum mass if one-block ships get farmed past the cap
+				if (us != 0 && us != sc.getFactionId() && BattleTracker.root(sc)) {
+					CivicPayouts.server().fire(new CivicPayouts.CivicEvent(CivicPayouts.Event.SHIP_DESTROYED, us, sc.getFactionId(),
+							null, null, sc.getSector(new Vector3i()), null));
+				}
 			}
 			return EventResult.CONTINUE;
 		}, this);
@@ -228,6 +244,30 @@ public final class BetterFactions extends StarMod {
 					ShipyardRepairs.get().onDeleted(sc);
 				}
 			}
+		}, this);
+
+		//a kill pays the killer's faction, a death costs the victim's; FAIR_KILL needs to know who joined when
+		api.event.player.PlayerDeathListener.TYPE.register((victim, damager, isServer) -> {
+			if (!isServer || damager == null || !(damager.getOwnerState() instanceof PlayerState killer) || killer == victim) {
+				return;
+			}
+			int theirs = victim.getFactionId();
+			int ours = damager.getFactionId();
+			if (ours == theirs) {
+				return;
+			}
+			if (ours != 0) {
+				CivicPayouts.server().fire(new CivicPayouts.CivicEvent(CivicPayouts.Event.PLAYER_KILLED, ours, theirs, killer.getName(), victim.getName(), null, null));
+			}
+			if (theirs != 0) {
+				CivicPayouts.server().fire(new CivicPayouts.CivicEvent(CivicPayouts.Event.PLAYER_LOST, theirs, ours, victim.getName(), null, null, null));
+			}
+		}, this);
+		api.event.player.PlayerJoinFactionListener.TYPE.register((ctx, isServer) -> {
+			if (isServer && ctx.getPlayer() != null) {
+				CivicPayouts.server().onJoinedFaction(ctx.getPlayer().getName(), System.currentTimeMillis());
+			}
+			return EventResult.CONTINUE;
 		}, this);
 
 		PlayerJoinWorldListener.TYPE.register((client, player, isServer) -> {

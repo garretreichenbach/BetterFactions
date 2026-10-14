@@ -1,7 +1,11 @@
 package videogoose.betterfactions.civics;
 
+import org.schema.schine.common.language.Lng;
+
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -22,8 +26,14 @@ public final class CivicType {
     private final boolean choosesResource;
     private final Set<String> requires;
     private final Kind kind;
+    private final List<Unlock> unlocks;
+    /** Replaced whole by {@code civics.xml}, never edited in place, so a reader holds a consistent list. */
+    private volatile List<CivicPayouts.Payout> payouts;
+    private final List<CivicPayouts.Payout> builtPayouts;
+    private final CivicPayouts.CivicHandler handler;
 
-    private CivicType(String id, String registeredBy, String displayName, String description, Set<String> excludes, String impliesGovernment, boolean choosesResource, Set<String> requires, Kind kind) {
+    private CivicType(String id, String registeredBy, String displayName, String description, Set<String> excludes, String impliesGovernment, boolean choosesResource, Set<String> requires, Kind kind, List<Unlock> unlocks,
+                      List<CivicPayouts.Payout> payouts, CivicPayouts.CivicHandler handler) {
         this.id = id;
         this.registeredBy = registeredBy;
         this.displayName = displayName;
@@ -33,6 +43,81 @@ public final class CivicType {
         this.choosesResource = choosesResource;
         this.requires = Collections.unmodifiableSet(requires);
         this.kind = kind;
+        this.unlocks = List.copyOf(unlocks);
+        this.builtPayouts = List.copyOf(payouts);
+        this.payouts = builtPayouts;
+        this.handler = handler;
+    }
+
+    /** What it pays out for: as registered, unless {@code civics.xml} replaced them. */
+    public List<CivicPayouts.Payout> getPayouts() {
+        return payouts;
+    }
+
+    void overridePayouts(List<CivicPayouts.Payout> p) {
+        payouts = p == null ? builtPayouts : List.copyOf(p);
+    }
+
+    /** The code side, for what its payouts cannot express; null for none. */
+    public CivicPayouts.CivicHandler getHandler() {
+        return handler;
+    }
+
+    /**
+     * A rule a faction must meet to pick this civic, beside {@link #getRequires} (the HOLDS_CIVIC rule).
+     * All of a civic's rules must hold. Checked only when picking: a faction that later falls below one
+     * keeps the civic.
+     */
+    public record Unlock(Rule rule, int value) {
+        public enum Rule {
+            STRENGTH_AT_LEAST,
+            HELD_TREATIES_AT_LEAST,
+            WARS_WON_AT_LEAST,
+            CLAIMED_SYSTEMS_AT_LEAST,
+            /** Given to a faction by an admin with {@code /faction_civic_grant}; value unused. */
+            ADMIN_GRANTED
+        }
+
+        /** Whether a faction standing as {@code s} meets it. */
+        public boolean met(String civic, Standing s) {
+            return switch (rule) {
+                case STRENGTH_AT_LEAST -> s.strength() >= value;
+                case HELD_TREATIES_AT_LEAST -> s.treaties() >= value;
+                case WARS_WON_AT_LEAST -> s.warsWon() >= value;
+                case CLAIMED_SYSTEMS_AT_LEAST -> s.systems() >= value;
+                case ADMIN_GRANTED -> s.granted().contains(civic);
+            };
+        }
+
+        /** What it asks for, as the chooser shows it. */
+        public String describe() {
+            return switch (rule) {
+                case STRENGTH_AT_LEAST -> Lng.str("Strength %s or more.", value);
+                case HELD_TREATIES_AT_LEAST -> Lng.str("%s treaties held at once.", value);
+                case WARS_WON_AT_LEAST -> Lng.str("%s wars won.", value);
+                case CLAIMED_SYSTEMS_AT_LEAST -> Lng.str("%s claimed systems.", value);
+                case ADMIN_GRANTED -> Lng.str("Granted by an administrator.");
+            };
+        }
+    }
+
+    /** What the unlock rules measure about one faction, taken when it picks. */
+    public record Standing(double strength, int treaties, int warsWon, int systems, Set<String> granted) {
+        public static final Standing NONE = new Standing(0, 0, 0, 0, Set.of());
+    }
+
+    public List<Unlock> getUnlocks() {
+        return unlocks;
+    }
+
+    /** The first unlock rule {@code s} does not meet, described; null when every one is met. */
+    public String locked(Standing s) {
+        for (Unlock u : unlocks) {
+            if (!u.met(id, s)) {
+                return u.describe();
+            }
+        }
+        return null;
     }
 
     /** What a faction holds this as: a civic in a slot, its one fleet doctrine, or one of its institutions. */
@@ -53,8 +138,8 @@ public final class CivicType {
     }
 
     /**
-     * Ids that must be held in another slot before this civic can be picked. ponytail: the HOLDS_CIVIC
-     * case of #19's unlock rules; folds into {@code requires} conditions when those land.
+     * Ids that must be held in another slot before this civic can be picked: the HOLDS_CIVIC unlock rule.
+     * Swapping one of them out drops this civic too ({@link FactionCivics#set}).
      */
     public Set<String> getRequires() {
         return requires;
@@ -123,6 +208,9 @@ public final class CivicType {
         private boolean choosesResource;
         private final Set<String> requires = new LinkedHashSet<>();
         private Kind kind = Kind.CIVIC;
+        private final List<Unlock> unlocks = new ArrayList<>();
+        private final List<CivicPayouts.Payout> payouts = new ArrayList<>();
+        private CivicPayouts.CivicHandler handler;
 
         public Builder(String name) {
             this.name = name;
@@ -156,6 +244,33 @@ public final class CivicType {
             return this;
         }
 
+        /** Adds an unlock rule; every one added must hold. */
+        public Builder unlock(Unlock.Rule rule, int value) {
+            unlocks.add(new Unlock(rule, value));
+            return this;
+        }
+
+        /**
+         * On {@code event}, if every filter in {@code where} holds, pays {@code fp} faction points (negative
+         * to charge), at most {@code dailyCap} a day; 0 for no cap. Servers can retune it in {@code civics.xml}.
+         */
+        public Builder payout(CivicPayouts.Event event, int fp, int dailyCap, CivicPayouts.Filter... where) {
+            Set<CivicPayouts.Filter> w = java.util.EnumSet.noneOf(CivicPayouts.Filter.class);
+            Collections.addAll(w, where);
+            payouts.add(new CivicPayouts.Payout(event, Collections.unmodifiableSet(w), fp, dailyCap));
+            return this;
+        }
+
+        public Builder handler(CivicPayouts.CivicHandler h) {
+            handler = h;
+            return this;
+        }
+
+        /** Only factions an admin has granted it to may pick it. */
+        public Builder adminGranted() {
+            return unlock(Unlock.Rule.ADMIN_GRANTED, 0);
+        }
+
         public Builder doctrine() {
             kind = Kind.DOCTRINE;
             return this;
@@ -173,7 +288,7 @@ public final class CivicType {
 
         CivicType build(String namespace) {
             return new CivicType(namespace + ":" + name, namespace, displayName, description, qualify(excludes, namespace),
-                    impliesGovernment, choosesResource, qualify(requires, namespace), kind);
+                    impliesGovernment, choosesResource, qualify(requires, namespace), kind, unlocks, payouts, handler);
         }
 
         private static Set<String> qualify(Set<String> ids, String namespace) {

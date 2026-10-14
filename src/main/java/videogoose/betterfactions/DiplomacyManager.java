@@ -47,6 +47,7 @@ import videogoose.betterfactions.gui.RepairDialogs;
 import videogoose.betterfactions.gui.WarBattlesDialog;
 import videogoose.betterfactions.repair.FactionDesigns;
 import videogoose.betterfactions.civics.Civics;
+import videogoose.betterfactions.civics.CivicPayouts;
 import videogoose.betterfactions.civics.CivicRegistry;
 import videogoose.betterfactions.civics.Senate;
 import videogoose.betterfactions.civics.Council;
@@ -535,6 +536,7 @@ public final class DiplomacyManager extends Observable {
 				changed();
 			}
 			case COUNCIL -> Council.client().received(tag);
+			case CIVIC_TYPES -> Civics.dataReceived(tag);
 			case CIVICS -> {
 				Civics.client().fromTag(tag);
 				changed();
@@ -600,6 +602,7 @@ public final class DiplomacyManager extends Observable {
 		checkFederationVotes();
 		Senate.server().update(this::senateCarrier);
 		Council.server().update(wall);
+		Civics.server().update(wall);
 
 		if (!needsSnapshot.isEmpty()) {
 			Tag snapshot = null;
@@ -613,6 +616,7 @@ public final class DiplomacyManager extends Observable {
 				needsSnapshot.remove(p);
 				BFPacket.toPlayer(p, Kind.SNAPSHOT, snapshot);
 				sendSecretHistoryTo(p);
+				BFPacket.toPlayer(p, Kind.CIVIC_TYPES, Civics.server().dataTag());
 				BFPacket.toPlayer(p, Kind.CIVICS, Civics.server().toTag());
 				BFPacket.toPlayer(p, Kind.POINT_MODS, pointMods.toTag());
 				Senate.server().sendTo(p);
@@ -1319,6 +1323,10 @@ public final class DiplomacyManager extends Observable {
                 diplomacyAction(DiplomacyAction.DiplActionType.TREATY_EXPIRED, t.from, t.to, t.typeId);
                 diplomacyAction(DiplomacyAction.DiplActionType.TREATY_EXPIRED, t.to, t.from, t.typeId);
                 TreatyType type = t.getType();
+                if (type != null && !type.isSanction() && !TreatyTypeRegistry.WAR.equals(t.typeId)) {
+                    civicEvent(CivicPayouts.Event.TREATY_KEPT, t.from, t.to, t.typeId);
+                    civicEvent(CivicPayouts.Event.TREATY_KEPT, t.to, t.from, t.typeId);
+                }
                 if (type != null && type.getImplies() != null) {
                     //the relation table was written at signing; left alone it would outlive the treaty
                     FactionRelation.RType still = getTreaties(t.from, t.to).getDerivedRelation();
@@ -1337,6 +1345,10 @@ public final class DiplomacyManager extends Observable {
 						? Lng.str("%s ended after %s. Final balance: %s %s%%, %s %s%%.", treaty.getDisplayName(), lasted,
 						getFactionName(treaty.from), Math.round(treaty.progress * 100), getFactionName(treaty.to), Math.round((1 - treaty.progress) * 100))
 						: Lng.str("%s ended after %s.", treaty.getDisplayName(), lasted));
+			}
+			//ponytail: ahead at the end is a win, however slim; add a margin if close wars count too easily
+			if (removed && TreatyTypeRegistry.WAR.equals(treaty.typeId) && treaty.progress != 0.5f) {
+				Civics.server().recordWarWon(treaty.progress > 0.5f ? treaty.from : treaty.to);
 			}
 			broadcast(Kind.TREATY, FactionTreatyChange.of(treaty, removed).toTag());
         }
@@ -2550,11 +2562,16 @@ public final class DiplomacyManager extends Observable {
 	 * Tears up a treaty that is in force and lets everything downstream of it catch up: the ledger
 	 * records who broke it, and a treaty that was forcing a relation leaves the pair neutral.
 	 */
+	private static void civicEvent(CivicPayouts.Event type, int us, int other, String detail) {
+		CivicPayouts.server().fire(new CivicPayouts.CivicEvent(type, us, other, null, null, null, detail));
+	}
+
 	private void breakTreatyInForce(int a, int b, TreatyType type) {
 		history(a, b, Lng.str("%s broke the %s with %s.", getFactionName(a), type.getDisplayName(), getFactionName(b)));
 		removeTreaty(a, b, type.getId());
 		if (onServer) {
 			Council.server().onBroken(a, b, type.getId());
+			civicEvent(CivicPayouts.Event.TREATY_BROKEN, a, b, type.getId());
 		}
 		diplomacyAction(DiplomacyAction.DiplActionType.TREATY_BROKEN, b, a, type.getId());
 		releaseRelation(a, b, type);
@@ -3354,6 +3371,7 @@ public final class DiplomacyManager extends Observable {
                 || !hasTreaty(victim, partner, TreatyTypeRegistry.DEFENSIVE_PACT)) {
             return;
         }
+        civicEvent(join ? CivicPayouts.Event.CALL_TO_ARMS_ANSWERED : CivicPayouts.Event.CALL_TO_ARMS_REFUSED, partner, aggressor, null);
         history(victim, partner, join
                 ? Lng.str("%s answered the call to arms against %s.", getFactionName(partner), getFactionName(aggressor))
                 : Lng.str("%s refused the call to arms against %s.", getFactionName(partner), getFactionName(aggressor)));
@@ -3434,6 +3452,12 @@ public final class DiplomacyManager extends Observable {
             addTreaty(treaty);
             if (onServer && held == null) {
                 Council.server().onTreaty(offer.a, offer.b, type.getId());
+                if (TreatyTypeRegistry.WAR.equals(type.getId())) {
+                    civicEvent(CivicPayouts.Event.WAR_DECLARED, offer.a, offer.b, type.getId());
+                } else if (!type.isSanction()) {
+                    civicEvent(CivicPayouts.Event.TREATY_SIGNED, offer.a, offer.b, type.getId());
+                    civicEvent(CivicPayouts.Event.TREATY_SIGNED, offer.b, offer.a, type.getId());
+                }
             }
         } else {
             clearImplyingTreaties(offer.a, offer.b);

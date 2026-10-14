@@ -3,6 +3,7 @@ package videogoose.betterfactions;
 import api.config.simpleconfig.SimpleConfigBool;
 import api.config.simpleconfig.SimpleConfigContainer;
 import api.config.simpleconfig.SimpleConfigInt;
+import api.config.simpleconfig.SimpleConfigString;
 
 /**
  * Server settings, synced to clients so the GUI can hide what the server would refuse anyway.
@@ -23,6 +24,8 @@ public final class BFConfig {
 	private static SimpleConfigInt civicSwapCost;
 	private static SimpleConfigInt civicSwapCooldownDays;
 	private static SimpleConfigInt civicRushCost;
+	private static SimpleConfigString civicSlotMilestones;
+	private static SimpleConfigString civicsDisabled;
 	private static SimpleConfigInt proposeTreatyCost;
 	private static SimpleConfigInt breakTreatyCost;
 	private static SimpleConfigInt declareWarCost;
@@ -75,6 +78,10 @@ public final class BFConfig {
 				"Days after swapping a civic before the faction may swap one again. 0 means no wait.");
 		civicRushCost = new SimpleConfigInt(config, "civic_rush_cost", 3000,
 				"Extra faction points, on top of civic_swap_cost, to swap a civic before the cooldown is over. 0 means the cooldown cannot be skipped.");
+		civicSlotMilestones = new SimpleConfigString(config, "civic_slot_milestones", "500,1200,2500",
+				"Faction strengths at which a faction earns one more civic slot, comma separated. Every faction starts with 3. Earned slots are kept if strength falls. Empty means 3 slots for everyone.");
+		civicsDisabled = new SimpleConfigString(config, "civics_disabled", "",
+				"Civic ids no faction may pick, comma separated, e.g. betterfactions:raiders. A faction already holding one keeps it.");
 		proposeTreatyCost = new SimpleConfigInt(config, "propose_treaty_cost", 100,
 				"Faction points a player faction pays to propose a treaty, whether or not it is accepted. Peace offers are always free. 0 makes proposals free.");
 		breakTreatyCost = new SimpleConfigInt(config, "break_treaty_cost", 1000,
@@ -207,6 +214,30 @@ public final class BFConfig {
 	public static int civicRushCost() {
 		Integer v = civicRushCost != null ? civicRushCost.getValue() : null;
 		return v == null ? 0 : Math.max(0, v);
+	}
+
+	/** The strengths that each earn a civic slot, lowest first; unparsable entries are skipped. */
+	public static int[] civicSlotMilestones() {
+		String v = civicSlotMilestones != null ? civicSlotMilestones.getValue() : null;
+		return parseMilestones(v == null ? "500,1200,2500" : v);
+	}
+
+	static int[] parseMilestones(String v) {
+		return java.util.Arrays.stream(v.split(",")).map(String::trim).filter(x -> x.matches("\\d+"))
+				.mapToInt(Integer::parseInt).sorted().toArray();
+	}
+
+	public static boolean civicDisabled(String id) {
+		String v = civicsDisabled != null ? civicsDisabled.getValue() : null;
+		if (v == null || v.isBlank()) {
+			return false;
+		}
+		for (String d : v.split(",")) {
+			if (d.trim().equals(id)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public static int proposeTreatyCost() {

@@ -5,7 +5,9 @@ import org.schema.schine.resource.tag.FinishTag;
 import org.schema.schine.resource.tag.Tag;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * One faction's civics: what it holds, slot by slot, and when it last swapped one.
@@ -23,7 +25,20 @@ public final class FactionCivics {
 
     /** Civic ids by slot. May hold an id whose mod is gone; it stays until swapped. */
     public final List<String> civics = new ArrayList<>();
+    /** Ratchets up with strength ({@link #slotsFor}) and never comes down. */
     public int slotsEarned = STARTING_SLOTS;
+    /** Wars that ended with this faction ahead; for the WARS_WON_AT_LEAST unlock rule. */
+    public int warsWon;
+    /** Civic ids an admin granted this faction; for the ADMIN_GRANTED unlock rule. */
+    public final Set<String> granted = new LinkedHashSet<>();
+    /** Day number ({@link #dayOf}) {@link #paidToday} and today's slot of {@link #income} are for. */
+    public long day;
+    /** Faction points paid today under each payout's key, for its daily cap. */
+    public final java.util.Map<String, Integer> paidToday = new java.util.HashMap<>();
+    /** Net civic income by day, the slot {@code day % 7}; the last seven days summed is the week's. */
+    public final int[] income = new int[7];
+    /** Day number the DAILY payouts last ran for. */
+    public long dailyDone;
     /** Wall clock of the last swap, 0 for never. */
     public long lastSwap;
     /** Block id of the resource picked with a civic that {@link CivicType#choosesResource}; 0 for none. */
@@ -41,6 +56,80 @@ public final class FactionCivics {
     /** Senate: what the faction calls it; empty for the default. */
     public String senateName = "";
     public static final int MAX_SENATE_NAME = 32;
+
+    /** Slots a faction of {@code strength} has earned: the starting ones plus one per milestone reached. */
+    public static int slotsFor(double strength, int[] milestones) {
+        int n = STARTING_SLOTS;
+        for (int m : milestones) {
+            if (strength >= m) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /** Held civics that would be dropped with the one in {@code slot}, because they need it, directly or not. */
+    public List<String> dependants(int slot) {
+        List<String> out = new ArrayList<>();
+        if (slot < 0 || slot >= civics.size()) {
+            return out;
+        }
+        List<String> gone = new ArrayList<>(List.of(civics.get(slot)));
+        for (int i = 0; i < gone.size(); i++) {
+            for (String held : civics) {
+                CivicType t = CivicRegistry.get(held);
+                if (t != null && t.getRequires().contains(gone.get(i)) && !gone.contains(held)) {
+                    gone.add(held);
+                    out.add(held);
+                }
+            }
+        }
+        return out;
+    }
+
+    public static long dayOf(long wallMs) {
+        return Math.floorDiv(wallMs, 24L * 60L * 60L * 1000L);
+    }
+
+    /** Moves the ledger on to {@code today}: yesterday's caps reset, and days past drop out of the week. */
+    void roll(long today) {
+        if (today <= day) {
+            return;
+        }
+        for (long d = day + 1; d <= today && d <= day + 7; d++) {
+            income[(int) Math.floorMod(d, 7L)] = 0;
+        }
+        paidToday.clear();
+        day = today;
+    }
+
+    /**
+     * What a payout of {@code fp} actually pays once its daily cap is applied, recorded against today.
+     * Costs are never capped.
+     *
+     * @param dailyCap 0 for none
+     */
+    public int credit(String key, int fp, int dailyCap, long now) {
+        roll(dayOf(now));
+        if (fp > 0 && dailyCap > 0) {
+            fp = Math.max(0, Math.min(fp, dailyCap - paidToday.getOrDefault(key, 0)));
+        }
+        if (fp > 0) {
+            paidToday.merge(key, fp, Integer::sum);
+        }
+        income[(int) Math.floorMod(day, 7L)] += fp;
+        return fp;
+    }
+
+    /** Net civic income over the last seven days, today included. */
+    public int weekIncome(long now) {
+        long today = dayOf(now);
+        int sum = 0;
+        for (long d = Math.max(day - 6, today - 6); d <= day; d++) {
+            sum += income[(int) Math.floorMod(d, 7L)];
+        }
+        return sum;
+    }
 
     public boolean isSwap(int slot) {
         return slot == DOCTRINE ? doctrine != null : slot < civics.size();
@@ -78,10 +167,6 @@ public final class FactionCivics {
             if (i != slot && other != null && type.conflictsWith(other)) {
                 return Lng.str("It cannot be held alongside %s.", other.getDisplayName());
             }
-            //swapping out a civic another held one requires
-            if (i != slot && other != null && slot < civics.size() && other.getRequires().contains(civics.get(slot))) {
-                return Lng.str("%s needs %s, which is in this slot.", other.getDisplayName(), CivicRegistry.nameOf(civics.get(slot)));
-            }
         }
         for (String need : type.getRequires()) {
             int at = civics.indexOf(need);
@@ -112,18 +197,23 @@ public final class FactionCivics {
     /**
      * Why this pick is refused, or null when it may go ahead.
      *
+     * @param standing   what the unlock rules measure about the faction now
      * @param points     the faction's faction points
      * @param swapCost   faction points a swap costs
      * @param rushCost   extra faction points to swap during the cooldown; 0 if it cannot be skipped
      * @param cooldownMs how long after a swap the next one may be made
      */
-    public String problem(int slot, String id, float points, long now, int swapCost, int rushCost, long cooldownMs) {
+    public String problem(int slot, String id, CivicType.Standing standing, float points, long now, int swapCost, int rushCost, long cooldownMs) {
         if (slot != DOCTRINE && (slot < 0 || slot >= slotsEarned || slot > civics.size())) {
             return Lng.str("That slot is not open.");
         }
         String c = conflict(slot, id);
         if (c != null) {
             return c;
+        }
+        String locked = CivicRegistry.get(id).locked(standing);
+        if (locked != null) {
+            return Lng.str("Locked. %s", locked);
         }
         if (isSwap(slot)) {
             long days = cooldownDays(now, cooldownMs);
@@ -140,13 +230,19 @@ public final class FactionCivics {
         return null;
     }
 
-    /** Applies a pick {@link #problem} allowed. */
-    public void set(int slot, String id, long now) {
-        set(slot, id, (short) 0, now);
+    /** Applies a pick {@link #problem} allowed; see the other {@code set}. */
+    public List<String> set(int slot, String id, long now) {
+        return set(slot, id, (short) 0, now);
     }
 
-    /** @param resource kept only when {@code id} {@link CivicType#choosesResource} */
-    public void set(int slot, String id, short resource, long now) {
+    /**
+     * Applies a pick {@link #problem} allowed. Replacing a civic others need drops them too, and the
+     * slots after close up.
+     *
+     * @param resource kept only when {@code id} {@link CivicType#choosesResource}
+     * @return the civics dropped because they needed the one replaced
+     */
+    public List<String> set(int slot, String id, short resource, long now) {
         CivicType type = CivicRegistry.get(id);
         if (type != null && type.choosesResource()) {
             this.resource = resource;
@@ -156,14 +252,17 @@ public final class FactionCivics {
                 lastSwap = now;
             }
             doctrine = id;
-            return;
+            return List.of();
         }
-        if (isSwap(slot)) {
-            civics.set(slot, id);
-            lastSwap = now;
-        } else {
+        if (!isSwap(slot)) {
             civics.add(id);
+            return List.of();
         }
+        List<String> dropped = dependants(slot);
+        civics.set(slot, id);
+        civics.removeAll(dropped);
+        lastSwap = now;
+        return dropped;
     }
 
     /**
@@ -227,7 +326,34 @@ public final class FactionCivics {
                 new Tag(Tag.Type.INT, null, senateHours),
                 new Tag(Tag.Type.BYTE, null, (byte) (senateVeto ? 1 : 0)),
                 new Tag(Tag.Type.STRING, null, senateName),
+                new Tag(Tag.Type.INT, null, warsWon),
+                strings(new ArrayList<>(granted)),
+                new Tag(Tag.Type.LONG, null, day),
+                ledger(),
+                new Tag(Tag.Type.LONG, null, dailyDone),
                 FinishTag.INST});
+    }
+
+    /** Today's caps as (key, paid) pairs, then the week's income. */
+    private Tag ledger() {
+        Tag[] t = new Tag[paidToday.size() + income.length + 1];
+        int i = 0;
+        for (java.util.Map.Entry<String, Integer> e : paidToday.entrySet()) {
+            t[i++] = new Tag(Tag.Type.STRUCT, null, new Tag[]{new Tag(Tag.Type.STRING, null, e.getKey()), new Tag(Tag.Type.INT, null, e.getValue()), FinishTag.INST});
+        }
+        for (int v : income) {
+            t[i++] = new Tag(Tag.Type.INT, null, v);
+        }
+        t[i] = FinishTag.INST;
+        return new Tag(Tag.Type.STRUCT, null, t);
+    }
+
+    private static void readStrings(Tag t, java.util.Collection<String> into) {
+        for (Tag id : t.getStruct()) {
+            if (id.getType() == Tag.Type.STRING) {
+                into.add(id.getString());
+            }
+        }
     }
 
     private static Tag strings(List<String> ids) {
@@ -269,6 +395,22 @@ public final class FactionCivics {
         }
         c.senateVeto = t.length > 8 && t[8].getType() == Tag.Type.BYTE && t[8].getByte() != 0;
         c.senateName = t.length > 9 && t[9].getType() == Tag.Type.STRING ? t[9].getString() : "";
+        c.warsWon = t.length > 10 && t[10].getType() == Tag.Type.INT ? t[10].getInt() : 0;
+        if (t.length > 11 && t[11].getType() == Tag.Type.STRUCT) {
+            readStrings(t[11], c.granted);
+        }
+        if (t.length > 14 && t[12].getType() == Tag.Type.LONG && t[13].getType() == Tag.Type.STRUCT) {
+            c.day = t[12].getLong();
+            int d = 0;
+            for (Tag e : t[13].getStruct()) {
+                if (e.getType() == Tag.Type.STRUCT) {
+                    c.paidToday.put(e.getStruct()[0].getString(), e.getStruct()[1].getInt());
+                } else if (e.getType() == Tag.Type.INT && d < c.income.length) {
+                    c.income[d++] = e.getInt();
+                }
+            }
+            c.dailyDone = t[14].getLong();
+        }
         return c;
     }
 

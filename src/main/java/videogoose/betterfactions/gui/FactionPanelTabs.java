@@ -764,7 +764,9 @@ public class FactionPanelTabs implements GUIActiveInterface {
         surplus.setTextSimple(new Object() {
             @Override
             public String toString() {
-                return Lng.str("%s per period", StringTools.formatPointZero(FactionStrength.pointSurplus(f)));
+                String period = Lng.str("%s per period", StringTools.formatPointZero(FactionStrength.pointSurplus(f)));
+                int civic = Civics.client().of(f.getIdFaction()).weekIncome(System.currentTimeMillis());
+                return civic == 0 ? period : Lng.str("%s, civics %s this week", period, (civic > 0 ? "+" : "") + civic);
             }
         });
         surplus.setPos(150, 148, 0);

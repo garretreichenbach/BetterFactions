@@ -106,12 +106,23 @@ public final class CivicChooser {
             return Civics.client().of(faction);
         }
 
+        /** Why {@code t} cannot go in the selected slot, unlock rules included; null when it can. */
+        private String blocked(CivicType t) {
+            String why = held().conflict(slot, t.getId());
+            if (why != null) {
+                return why;
+            }
+            Faction f = getState().getFactionManager().getFaction(faction);
+            String locked = f == null ? null : t.locked(Civics.standing(f));
+            return locked != null ? Lng.str("Locked. %s", locked) : null;
+        }
+
         /** Every civic the slot could take or explain, held ones left out: there is nothing to say about them. */
         private List<CivicType> candidates() {
             List<CivicType> out = new ArrayList<>();
             for (CivicType t : CivicRegistry.all()) {
-                if (t.getKind() == CivicType.Kind.CIVIC && !held().civics.contains(t.getId())
-                        && (!availableOnly || held().conflict(slot, t.getId()) == null)) {
+                if (t.getKind() == CivicType.Kind.CIVIC && !held().civics.contains(t.getId()) && !BFConfig.civicDisabled(t.getId())
+                        && (!availableOnly || blocked(t) == null)) {
                     out.add(t);
                 }
             }
@@ -178,7 +189,7 @@ public final class CivicChooser {
         }
 
         private GUIAnchor card(CivicType t, int width) {
-            String why = held().conflict(slot, t.getId());
+            String why = blocked(t);
             boolean on = t.getId().equals(selected);
             GUIAnchor a = new GUIAnchor(getState(), width, CARD_HEIGHT);
             a.attach(new GUIColoredRectangle(getState(), width, CARD_HEIGHT, new Vector4f(on ? CARD_HELD : CARD)));
@@ -213,7 +224,7 @@ public final class CivicChooser {
                     return Lng.str("NEEDS %s", CivicRegistry.nameOf(need).toUpperCase());
                 }
             }
-            return Lng.str("BLOCKED");
+            return c.conflict(slot, t.getId()) == null ? Lng.str("LOCKED") : Lng.str("BLOCKED");
         }
 
         private GUIAnchor detail(int height) {
@@ -227,7 +238,7 @@ public final class CivicChooser {
                 return d;
             }
             FactionCivics c = held();
-            String why = c.conflict(slot, t.getId());
+            String why = blocked(t);
             long now = System.currentTimeMillis();
             long cooldownMs = BFConfig.civicSwapCooldownDays() * DAY_MS;
             int cost = c.cost(slot, now, videogoose.betterfactions.civics.Council.ownCost(videogoose.betterfactions.civics.Council.REFORM, BFConfig.civicSwapCost()), BFConfig.civicRushCost(), cooldownMs);
@@ -267,6 +278,11 @@ public final class CivicChooser {
                     : !swap ? Lng.str("Fills slot %s for free.", slot + 1)
                     : days > 0 ? Lng.str("The swap cooldown has %s days left. Replacing %s now costs %s faction points.", days, CivicRegistry.nameOf(c.at(slot)), cost)
                     : Lng.str("Replaces %s for %s faction points. The next swap waits %s days.", CivicRegistry.nameOf(c.at(slot)), cost, BFConfig.civicSwapCooldownDays());
+            if (why == null && swap) {
+                for (String dep : c.dependants(slot)) {
+                    verdict += " " + Lng.str("%s is dropped with it.", CivicRegistry.nameOf(dep));
+                }
+            }
             GUIAnchor verdictWrap = new GUIAnchor(getState(), DETAIL_WIDTH - 24, 60);
             GUITextOverlay v = text(getState(), 14, why != null ? ORANGE : DIM, verdict);
             v.autoWrapOn = verdictWrap;
@@ -287,6 +303,9 @@ public final class CivicChooser {
             }
             for (String need : t.getRequires()) {
                 b.append(Lng.str("Needs %s in another slot.", CivicRegistry.nameOf(need))).append('\n');
+            }
+            for (CivicType.Unlock u : t.getUnlocks()) {
+                b.append(Lng.str("Unlocks at: %s", u.describe())).append('\n');
             }
             return b.toString();
         }
