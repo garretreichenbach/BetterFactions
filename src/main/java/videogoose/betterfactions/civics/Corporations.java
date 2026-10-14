@@ -2,8 +2,12 @@ package videogoose.betterfactions.civics;
 
 import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.common.controller.database.DatabaseEntry;
+import org.schema.game.common.data.ManagedSegmentController;
+import org.schema.game.common.controller.SegmentController;
+import org.schema.game.common.controller.elements.ShipyardManagerContainerInterface;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.player.faction.Faction;
+import org.schema.game.common.data.player.faction.FactionManager;
 import org.schema.game.common.data.player.faction.FactionPermission;
 import org.schema.game.common.data.world.SimpleTransformableSendableObject;
 import org.schema.game.common.data.world.VoidSystem;
@@ -14,9 +18,12 @@ import org.schema.schine.resource.tag.FinishTag;
 import org.schema.schine.resource.tag.Tag;
 import videogoose.betterfactions.BFConfig;
 import videogoose.betterfactions.BetterFactions;
+import videogoose.betterfactions.DiplomacyManager;
 import videogoose.betterfactions.Perms;
 import videogoose.betterfactions.assets.FactionAssets;
+import videogoose.betterfactions.diplomacy.DiplomacyEntity;
 import videogoose.betterfactions.net.BFPacket;
+import videogoose.betterfactions.repair.ShipyardRepairs;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -369,6 +376,7 @@ public final class Corporations {
     static final int MAX_TRAFFIC_MULTIPLIER = 4;
     static final int CHAINS_FEE_PERCENT = 25;
     static final int GOODS_FEE_PERCENT = 10;
+    static final int RELATION_FEE_PERCENT = 50;
     static final int GOODS_FEE_RADIUS = 5;
     public static final int MARKET_SIZE = 12;
 
@@ -386,6 +394,15 @@ public final class Corporations {
         double busy = Math.min(MAX_TRAFFIC_MULTIPLIER, 1 + (double) Math.max(0, traffic) / Math.max(1, trafficUnit));
         long fee = (long) (base * (station ? 2 : 1) * busy);
         return chains ? fee * (100 - CHAINS_FEE_PERCENT) / 100 : fee;
+    }
+
+    /**
+     * A fee in someone else's system, moved by its owner's opinion of the buyer: up to {@link #RELATION_FEE_PERCENT}
+     * off at the best opinion, and as much on at the worst.
+     */
+    static long relationFee(long fee, int opinion, int maxOpinion) {
+        double t = Math.clamp((double) opinion / Math.max(1, maxOpinion), -1, 1);
+        return Math.round(fee * (1 - t * RELATION_FEE_PERCENT / 100.0));
     }
 
     /** The fee for this corporation: a Consumer Goods HQ near the shop takes {@link #GOODS_FEE_PERCENT} off. */
@@ -589,6 +606,28 @@ public final class Corporations {
     }
 
     /** A station or planet the faction owns, by uid. */
+    /**
+     * A shipyard on the station, or on any plate of the planet, as loaded now; an unloaded station counts by the
+     * shipyard last seen on it as it unloaded. ponytail: an unloaded planet is not known, so it must be loaded.
+     */
+    private static boolean hasShipyard(FactionAssets.Asset a) {
+        boolean planet = FactionAssets.isPlanet(a.type);
+        boolean seen = false;
+        for (SegmentController sc : GameServerState.instance.getSegmentControllersByName().values()) {
+            boolean it = planet ? FactionAssets.isPlanet(sc.getType().dbTypeId) && a.sector.equals(sc.getSector(new Vector3i()))
+                    : sc.getUniqueIdentifier().equals(a.uid);
+            if (!it) {
+                continue;
+            }
+            seen = true;
+            if (sc instanceof ManagedSegmentController<?> m && m.getManagerContainer() instanceof ShipyardManagerContainerInterface y
+                    && !y.getShipyard().getCollectionManagers().isEmpty()) {
+                return true;
+            }
+        }
+        return !seen && !planet && ShipyardRepairs.get().yardRemembered(a.uid);
+    }
+
     private static FactionAssets.Asset station(FactionAssets assets, String uid) {
         String k = key(uid);
         for (FactionAssets.Asset a : assets.assets) {
@@ -708,8 +747,11 @@ public final class Corporations {
         }
     }
 
-    /** The Guild shops nearest {@code from} that nobody holds a franchise on, with their fees for this faction. */
-    private synchronized List<Offer> market(Vector3i from, boolean chains, long now) {
+    /**
+     * The Guild shops nearest {@code from} that nobody holds a franchise on and that sit outside systems held by
+     * {@code faction}'s enemies, with their fees for this faction: dearer where the system's owner thinks ill of it.
+     */
+    private synchronized List<Offer> market(int faction, Vector3i from, boolean chains, long now) {
         java.util.Set<String> held = new java.util.HashSet<>();
         for (State st : byFaction.values()) {
             for (Corp c : st.corps) {
@@ -718,17 +760,30 @@ public final class Corporations {
         }
         long day = now / DAY_MS;
         List<Offer> out = new ArrayList<>();
-        guildShops.stream().filter(g -> !held.contains(g.uid))
-                .sorted(java.util.Comparator.comparingInt(g -> systems(from, g.sector)))
-                .limit(MARKET_SIZE)
-                .forEach(g -> {
-                    Offer o = new Offer();
-                    o.shop = g;
-                    long[] tr = traffic.get(g.uid);
-                    o.traffic = tr == null ? 0 : decayed(tr[0], tr[1], day);
-                    o.fee = franchiseFee(BFConfig.franchiseBaseFee(), tradeStation(g.name), o.traffic, BFConfig.franchiseTrafficUnit(), chains);
-                    out.add(o);
-                });
+        FactionManager fm = GameServerState.instance.getFactionManager();
+        DiplomacyManager dm = DiplomacyManager.server();
+        List<Holding> near = guildShops.stream().filter(g -> !held.contains(g.uid))
+                .sorted(java.util.Comparator.comparingInt(g -> systems(from, g.sector))).toList();
+        for (Holding g : near) {
+            if (out.size() >= MARKET_SIZE) {
+                break;
+            }
+            int owner = dm.systemOwner(VoidSystem.getPosFromSector(g.sector, new Vector3i()));
+            if (owner != 0 && owner != faction && fm.isEnemy(faction, owner)) {
+                continue;
+            }
+            Offer o = new Offer();
+            o.shop = g;
+            long[] tr = traffic.get(g.uid);
+            o.traffic = tr == null ? 0 : decayed(tr[0], tr[1], day);
+            o.fee = franchiseFee(BFConfig.franchiseBaseFee(), tradeStation(g.name), o.traffic, BFConfig.franchiseTrafficUnit(), chains);
+            Faction lord = owner == 0 || owner == faction ? null : fm.getFaction(owner);
+            DiplomacyEntity e = lord == null ? null : dm.diplomacyOf(lord).entities.get((long) faction);
+            if (e != null) {
+                o.fee = relationFee(o.fee, e.getPoints(), e.getConfig().getDiplomacyMaxPoints());
+            }
+            out.add(o);
+        }
         return out;
     }
 
@@ -793,7 +848,7 @@ public final class Corporations {
         Offer offer = null;
         if (op == 10) {
             String k = key(t[3].getString());
-            offer = market(marketCentre(f), chains(id, Civics.server()), System.currentTimeMillis()).stream()
+            offer = market(id, marketCentre(f), chains(id, Civics.server()), System.currentTimeMillis()).stream()
                     .filter(o -> o.shop.uid.equals(k)).findFirst().orElse(null);
         }
         List<Runnable> after = new ArrayList<>();
@@ -869,7 +924,7 @@ public final class Corporations {
                         return;
                     }
                     if (offer == null) {
-                        reject(p, Lng.str("That shop is not on offer: it is gone, too far, or someone holds its franchise."));
+                        reject(p, Lng.str("That shop is not on offer: it is gone, too far, in an enemy's system, or someone holds its franchise."));
                         return;
                     }
                     if (c.holdingCount() >= MAX_HOLDINGS) {
@@ -962,6 +1017,10 @@ public final class Corporations {
                         return;
                     }
                     if (c.hq != null && c.hq.uid.equals(key(a.uid))) {
+                        return;
+                    }
+                    if (c.type == Type.SHIPYARDS && !hasShipyard(a)) {
+                        reject(p, Lng.str("%s builds ships: its HQ needs a shipyard, and none is seen on %s. If it has one, visit it so it loads, then try again.", c.name, a.name));
                         return;
                     }
                     Corp there = hqIn(a.sector, c);
@@ -1128,7 +1187,7 @@ public final class Corporations {
         List<Tag> offers = new ArrayList<>();
         Faction f = GameServerState.instance.getFactionManager().getFaction(id);
         if (f != null && Civics.server().holds(id, CivicRegistry.CORPORATIONS)) {
-            for (Offer o : market(marketCentre(f), chains(id, Civics.server()), System.currentTimeMillis())) {
+            for (Offer o : market(id, marketCentre(f), chains(id, Civics.server()), System.currentTimeMillis())) {
                 offers.add(new Tag(Tag.Type.STRUCT, null, new Tag[]{o.shop.toTag(), new Tag(Tag.Type.LONG, null, o.traffic),
                         new Tag(Tag.Type.LONG, null, o.fee), FinishTag.INST}));
             }

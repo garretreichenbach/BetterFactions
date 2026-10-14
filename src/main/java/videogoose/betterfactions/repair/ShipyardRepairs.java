@@ -1019,6 +1019,11 @@ public final class ShipyardRepairs {
 		}
 	}
 
+	/** Whether the station had a working shipyard when it last unloaded. */
+	public boolean yardRemembered(String stationUid) {
+		return yardIndexByStation.containsKey(stationUid);
+	}
+
 	/** Server: an entity deleted for good. */
 	public void onDeleted(SegmentController sc) {
 		counts.remove(sc.getUniqueIdentifier());

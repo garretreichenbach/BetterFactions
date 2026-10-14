@@ -87,6 +87,9 @@ public final class Corporations_test {
         assert Corporations.franchiseFee(base, false, unit, unit, false) == 2 * base : "a unit of sales adds the base again";
         assert Corporations.franchiseFee(base, false, 100 * unit, unit, false) == 4 * base : "busy tops out at four times";
         assert Corporations.franchiseFee(base, false, 0, unit, true) == base * 3 / 4 : "Corporate Chains: a quarter off";
+        assert Corporations.relationFee(1000, 0, 5000) == 1000 : "an indifferent owner: unchanged";
+        assert Corporations.relationFee(1000, 5000, 5000) == 500 : "a friendly owner: half off";
+        assert Corporations.relationFee(1000, -9000, 5000) == 1500 : "a hostile owner: half again, however hostile";
         assert Corporations.tradeStation("Trade Station") && !Corporations.tradeStation("Trade Outpost") && !Corporations.tradeStation(null);
         assert Corporations.systems(new Vector3i(0, 0, 0), new Vector3i(80, -17, 3)) == 5;
         Corporations.Offer offer = new Corporations.Offer();
