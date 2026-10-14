@@ -1095,6 +1095,11 @@ public final class BattleTracker {
 		if (!fleetsStopped.contains(pos)) {
 			//queued a while ago, or saved before a restart, and the fleet has moved on since
 			System.err.println("[BetterFactions] no fleet left at queued sector " + pos + "; dropped");
+			//a fight carried over a restart has nobody left to fight it on: report it now, not after an hour of uptime
+			Battle c = carried.remove(pos);
+			if (c != null && c.lastHit > 0) {
+				report(GameServerState.instance, null, c, now);
+			}
 			return false;
 		}
 		try {
