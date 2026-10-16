@@ -13,6 +13,14 @@ Admin only. Factions are given by numeric id.
 | `/faction_federation_list` | Lists federations, their members and open votes |
 | `/faction_federation_dissolve <id>` | Dissolves a federation |
 | `/faction_civic_grant <faction> <civic> [on\|off]` | Lets a faction pick a civic that only an admin can grant, or takes that back |
+| `/directives_reload` | Rereads the Council's `directives.xml` |
+| `/battle_blueprints [filter]` | Lists ship blueprints, heaviest first |
+| `/battle_spawn_fleet <faction> <count> <x> <y> <z> <blueprint>` | Spawns up to 50 ships of one blueprint for a faction into an unloaded sector, on sentry, in your fleet list |
+| `/raid_status` | Shows what each raiding fleet is chasing and why |
+
+Debug switches, not saved: `/senate_pause`, `/council_next`, `/faction_npc_yield <faction>`, `/yesman`, `/shipyard_repairs_free`, `/npc_fleets_frozen`.
+
+Admins also get a **Battles** tab in the network profiler, listing every battle with buttons to pause, end, go to or watch it.
 
 Treaty types are written like `starmade:alliance`. Running `/faction_treaty_list` shows them all.
 
@@ -51,6 +59,16 @@ The mod config sets `civic_slot_milestones` (the strengths that each earn a civi
 
 A civic that does not parse is skipped and logged; the rest still apply.
 
+## Council Directives and Casus Belli
+
+The Council's agendas come from `directives.xml`. Copy the shipped file to `moddata/BetterFactions/` to change it; a copy there replaces the shipped one whole, and `/directives_reload` reads it again.
+
+An optional `moddata/BetterFactions/casus_belli.xml` (a `<CasusBelli>` section) tunes casus belli. Nothing ships for it.
+
+## Mod Config
+
+Every cost, rate and timer the mod uses is a key in its config: treaty and war costs, gifts and claims, civic swaps, Senate vote lengths, corporation cuts and franchise fees, contract fees and NPC bounties, fleet upkeep and station income, wreck lifetime, the mining bonus ramp, pirate ambush chance, and the battle limits (`max_soft_loaded_battles`, `battle_auto_resolve_after_seconds` and the tick thresholds). Set `max_soft_loaded_battles` to 0 to turn off fighting in unloaded sectors.
+
 ## Save Data
 
-Treaties, offers, federations, emblems and opinion are saved to `moddata/BetterFactions/diplomacy-<world>.tag` with the world.
+Everything is saved with the world under `moddata/BetterFactions/`, one `<name>-<world>.tag` per system: diplomacy (treaties, offers, federations, opinion, reputation), battles, civics, senate, council, corporations, contracts, repairs, designs, intercepts, tradefleets, routesafety, wrecks, fleet-mass, claim-ages and point-mods. Uploaded emblems are in `moddata/BetterFactions/emblems/`. A file that cannot be read is renamed `.unreadable-<time>` and that system starts empty.

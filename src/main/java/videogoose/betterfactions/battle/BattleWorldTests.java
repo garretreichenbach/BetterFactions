@@ -19,6 +19,7 @@ import org.schema.game.server.data.GameServerState;
 import org.schema.game.server.test.world.WorldTestExtension;
 import org.schema.game.server.test.world.WorldTestSpec;
 import videogoose.betterfactions.diplomacy.CombatRatings;
+import videogoose.betterfactions.fleet.TradeFleetOrders;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -46,6 +47,9 @@ import java.util.function.BooleanSupplier;
  *       the test's fleets. Works while the fleet is unloaded. With {@code "target": "depot"} the order is
  *       given that entity's sector, for orders that take one ({@code FLEET_ATTACK}, {@code FLEET_DEFEND},
  *       {@code MOVE_FLEET}).</li>
+ *   <li>{@code { "raid": "raiders", "targets": [-2], "miners": true }}: puts one of the test's fleets on a
+ *       Raid Trade Routes order of this entity's system, as the raid dialog would; {@code targets} and
+ *       {@code miners} as there (no targets: anyone not ours or a friend's).</li>
  *   <li>{@code { "command": "pause" }} or {@code "end"}: the admin profiler's button, on the battle in that
  *       entity's sector.</li>
  * </ul>
@@ -53,7 +57,8 @@ import java.util.function.BooleanSupplier;
  * <p>Expect key {@code "battle"}, naming an entity whose sector is checked, with a {@code "measure"}:
  * {@code active}, {@code soft}, {@code paused}, {@code loaded} and {@code queued} (each 1 or 0),
  * {@code hits} (hits taken, all sides), {@code lost} (ships lost, all sides), {@code pausedFor} (seconds),
- * {@code reported} (news reports for that sector this run), and, for the entity itself, {@code gate} (its
+ * {@code reported} (news reports for that sector this run), {@code prey} (1 when fleet {@code "fleet"}'s raid
+ * is on fleet {@code "of"}), and, for the entity itself, {@code gate} (its
  * reactor gate, 0 to 1) and {@code rate} (its combat rating now).</p>
  */
 public final class BattleWorldTests implements WorldTestExtension {
@@ -98,10 +103,7 @@ public final class BattleWorldTests implements WorldTestExtension {
 		} else if (json.has("fleetOrder")) {
 			FleetCommandTypes order = FleetCommandTypes.valueOf(json.get("fleetOrder").getAsString());
 			String id = json.get("fleet").getAsString();
-			Fleet fleet = scene.fleets().get(id);
-			if (fleet == null) {
-				throw new IllegalArgumentException("battle setup: no fleet '" + id + "'");
-			}
+			Fleet fleet = fleet(scene, id);
 			if (json.has("target")) {
 				String targetId = json.get("target").getAsString();
 				SegmentController target = scene.entities().get(targetId);
@@ -112,11 +114,19 @@ public final class BattleWorldTests implements WorldTestExtension {
 			} else {
 				action = () -> fleet.getFleetManager().executeCommand(new FleetCommand(order, fleet));
 			}
+		} else if (json.has("raid")) {
+			Fleet fleet = fleet(scene, json.get("raid").getAsString());
+			java.util.Set<Integer> targets = new java.util.HashSet<>();
+			if (json.has("targets")) {
+				json.getAsJsonArray("targets").forEach(t -> targets.add(t.getAsInt()));
+			}
+			boolean miners = json.has("miners") && json.get("miners").getAsBoolean();
+			action = () -> TradeFleetOrders.get().raidForTest(fleet, List.of(sectorOf(ship)), targets, miners);
 		} else if (json.has("command")) {
 			String command = json.get("command").getAsString();
 			action = () -> command(ship, command);
 		} else {
-			throw new IllegalArgumentException("battle setup needs \"ai\", \"fleetOrder\" or \"command\": " + json);
+			throw new IllegalArgumentException("battle setup needs \"ai\", \"fleetOrder\", \"raid\" or \"command\": " + json);
 		}
 		int now = BattleTracker.ticks();
 		int atTick = now + (json.has("atTick") ? json.get("atTick").getAsInt() : 0);
@@ -231,6 +241,8 @@ public final class BattleWorldTests implements WorldTestExtension {
 				return CombatRatings.reactorGate(entity);
 			case "rate":
 				return CombatRatings.rate(entity);
+			case "prey":
+				return TradeFleetOrders.get().preyOf(fleet(scene, json.get("fleet").getAsString()).dbid) == fleet(scene, json.get("of").getAsString()).dbid ? 1 : 0;
 			default:
 				break;
 		}
@@ -252,6 +264,14 @@ public final class BattleWorldTests implements WorldTestExtension {
 			case "reported" -> tracker.reportsAt(pos);
 			default -> throw new IllegalArgumentException("unknown battle measure '" + measure + "'");
 		};
+	}
+
+	private static Fleet fleet(Scene scene, String id) {
+		Fleet fleet = scene.fleets().get(id);
+		if (fleet == null) {
+			throw new IllegalArgumentException("battle test: no fleet '" + id + "'");
+		}
+		return fleet;
 	}
 
 	/** Where an entity is now: its loaded sector, else its database row. */

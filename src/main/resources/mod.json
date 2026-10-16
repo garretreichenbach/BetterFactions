@@ -2,7 +2,7 @@
 	"id": "videogoose.betterfactions",
 	"name": "BetterFactions",
 	"author": "VideoGoose",
-	"description": "Treaties, opinion, federations and emblems for player and NPC factions alike.",
+	"description": "Faction overhaul: treaties, opinion, federations, civics and institutions, unloaded battles, raids, repairs and trade route safety, for player and NPC factions alike.",
 	"version": "0.3.0",
 	"starmade_version": "0.4.509",
 	"starloader_version": "2.0",

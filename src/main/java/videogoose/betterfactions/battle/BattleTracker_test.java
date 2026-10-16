@@ -443,6 +443,7 @@ public final class BattleTracker_test {
 		saved.side(10).lost = 2;
 		saved.side(10).lostRating = 33.5;
 		saved.side(20).hitsTaken = 40;
+		saved.units.put("ENTITY_SHIP_A", new BattleReports.Unit("A", 10, (byte) 5, 100, 0.5f, 7, false));
 		before.carry(saved, now);
 
 		//paused 10 min into a fight that has been held for an hour since: it has run 10 min, not 70
@@ -459,6 +460,8 @@ public final class BattleTracker_test {
 		assert back.lastHit > 0 : "it had hits, so it is reported when it ends";
 		assert Math.abs(System.currentTimeMillis() - back.start - 120_000) < 5_000 : "age is a duration, so downtime does not count";
 		assert after.queued().containsKey(new Vector3i(9, 8, 7)) : "its sector is queued so it fights on";
+		assert back.units.get("ENTITY_SHIP_A").name().equals("A") : "a quiet round's units survive the restart";
+		assert after.open(11, new Vector3i(9, 8, 7), now).units.containsKey("ENTITY_SHIP_A") : "and the next round picks them up";
 
 		BattleTracker.Battle heldBack = after.carried().get(new Vector3i(1, 2, 3));
 		assert heldBack.paused : "a pause survives a restart";

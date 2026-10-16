@@ -11,9 +11,15 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Server: a root ship whose last reactor block is shot away overheats. The engine judges a ship with no reactors
- * only by its core, so a gutted hull with its core intact (an NPC miner, typically) floated on at "Reactor HP 0/1",
- * never dying, never counted as a loss. Only damage does it: a reactor taken out in build mode is not a death.
+ * Server: a root ship with no reactor dies of damage like any other. The engine judges a ship with no reactors
+ * only by its core, so two kinds of hull floated on at "Reactor HP 0/1", never dying, never counted as a loss:
+ * <ul>
+ *   <li>one whose last reactor block was shot away (an NPC miner, typically): it overheats then;</li>
+ *   <li>one that never had a reactor: vanilla's NPC designs still run the old power system, and with old power
+ *   disallowed the engine treats them as new power with no reactor. It overheats once damage has taken
+ *   {@link #betterFactions$OLD_POWER_OVERHEAT} of the blocks it was seen with, old power's own overheat line.</li>
+ * </ul>
+ * Only damage does it: blocks removed in build mode are not a death.
  */
 @Mixin(value = SegmentControllerHpController.class, remap = false)
 public abstract class ReactorLostOverheatMixin {
@@ -22,8 +28,19 @@ public abstract class ReactorLostOverheatMixin {
 	@Unique
 	private static final long betterFactions$DAMAGE_MS = 5000;
 
+	/** blockBehaviorConfig's old-power ("noreactor") OVERHEATING condition. */
+	@Unique
+	private static final double betterFactions$OLD_POWER_OVERHEAT = 0.5;
+
 	@Unique
 	private boolean betterFactions$hadReactor;
+
+	/**
+	 * Most blocks seen on a reactorless hull since it loaded.
+	 * ponytail: not saved, so a hull unloaded half-wrecked counts from what is left; persist it if that matters.
+	 */
+	@Unique
+	private int betterFactions$peakBlocks;
 
 	@Inject(method = "updateLocal", at = @At("HEAD"))
 	private void betterFactions$reactorLost(Timer timer, CallbackInfo ci) {
@@ -34,14 +51,26 @@ public abstract class ReactorLostOverheatMixin {
 		}
 		if (sc.hasAnyReactors()) {
 			betterFactions$hadReactor = true;
+			betterFactions$peakBlocks = 0;
 			return;
 		}
-		if (!betterFactions$hadReactor) {
+		if (!(sc instanceof Ship) || !sc.railController.isRoot() || sc.isCoreOverheating() || self.isRebooting()) {
 			return;
 		}
-		betterFactions$hadReactor = false;
-		if (sc instanceof Ship && sc.railController.isRoot() && !sc.isCoreOverheating() && !self.isRebooting()
-				&& sc.getState().getUpdateTime() - sc.lastDamageTaken < betterFactions$DAMAGE_MS) {
+		boolean damaged = sc.getState().getUpdateTime() - sc.lastDamageTaken < betterFactions$DAMAGE_MS;
+		if (betterFactions$hadReactor) {
+			betterFactions$hadReactor = false;
+			if (damaged) {
+				self.triggerOverheating();
+			}
+			return;
+		}
+		if (sc.isUsingOldPower() || !sc.isFullyLoaded()) {
+			return; //old power allowed: the engine's own HP conditions handle it
+		}
+		int blocks = sc.getTotalElements();
+		betterFactions$peakBlocks = Math.max(betterFactions$peakBlocks, blocks);
+		if (damaged && blocks <= betterFactions$peakBlocks * betterFactions$OLD_POWER_OVERHEAT) {
 			self.triggerOverheating();
 		}
 	}

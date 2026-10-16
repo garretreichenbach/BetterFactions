@@ -14,6 +14,26 @@ public class DiplomacyAction {
     public int counter;
     public long timeDuration;
 
+    /**
+     * The engine reports an attack on every update a hit lands, so one raid arrives as dozens. Hits
+     * closer together than this are one engagement and count once.
+     */
+    static final long ENGAGEMENT_GAP_MS = 120_000;
+    /** When the last hit of the current engagement landed. Not saved: a restart starts a new one. */
+    private long lastHit;
+
+    /**
+     * Records one report of this action at {@code now}.
+     *
+     * @return false when it only continues an engagement already counted
+     */
+    boolean newOccurrence(long now) {
+        boolean fresh = (type != DiplActionType.ATTACK && type != DiplActionType.ATTACK_ENEMY)
+                || lastHit == 0 || now - lastHit >= ENGAGEMENT_GAP_MS;
+        lastHit = now;
+        return fresh;
+    }
+
     public static String key(DiplActionType type, String subject) {
         return subject == null ? type.name() : type.name() + ":" + subject;
     }

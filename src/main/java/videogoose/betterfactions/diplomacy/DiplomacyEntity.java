@@ -559,9 +559,11 @@ public class DiplomacyEntity implements LogInterface {
                 log("Faction revoked " + offer.getRelation().name() + " offer because of aggresion", LogLevel.NORMAL);
             }
         }
-        //reset action and increase counter
+        //reset action, and count it unless it only continues an engagement already counted
         action.timeDuration = getConfig().getDiplomacyActionTimeout(type);
-        action.counter++;
+        if (action.newOccurrence(System.currentTimeMillis())) {
+            action.counter++;
+        }
         setChanged();
     }
 

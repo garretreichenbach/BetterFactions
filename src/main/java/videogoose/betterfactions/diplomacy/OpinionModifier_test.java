@@ -36,6 +36,7 @@ public final class OpinionModifier_test {
         actionsWithDifferentSubjectsDoNotCollide();
         resolvesByNameNotPosition();
         legacyTagsStillLoad();
+        oneRaidIsOneEngagement();
         System.out.println("OpinionModifier_test: OK");
     }
 
@@ -170,5 +171,20 @@ public final class OpinionModifier_test {
                 new Tag(Tag.Type.LONG, null, 0L),
                 FinishTag.INST,
         });
+    }
+
+    /** The engine reports a hit every update; a raid's worth of them must not read as five wars' worth. */
+    private static void oneRaidIsOneEngagement() {
+        DiplomacyAction a = new DiplomacyAction();
+        a.type = DiplActionType.ATTACK;
+        long t = 1_000_000;
+        assert a.newOccurrence(t);
+        assert !a.newOccurrence(t + 50);
+        assert !a.newOccurrence(t + 50 + DiplomacyAction.ENGAGEMENT_GAP_MS - 1) : "a hit just inside the gap continues the fight";
+        assert a.newOccurrence(t + 50 + 2 * DiplomacyAction.ENGAGEMENT_GAP_MS) : "a lull ends the engagement";
+
+        DiplomacyAction offer = new DiplomacyAction();
+        offer.type = DiplActionType.PEACE_OFFER;
+        assert offer.newOccurrence(t) && offer.newOccurrence(t + 1) : "only attacks are grouped";
     }
 }

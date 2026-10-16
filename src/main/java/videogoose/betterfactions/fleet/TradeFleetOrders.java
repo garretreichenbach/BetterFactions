@@ -108,6 +108,19 @@ public final class TradeFleetOrders {
 		}
 	}
 
+	/** World tests (BattleWorldTests): puts the fleet on a raid of the route's systems, no player needed. */
+	public void raidForTest(Fleet fleet, List<Vector3i> route, java.util.Set<Integer> targets, boolean miners) {
+		Post post = new Post(Kind.RAID, new Vector3i(route.get(0)));
+		for (Vector3i s : route) {
+			post.route.add(new Vector3i(s));
+		}
+		post.targets.addAll(targets);
+		post.miners = miners;
+		posts.put(fleet.dbid, post);
+		send(fleet, post, FleetCommandTypes.FLEET_DEFEND, post.route.get(0), System.currentTimeMillis());
+		FleetLabels.refresh(fleet);
+	}
+
 	/** The fleet a raiding fleet is on (a convoy, or miners), or -1. */
 	public long preyOf(long fleetDbId) {
 		Post post = posts.get(fleetDbId);

@@ -241,7 +241,6 @@ public final class BattleTracker {
 		String name;
 		/**
 		 * Every root ship and station seen fighting, by UID, as last seen: the full report's tables.
-		 * todo: not saved with the battle, so a fight carried over a restart reports only what it saw after.
 		 */
 		final Object2ObjectOpenHashMap<String, BattleReports.Unit> units = new Object2ObjectOpenHashMap<>();
 
@@ -853,6 +852,7 @@ public final class BattleTracker {
 			b.lastHit = c.lastHit > 0 ? now : 0; //a fresh quiet window: it has only just reloaded
 			b.paused = c.paused;
 			b.pausedAt = now;
+			b.units.putAll(c.units);
 		}
 		battles.put(b.sectorId, b);
 		return b;
@@ -911,6 +911,7 @@ public final class BattleTracker {
 		Int2DoubleOpenHashMap strength = new Int2DoubleOpenHashMap();
 		LongOpenHashSet counted = new LongOpenHashSet();
 		List<Fleet> fleets = new ArrayList<>();
+		Object2ObjectOpenHashMap<String, BattleReports.Unit> units = new Object2ObjectOpenHashMap<>();
 		for (Fleet f : state.getFleetManager().fleetCache.values()) {
 			FleetMember flag = f.getFlagShip();
 			if (flag == null || flag.isLoaded() || !pos.equals(flag.getSector())) {
@@ -927,8 +928,15 @@ public final class BattleTracker {
 			for (DatabaseEntry d : state.getDatabaseIndex().getTableManager().getEntityTable().getBySector(pos, 200)) {
 				boolean station = d.getEntityType() == SimpleTransformableSendableObject.EntityType.SPACE_STATION;
 				//faction 0 here is derelicts and abandoned hulls parked in the sector, not a side in the fight
-				if (d.faction != 0 && (station || d.getEntityType() == SimpleTransformableSendableObject.EntityType.SHIP) && counted.add(d.dbId)) {
+				if (d.faction == 0 || !station && d.getEntityType() != SimpleTransformableSendableObject.EntityType.SHIP) {
+					continue;
+				}
+				if (counted.add(d.dbId)) {
 					strength.put(d.faction, strength.get(d.faction) + ratings.ratingOf(d.dbId) * (station ? STATION_BONUS : 1));
+				}
+				if (d.dockedTo <= 0 && units.size() < MAX_UNITS) {
+					//a paper battle damages nothing and the database knows no mass: listed whole, mass unknown
+					units.put(d.uid, new BattleReports.Unit(d.realName, d.faction, (byte) d.getEntityType().dbTypeId, 0, 1, ratings.ratingOf(d.dbId), false));
 				}
 			}
 		} catch (Exception e) {
@@ -955,6 +963,7 @@ public final class BattleTracker {
 		}
 		b.autoResolved = true;
 		b.lastHit = now;
+		b.units.putAll(units);
 		for (int faction : strength.keySet()) {
 			Side s = b.side(faction);
 			s.survivors = faction == winner || !enemies.test(faction, winner);
@@ -1977,10 +1986,17 @@ public final class BattleTracker {
 			}
 			sides[i] = FinishTag.INST;
 			long ran = b.paused ? b.pausedAt - b.start : fought(b, now);
+			Tag[] uids = new Tag[b.units.size() + 1];
+			int u = 0;
+			for (String uid : b.units.keySet()) {
+				uids[u++] = new Tag(Tag.Type.STRING, null, uid);
+			}
+			uids[u] = FinishTag.INST;
 			rows.add(new Tag(Tag.Type.STRUCT, null, new Tag[]{
 					new Tag(Tag.Type.VECTOR3i, null, new Vector3i(b.pos)), new Tag(Tag.Type.LONG, null, ran),
 					new Tag(Tag.Type.BYTE, null, (byte) (b.lastHit > 0 ? 1 : 0)), new Tag(Tag.Type.BYTE, null, (byte) (b.observed ? 1 : 0)),
-					new Tag(Tag.Type.BYTE, null, (byte) (b.paused ? 1 : 0)), new Tag(Tag.Type.STRUCT, null, sides), FinishTag.INST}));
+					new Tag(Tag.Type.BYTE, null, (byte) (b.paused ? 1 : 0)), new Tag(Tag.Type.STRUCT, null, sides),
+					new Tag(Tag.Type.STRUCT, null, uids), BattleReports.unitsTag(new ArrayList<>(b.units.values())), FinishTag.INST}));
 		}
 		rows.add(FinishTag.INST);
 		Tag[] queue = new Tag[pending.size() + 1];
@@ -2023,6 +2039,13 @@ public final class BattleTracker {
 					side.committedShips = s[5].getInt();
 				}
 				side.attacking = s.length > 7 && s[6].getByte() != 0;
+			}
+			if (e.length > 8) { //saved before units were kept: the report lists only what it sees after
+				Tag[] uids = e[6].getStruct();
+				List<BattleReports.Unit> units = BattleReports.unitsFrom(e[7]);
+				for (int i = 0; i < units.size(); i++) {
+					b.units.put(uids[i].getString(), units.get(i));
+				}
 			}
 			carry(b, now);
 			enqueue(b.pos, now);
